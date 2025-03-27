@@ -2,7 +2,8 @@ import FetchDataSteps from "@/components/tutorial/fetch-data-steps";
 import { createClient } from "@/utils/supabase/server";
 import { InfoIcon } from "lucide-react";
 import { redirect } from "next/navigation";
-import { ApprovalButton } from "@/components/approval-button";
+import { CreateApprovalButton } from "@/components/create-approval-button";
+import { ApproveButton } from "@/components/approve-button";
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
@@ -32,7 +33,11 @@ export default async function ProtectedPage() {
       </div>
       <div className="flex flex-col gap-4">
         <h2 className="font-bold text-2xl">Create Approval</h2>
-        <ApprovalButton />
+        <CreateApprovalButton />
+      </div>
+      <div className="flex flex-col gap-4">
+        <h2 className="font-bold text-2xl">Approve Approval</h2>
+        <ApproveButton approvalId={31} />
       </div>
       <div>
         <h2 className="font-bold text-2xl mb-4">Next steps</h2>
