@@ -19,7 +19,7 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Sidebar />
       <TopBar />
       <main className="transition-[padding-left] duration-300" style={{ paddingLeft: 'var(--sidebar-width)', paddingTop: '3.5rem' }}>

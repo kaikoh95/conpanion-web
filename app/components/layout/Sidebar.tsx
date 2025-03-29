@@ -22,7 +22,7 @@ export default function Sidebar() {
 
   return (
     <aside 
-      className={`w-16 bg-[#2A2E34] h-screen flex flex-col py-4 fixed left-0 top-0 z-30 transition-all duration-300 overflow-hidden ${
+      className={`w-16 bg-background/80 dark:bg-background/95 h-screen flex flex-col py-4 fixed left-0 top-0 z-30 transition-all duration-300 overflow-hidden border-r ${
         isExpanded ? 'w-48' : 'w-16'
       }`}
       onMouseEnter={() => setIsExpanded(true)}
@@ -37,16 +37,16 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`relative flex items-center mx-2 py-2 rounded-lg transition-colors duration-200 ${
+              className={`relative flex items-center mx-2 py-2 rounded-lg ${
                 isActive 
-                  ? 'bg-indigo-500 text-white' 
-                  : 'text-gray-400 hover:bg-gray-700/50 hover:text-gray-100'
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
               }`}
             >
               <div className="w-12 flex items-center justify-center">
                 <Icon className="w-5 h-5" />
               </div>
-              <span className={`absolute left-12 text-sm whitespace-nowrap transition-all duration-300 ${
+              <span className={`absolute left-12 text-sm whitespace-nowrap transition-transform duration-300 ${
                 isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
               }`}>
                 {item.name}
@@ -57,12 +57,12 @@ export default function Sidebar() {
       </div>
       <Link
         href="/protected/settings"
-        className={`relative flex items-center mx-2 py-2 rounded-lg text-gray-400 hover:bg-gray-700/50 hover:text-gray-100 transition-colors duration-200`}
+        className="relative flex items-center mx-2 py-2 rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground"
       >
         <div className="w-12 flex items-center justify-center">
           <Settings className="w-5 h-5" />
         </div>
-        <span className={`absolute left-12 text-sm whitespace-nowrap transition-all duration-300 ${
+        <span className={`absolute left-12 text-sm whitespace-nowrap transition-transform duration-300 ${
           isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
         }`}>
           Settings
