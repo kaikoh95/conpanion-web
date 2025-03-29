@@ -1,0 +1,19 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- You can @ files here
+- You can use markdown but dont have to
+
+1. This is a repository for building a SaaS Project Management tool - like JIRA, Clickup and Monday - but for construction companies to use.
+2. This project uses the following tools: NextJS, Tailwind CSS, TypeScript, NPM, Supabase.
+3. Use NextJS App routing, functional components, TypeScript for @*.ts and @*.tsx files.
+4. When prompted, always take all the existing code and structure in the repository into account before suggesting and implementing.
+5. Always use the latest documentation where possible.
+6. Always attempt optimise the code and use DRY concepts.
+7. Build out components and layouts with great user experience and journey in mind, to always ensure a smooth user experience throughout the application.
+8. Ensure mobile responsive designs as well as optimised desktop designs.
