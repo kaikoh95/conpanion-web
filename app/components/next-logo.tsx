@@ -1,4 +1,3 @@
-@ -1,46 +0,0 @@
 export default function NextLogo() {
   return (
     <svg
