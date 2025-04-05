@@ -31,6 +31,8 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { SortableQuestionCard } from "@/components/forms/sortable-question-card";
+import { FormBuilderQuestion } from "@/lib/types/form-builder";
 
 const questionTypes = [
   { value: "question", label: "Short answer" },
@@ -39,216 +41,22 @@ const questionTypes = [
   { value: "photo", label: "Photo" },
 ] as const;
 
-// Add SortableQuestionCard component
-function SortableQuestionCard({ item, index, isEditing, onUpdate, onDelete }: { 
-  item: FormItem; 
-  index: number;
-  isEditing: boolean;
-  onUpdate: (index: number, updates: Partial<FormItem>) => void;
-  onDelete?: (index: number) => void;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ 
-    id: item.id?.toString() || item.display_order.toString()
-  });
+// Adapter functions to convert between FormItem and FormBuilderQuestion
+const toFormBuilderQuestion = (item: FormItem): FormBuilderQuestion => ({
+  id: item.id?.toString() || item.display_order.toString(),
+  type: item.item_type,
+  title: item.question_value,
+  options: item.options,
+  required: item.is_required,
+});
 
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    transition,
-  } : undefined;
-
-  const renderQuestionPreview = () => {
-    switch (item.item_type) {
-      case "question":
-        return (
-          <div className="border rounded-md px-3 py-2 bg-muted/30">
-            <p className="text-sm text-muted-foreground">Text answer</p>
-          </div>
-        );
-      case "photo":
-        return (
-          <div className="border rounded-md px-3 py-2 bg-muted/30">
-            <p className="text-sm text-muted-foreground">Photo upload</p>
-          </div>
-        );
-      case "radio_box":
-      case "checklist":
-        return (
-          <div className="space-y-2 mt-2">
-            {item.options?.map((option, optionIndex) => (
-              <div key={optionIndex} className="flex items-center gap-2 pl-1">
-                {item.item_type === "radio_box" ? (
-                  <CircleDot className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                ) : (
-                  <CheckSquare className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                )}
-                <span className="text-sm text-muted-foreground">{option}</span>
-              </div>
-            ))}
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} className="relative">
-      <Card 
-        className={`p-4 ${isDragging ? 'shadow-lg ring-1 ring-primary/20 opacity-50' : ''} transition-shadow duration-200`}
-      >
-        <div className="flex items-start gap-4">
-          {isEditing && (
-            <div 
-              className="flex-none cursor-grab active:cursor-grabbing touch-none" 
-              {...attributes} 
-              {...listeners}
-            >
-              <GripVertical className="h-5 w-5 text-muted-foreground" />
-            </div>
-          )}
-          <div className="flex-1 space-y-4">
-            <div className="flex items-center gap-4">
-              {isEditing ? (
-                <Input
-                  value={item.question_value}
-                  onChange={(e) => onUpdate(index, { question_value: e.target.value })}
-                  className="text-lg"
-                  placeholder="Question here"
-                />
-              ) : (
-                <p className="text-lg font-medium">{item.question_value}</p>
-              )}
-              {isEditing && (
-                <Select
-                  value={item.item_type}
-                  onValueChange={(value) =>
-                    onUpdate(index, {
-                      item_type: value as ItemType,
-                      options: value === "radio_box" || value === "checklist" ? [""] : [],
-                    })
-                  }
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select type">
-                      {questionTypes.find(type => type.value === item.item_type)?.label}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {questionTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            {!isEditing ? (
-              renderQuestionPreview()
-            ) : (
-              <>
-                {(item.item_type === "radio_box" || item.item_type === "checklist") && (
-                  <div className="space-y-2 mt-2">
-                    {item.options?.map((option, optionIndex) => (
-                      <div key={optionIndex} className="flex items-center gap-2 pl-1">
-                        {item.item_type === "radio_box" ? (
-                          <CircleDot className="h-4 w-4 flex-shrink-0" />
-                        ) : (
-                          <CheckSquare className="h-4 w-4 flex-shrink-0" />
-                        )}
-                        <div className="flex items-center gap-2 flex-1">
-                          <Input
-                            value={option}
-                            onChange={(e) => onUpdate(index, {
-                              options: item.options?.map((opt, j) => 
-                                j === optionIndex ? e.target.value : opt
-                              )
-                            })}
-                            className="flex-1"
-                            placeholder={`Option ${optionIndex + 1}`}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onUpdate(index, {
-                              options: item.options?.filter((_, j) => j !== optionIndex)
-                            })}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => onUpdate(index, {
-                        options: [...(item.options || []), ""]
-                      })}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add option
-                    </Button>
-                  </div>
-                )}
-                {item.item_type === "question" && (
-                  <div className="space-y-2">
-                    <div className="border rounded-md px-3 py-2 bg-muted/30">
-                      <p className="text-sm text-muted-foreground">Text answer</p>
-                    </div>
-                  </div>
-                )}
-                {item.item_type === "photo" && (
-                  <div className="space-y-2">
-                    <div className="border rounded-md px-3 py-2 bg-muted/30">
-                      <p className="text-sm text-muted-foreground">Photo upload</p>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {isEditing && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id={`required-${item.id || index}`}
-                    checked={item.is_required}
-                    onCheckedChange={(checked) =>
-                      onUpdate(index, { is_required: checked as boolean })
-                    }
-                  />
-                  <label
-                    htmlFor={`required-${item.id || index}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Required
-                  </label>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onDelete?.(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
-}
+const fromFormBuilderQuestion = (question: FormBuilderQuestion, displayOrder: number): Omit<FormItem, 'id' | 'form_id'> => ({
+  item_type: question.type,
+  question_value: question.title,
+  options: question.options,
+  is_required: question.required,
+  display_order: displayOrder,
+});
 
 export default function FormDetail({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -355,47 +163,34 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
     }
   };
 
-  const updateQuestion = (index: number, updates: Partial<FormItem>) => {
+  const updateQuestion = (id: string, updates: Partial<FormBuilderQuestion>) => {
+    const index = editedItems.findIndex(item => 
+      item.id?.toString() === id || item.display_order.toString() === id
+    );
+    
+    if (index === -1) return;
+
     setEditedItems(items => 
       items.map((item, i) => 
-        i === index ? { ...item, ...updates } : item
+        i === index 
+          ? { 
+              ...item, 
+              item_type: updates.type || item.item_type,
+              question_value: updates.title || item.question_value,
+              options: updates.options || item.options,
+              is_required: updates.required ?? item.is_required,
+            } 
+          : item
       )
     );
   };
 
-  const addOption = (index: number) => {
-    setEditedItems(items => 
-      items.map((item, i) => 
-        i === index ? {
-          ...item,
-          options: [...(item.options || []), "New option"]
-        } : item
-      )
+  const deleteQuestion = (id: string) => {
+    const index = editedItems.findIndex(item => 
+      item.id?.toString() === id || item.display_order.toString() === id
     );
-  };
-
-  const updateOption = (questionIndex: number, optionIndex: number, value: string) => {
-    setEditedItems(items => 
-      items.map((item, i) => 
-        i === questionIndex ? {
-          ...item,
-          options: item.options?.map((opt, j) => 
-            j === optionIndex ? value : opt
-          )
-        } : item
-      )
-    );
-  };
-
-  const removeOption = (questionIndex: number, optionIndex: number) => {
-    setEditedItems(items => 
-      items.map((item, i) => 
-        i === questionIndex ? {
-          ...item,
-          options: item.options?.filter((_, j) => j !== optionIndex)
-        } : item
-      )
-    );
+    if (index === -1) return;
+    setEditedItems(items => items.filter((_, i) => i !== index));
   };
 
   const getStatusColor = () => {
@@ -496,8 +291,8 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
           </div>
         ) : (
           <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b">
-              <div className="flex-1 mr-4">
+            <div className="flex items-start justify-between p-6 border-b">
+              <div className="space-y-1">
                 {isEditing ? (
                   <div className="relative">
                     <Input
@@ -512,7 +307,7 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
                 ) : (
                   <h2 className="text-2xl font-semibold">{form.form.name}</h2>
                 )}
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2">
                   <Badge variant="secondary" className={getStatusColor()}>
                     {getStatusText()}
                   </Badge>
@@ -585,10 +380,11 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
                             {editedItems.map((item, index) => (
                               <SortableQuestionCard
                                 key={item.id || index}
-                                item={item}
-                                index={index}
-                                isEditing={isEditing}
+                                question={toFormBuilderQuestion(item)}
                                 onUpdate={updateQuestion}
+                                onDelete={deleteQuestion}
+                                isFirst={index === 0}
+                                isEditing={isEditing}
                               />
                             ))}
                           </div>
@@ -599,10 +395,11 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
                         {editedItems.map((item, index) => (
                           <SortableQuestionCard
                             key={item.id || index}
-                            item={item}
-                            index={index}
-                            isEditing={isEditing}
+                            question={toFormBuilderQuestion(item)}
                             onUpdate={updateQuestion}
+                            onDelete={deleteQuestion}
+                            isFirst={index === 0}
+                            isEditing={isEditing}
                           />
                         ))}
                       </div>

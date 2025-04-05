@@ -175,6 +175,7 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
                       onUpdate={updateQuestion}
                       onDelete={deleteQuestion}
                       isFirst={index === 0}
+                      isEditing={true}
                     />
                   ))}
                 </div>

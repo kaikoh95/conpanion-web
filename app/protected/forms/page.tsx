@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CreateFormDialog } from "@/components/form-builder/create-form-dialog";
+import { CreateFormDialog } from "@/components/forms/create-form-dialog";
 import { getForms } from "@/lib/api/forms";
 import { Form } from "@/lib/types/form";
 import { format } from "date-fns";

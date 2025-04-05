@@ -19,4 +19,5 @@ export interface SortableQuestionCardProps {
   onUpdate: (id: string, updates: Partial<FormBuilderQuestion>) => void;
   onDelete: (id: string) => void;
   isFirst: boolean;
+  isEditing: boolean;
 } 
