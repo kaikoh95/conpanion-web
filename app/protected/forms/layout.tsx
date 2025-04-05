@@ -35,6 +35,22 @@ export default function FormsLayout({ children }: { children: React.ReactNode })
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Extract form ID from pathname if it exists
+    const match = pathname.match(/\/forms\/(\d+)/);
+    if (match) {
+      setSelectedFormId(match[1]);
+    } else {
+      setSelectedFormId(null);
+    }
+  }, [pathname]);
+
+  const handleFormClick = (formId: number) => {
+    setSelectedFormId(formId.toString());
+    router.push(`/protected/forms/${formId}`);
+  };
 
   const fetchForms = async () => {
     try {
@@ -168,8 +184,8 @@ export default function FormsLayout({ children }: { children: React.ReactNode })
                   filteredForms.map((form) => (
                     <TableRow 
                       key={form.id} 
-                      className={`cursor-pointer hover:bg-muted/50 ${pathname === `/protected/forms/${form.id}` ? 'bg-muted' : ''}`}
-                      onClick={() => router.push(`/protected/forms/${form.id}`)}
+                      className={`cursor-pointer hover:bg-muted/50 ${form.id?.toString() === selectedFormId ? 'bg-muted' : ''}`}
+                      onClick={() => handleFormClick(form.id!)}
                     >
                       <TableCell className="font-medium">{form.name}</TableCell>
                       <TableCell>General</TableCell>
@@ -203,7 +219,7 @@ export default function FormsLayout({ children }: { children: React.ReactNode })
         />
       </div>
 
-      {children}
+      {selectedFormId && children}
     </div>
   );
 } 
