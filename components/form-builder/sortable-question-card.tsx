@@ -11,10 +11,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { SortableQuestionCardProps } from "@/lib/types/form-builder";
 
 const questionTypes = [
-  { value: "short", label: "Short answer" },
-  { value: "long", label: "Long answer" },
-  { value: "radio", label: "Multiple choice" },
-  { value: "checkbox", label: "Checkboxes" },
+  { value: "question", label: "Short answer" },
+  { value: "radio_box", label: "Multiple choice" },
+  { value: "checklist", label: "Checkboxes" },
+  { value: "photo", label: "Photo" },
 ] as const;
 
 export function SortableQuestionCard({ question, onUpdate, onDelete, isFirst }: SortableQuestionCardProps) {
@@ -76,11 +76,11 @@ export function SortableQuestionCard({ question, onUpdate, onDelete, isFirst }: 
               </Select>
             </div>
 
-            {(question.type === "radio" || question.type === "checkbox") && (
+            {(question.type === "radio_box" || question.type === "checklist") && (
               <div className="space-y-2">
                 {question.options?.map((option, optionIndex) => (
                   <div key={optionIndex} className="flex items-center gap-2">
-                    {question.type === "radio" ? (
+                    {question.type === "radio_box" ? (
                       <CircleDot className="h-4 w-4" />
                     ) : (
                       <CheckSquare className="h-4 w-4" />
@@ -108,6 +108,22 @@ export function SortableQuestionCard({ question, onUpdate, onDelete, isFirst }: 
                 >
                   Add option
                 </Button>
+              </div>
+            )}
+
+            {question.type === "question" && (
+              <div className="space-y-2">
+                <div className="border rounded-md px-3 py-2 bg-muted/30">
+                  <p className="text-sm text-muted-foreground">Text answer</p>
+                </div>
+              </div>
+            )}
+
+            {question.type === "photo" && (
+              <div className="space-y-2">
+                <div className="border rounded-md px-3 py-2 bg-muted/30">
+                  <p className="text-sm text-muted-foreground">Photo upload</p>
+                </div>
               </div>
             )}
 

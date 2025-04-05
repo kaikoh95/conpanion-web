@@ -1,4 +1,4 @@
-export type QuestionType = "short" | "long" | "radio" | "checkbox";
+export type QuestionType = 'question' | 'checklist' | 'radio_box' | 'photo';
 
 export interface FormBuilderQuestion {
   id: string;

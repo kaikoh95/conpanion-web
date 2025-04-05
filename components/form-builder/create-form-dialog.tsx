@@ -8,6 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
@@ -32,6 +33,16 @@ import {
 import { FormBuilderProps, FormBuilderQuestion } from "@/lib/types/form-builder";
 import { generateFormItems } from "@/lib/utils/form-utils";
 import { SortableQuestionCard } from "./sortable-question-card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuilderProps) {
   const router = useRouter();
@@ -39,12 +50,13 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
   const [questions, setQuestions] = useState<FormBuilderQuestion[]>([
     {
       id: "1",
-      type: "short",
+      type: "question",
       title: "",
       required: false,
     },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -68,7 +80,7 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
   const addQuestion = () => {
     const newQuestion: FormBuilderQuestion = {
       id: String(questions.length + 1),
-      type: "short",
+      type: "question",
       title: "",
       required: false,
     };
@@ -83,6 +95,30 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
 
   const deleteQuestion = (id: string) => {
     setQuestions(questions.filter((q) => q.id !== id));
+  };
+
+  const hasUnsavedChanges = () => {
+    return title.trim() !== "" || questions.some(q => q.title.trim() !== "" || q.options?.some(opt => opt.trim() !== ""));
+  };
+
+  const handleClose = (open: boolean) => {
+    if (!open && hasUnsavedChanges()) {
+      setShowDiscardDialog(true);
+    } else {
+      onOpenChange(open);
+    }
+  };
+
+  const handleDiscard = () => {
+    setTitle("");
+    setQuestions([{
+      id: "1",
+      type: "question",
+      title: "",
+      required: false,
+    }]);
+    setShowDiscardDialog(false);
+    onOpenChange(false);
   };
 
   const handleSubmit = async () => {
@@ -107,67 +143,83 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Create Form</DialogTitle>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="New form"
-              className="text-xl font-semibold border-none bg-transparent focus-visible:ring-0 px-0 text-foreground placeholder:text-muted-foreground/60"
+              className="text-2xl font-semibold border-none bg-transparent focus-visible:ring-0 px-0 text-foreground placeholder:text-muted-foreground/60"
             />
-          </DialogTitle>
-        </DialogHeader>
+          </DialogHeader>
 
-        <div className="space-y-4 my-4">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-            modifiers={[]}
-          >
-            <SortableContext
-              items={questions.map(q => q.id)}
-              strategy={verticalListSortingStrategy}
+          <div className="space-y-4 my-4">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+              modifiers={[]}
             >
-              <div className="space-y-4">
-                {questions.map((question, index) => (
-                  <SortableQuestionCard
-                    key={question.id}
-                    question={question}
-                    onUpdate={updateQuestion}
-                    onDelete={deleteQuestion}
-                    isFirst={index === 0}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </div>
+              <SortableContext
+                items={questions.map(q => q.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-4">
+                  {questions.map((question, index) => (
+                    <SortableQuestionCard
+                      key={question.id}
+                      question={question}
+                      onUpdate={updateQuestion}
+                      onDelete={deleteQuestion}
+                      isFirst={index === 0}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
 
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={addQuestion}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add question
-        </Button>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={addQuestion}
           >
-            {isSubmitting ? "Creating..." : "Create form"}
+            <Plus className="h-4 w-4 mr-2" />
+            Add question
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleClose(false)}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Creating..." : "Create form"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to discard your changes? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDiscard}>Discard</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 } 
