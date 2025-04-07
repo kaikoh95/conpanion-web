@@ -3,13 +3,14 @@ import { FormItem } from "@/lib/types/form";
 
 export const mapQuestionTypeToItemType = (type: QuestionType): "question" | "checklist" | "radio_box" | "photo" => {
   switch (type) {
-    case "short":
-    case "long":
+    case "question":
       return "question";
-    case "radio":
+    case "radio_box":
       return "radio_box";
-    case "checkbox":
+    case "checklist":
       return "checklist";
+    case "photo":
+      return "photo";
     default:
       return "question";
   }
@@ -24,7 +25,7 @@ export const generateFormItems = (questions: {
   return questions.map((question, index) => ({
     item_type: mapQuestionTypeToItemType(question.type),
     question_value: question.title,
-    options: question.type === "radio" || question.type === "checkbox" ? question.options || [] : [],
+    options: question.type === "radio_box" || question.type === "checklist" ? question.options || [] : [],
     is_required: question.required,
     display_order: index,
   }));

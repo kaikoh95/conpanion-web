@@ -1,4 +1,4 @@
-export type QuestionType = "short" | "long" | "radio" | "checkbox";
+export type QuestionType = 'question' | 'checklist' | 'radio_box' | 'photo';
 
 export interface FormBuilderQuestion {
   id: string;
@@ -19,4 +19,5 @@ export interface SortableQuestionCardProps {
   onUpdate: (id: string, updates: Partial<FormBuilderQuestion>) => void;
   onDelete: (id: string) => void;
   isFirst: boolean;
+  isEditing: boolean;
 } 
