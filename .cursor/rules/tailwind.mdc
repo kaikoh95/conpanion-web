@@ -1,0 +1,20 @@
+---
+description: Base Rules
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- You can @ files here
+- You can use markdown but dont have to
+
+You should always use the rules defined here when suggesting Tailwind CSS classes usages.
+
+You should always avoid using position absolute as much as possible.
+
+You should always use modern definitions like flexbox or grid as much as possible.
+
+You should always use classes with mobile responsiveness first in mind then desktop.
+
+You should always suggest the minimal number of classes in order to meet the requirements rather than bloating the entire HTML.

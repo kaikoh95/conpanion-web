@@ -1,0 +1,24 @@
+# Supabase
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Dependencies
+node_modules/
+
+# Build outputs
+build/
+dist/
+
+# Editor directories
+.vscode
+.idea/
+
+.branches
+.temp
+
+# dotenvx
+.env.keys
