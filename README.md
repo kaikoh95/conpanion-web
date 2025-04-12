@@ -58,6 +58,11 @@ npm run db:reset
 
 ### Database Changes
 
+Link your local project to your remote Supabase project
+```bash
+npm run sb link --project-ref your-project-ref
+```
+
 1. Create a new migration:
 ```bash
 supabase migration new <migration-name>
@@ -72,16 +77,13 @@ npm run db:reset
 
 4. Push migrations to remote database:
 ```bash
-# First, link your local project to your remote Supabase project
-npm run sb link --project-ref your-project-ref
-
 # Then push the migrations
 npm run sb db push
 ```
 
 5. Working with database data:
 ```bash
-# Generate a dump of your database data
+# Generate a dump of your database data against the remote db
 npm run db:dump
 
 # Quick access to Supabase CLI commands

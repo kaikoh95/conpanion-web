@@ -7,7 +7,7 @@
     "lint": "next lint",
     "sb": "supabase",
     "types:db": "supabase gen types typescript --local > lib/supabase/types.generated.d.ts",
-    "db:dump": "supabase db dump --data-only > supabase/seed.sql",
+    "db:dump": "supabase db dump --linked --data-only -f ./supabase/seed.sql",
     "db:reset": "supabase db reset && npm run types:db",
     "prepare": "husky install"
   },
