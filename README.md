@@ -65,9 +65,27 @@ supabase migration new <migration-name>
 
 2. Edit the migration file in `supabase/migrations/`
 
-3. Apply migrations and update types:
+3. Apply migrations locally and update types:
 ```bash
 npm run db:reset
+```
+
+4. Push migrations to remote database:
+```bash
+# First, link your local project to your remote Supabase project
+npm run sb link --project-ref your-project-ref
+
+# Then push the migrations
+npm run sb db push
+```
+
+5. Working with database data:
+```bash
+# Generate a dump of your database data
+npm run db:dump
+
+# Quick access to Supabase CLI commands
+npm run sb -- <command>
 ```
 
 ### Type Generation
@@ -81,14 +99,12 @@ To manually generate types from your local database:
 npm run types:db
 ```
 
-### Available Scripts
+### Other available Scripts
 
 - `npm run dev` - Start the development server
 - `npm run build` - Build the production application
 - `npm run start` - Start the production server
 - `npm run lint` - Run ESLint
-- `npm run types:db` - Generate TypeScript types from local database schema
-- `npm run db:reset` - Reset database and update types
 
 ## Project Structure
 
