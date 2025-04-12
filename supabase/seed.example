@@ -1,0 +1,686 @@
+-- Seed Users first
+-- Note: The passwords are hashed using bcrypt and the default cost factor
+-- The example password used here is 'password123' for all users
+INSERT INTO auth.users (
+    id,
+    instance_id,
+    email,
+    encrypted_password,
+    email_confirmed_at,
+    invited_at,
+    confirmation_token,
+    confirmation_sent_at,
+    recovery_token,
+    recovery_sent_at,
+    email_change_token_new,
+    email_change,
+    email_change_sent_at,
+    last_sign_in_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    is_super_admin,
+    created_at,
+    updated_at,
+    phone,
+    phone_confirmed_at,
+    phone_change,
+    phone_change_token,
+    phone_change_sent_at,
+    email_change_token_current,
+    email_change_confirm_status,
+    banned_until,
+    reauthentication_token,
+    reauthentication_sent_at,
+    is_sso_user,
+    deleted_at,
+    is_anonymous,
+    aud,
+    role
+) VALUES 
+(
+    'e9d42068-621c-4e36-8c7c-1dd408c92181', -- id
+    '00000000-0000-0000-0000-000000000000', -- instance_id
+    'kaikoh95@gmail.com', -- email
+    crypt('password123', gen_salt('bf')), -- password123
+    now(), -- email_confirmed_at
+    null, -- invited_at
+    '', -- confirmation_token
+    null, -- confirmation_sent_at
+    '', -- recovery_token
+    null, -- recovery_sent_at
+    '', -- email_change_token_new
+    '', -- email_change
+    null, -- email_change_sent_at
+    now(), -- last_sign_in_at
+    jsonb_build_object(
+        'provider', 'email',
+        'providers', array['email']
+    ), -- raw_app_meta_data
+    jsonb_build_object(
+        'name', 'Admin User',
+        'avatar_url', 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
+    ), -- raw_user_meta_data
+    false, -- is_super_admin
+    now(), -- created_at
+    now(), -- updated_at
+    null, -- phone
+    null, -- phone_confirmed_at
+    '', -- phone_change
+    '', -- phone_change_token
+    null, -- phone_change_sent_at
+    '', -- email_change_token_current
+    0, -- email_change_confirm_status
+    null, -- banned_until
+    '', -- reauthentication_token
+    null, -- reauthentication_sent_at
+    false, -- is_sso_user
+    null, -- deleted_at
+    false, -- is_anonymous
+    'authenticated', -- aud
+    'authenticated' -- role
+),
+(
+    'f9d42068-621c-4e36-8c7c-1dd408c92183', -- id
+    '00000000-0000-0000-0000-000000000000', -- instance_id
+    'sebapian95@gmail.com', -- email
+    crypt('password123', gen_salt('bf')), -- password123
+    now(), -- email_confirmed_at
+    null, -- invited_at
+    '', -- confirmation_token
+    null, -- confirmation_sent_at
+    '', -- recovery_token
+    null, -- recovery_sent_at
+    '', -- email_change_token_new
+    '', -- email_change
+    null, -- email_change_sent_at
+    now(), -- last_sign_in_at
+    jsonb_build_object(
+        'provider', 'email',
+        'providers', array['email']
+    ), -- raw_app_meta_data
+    jsonb_build_object(
+        'name', 'Regular User',
+        'avatar_url', 'https://www.gravatar.com/avatar/11111111111111111111111111111111?d=mp&f=y'
+    ), -- raw_user_meta_data
+    false, -- is_super_admin
+    now(), -- created_at
+    now(), -- updated_at
+    null, -- phone
+    null, -- phone_confirmed_at
+    '', -- phone_change
+    '', -- phone_change_token
+    null, -- phone_change_sent_at
+    '', -- email_change_token_current
+    0, -- email_change_confirm_status
+    null, -- banned_until
+    '', -- reauthentication_token
+    null, -- reauthentication_sent_at
+    false, -- is_sso_user
+    null, -- deleted_at
+    false, -- is_anonymous
+    'authenticated', -- aud
+    'authenticated' -- role
+),
+(
+    'f9d42068-621c-4e36-8c7c-1dd408c92182', -- id
+    '00000000-0000-0000-0000-000000000000', -- instance_id
+    'user@example.com', -- email
+    crypt('password123', gen_salt('bf')), -- password123
+    now(), -- email_confirmed_at
+    null, -- invited_at
+    '', -- confirmation_token
+    null, -- confirmation_sent_at
+    '', -- recovery_token
+    null, -- recovery_sent_at
+    '', -- email_change_token_new
+    '', -- email_change
+    null, -- email_change_sent_at
+    now(), -- last_sign_in_at
+    jsonb_build_object(
+        'provider', 'email',
+        'providers', array['email']
+    ), -- raw_app_meta_data
+    jsonb_build_object(
+        'name', 'Regular User',
+        'avatar_url', 'https://www.gravatar.com/avatar/11111111111111111111111111111111?d=mp&f=y'
+    ), -- raw_user_meta_data
+    false, -- is_super_admin
+    now(), -- created_at
+    now(), -- updated_at
+    null, -- phone
+    null, -- phone_confirmed_at
+    '', -- phone_change
+    '', -- phone_change_token
+    null, -- phone_change_sent_at
+    '', -- email_change_token_current
+    0, -- email_change_confirm_status
+    null, -- banned_until
+    '', -- reauthentication_token
+    null, -- reauthentication_sent_at
+    false, -- is_sso_user
+    null, -- deleted_at
+    false, -- is_anonymous
+    'authenticated', -- aud
+    'authenticated' -- role
+);
+
+-- Insert identities for the users (required for email authentication)
+INSERT INTO auth.identities (
+    id,
+    user_id,
+    identity_data,
+    provider,
+    provider_id,
+    last_sign_in_at,
+    created_at,
+    updated_at
+) VALUES 
+(
+    'e9d42068-621c-4e36-8c7c-1dd408c92181',
+    'e9d42068-621c-4e36-8c7c-1dd408c92181',
+    jsonb_build_object(
+        'sub', 'e9d42068-621c-4e36-8c7c-1dd408c92181',
+        'email', 'kaikoh95@gmail.com',
+        'email_verified', true,
+        'phone_verified', false
+    ),
+    'email',
+    'kaikoh95@gmail.com',
+    now(),
+    now(),
+    now()
+),
+(
+    'f9d42068-621c-4e36-8c7c-1dd408c92183',
+    'f9d42068-621c-4e36-8c7c-1dd408c92183',
+    jsonb_build_object(
+        'sub', 'f9d42068-621c-4e36-8c7c-1dd408c92183',
+        'email', 'sebapian95@gmail.com',
+        'email_verified', true,
+        'phone_verified', false
+    ),
+    'email',
+    'sebapian95@gmail.com',
+    now(),
+    now(),
+    now()
+),
+(
+    'f9d42068-621c-4e36-8c7c-1dd408c92182',
+    'f9d42068-621c-4e36-8c7c-1dd408c92182',
+    jsonb_build_object(
+        'sub', 'f9d42068-621c-4e36-8c7c-1dd408c92182',
+        'email', 'user@example.com',
+        'email_verified', true,
+        'phone_verified', false
+    ),
+    'email',
+    'user@example.com',
+    now(),
+    now(),
+    now()
+);
+
+-- Create a sample project (we'll create the projects table later)
+DO $$
+DECLARE
+    v_user_id uuid := 'e9d42068-621c-4e36-8c7c-1dd408c92181';
+    v_project_id integer := 1;
+BEGIN
+    -- Insert default statuses
+    INSERT INTO public.statuses (project_id, name, color, position, is_default, created_by) VALUES
+    (v_project_id, 'To Do', '#E2E8F0', 0, true, v_user_id),
+    (v_project_id, 'In Progress', '#3182CE', 1, false, v_user_id),
+    (v_project_id, 'In Review', '#805AD5', 2, false, v_user_id),
+    (v_project_id, 'Done', '#48BB78', 3, false, v_user_id);
+
+    -- Insert default priorities
+    INSERT INTO public.priorities (project_id, name, color, position, is_default, created_by) VALUES
+    (v_project_id, 'Low', '#718096', 0, false, v_user_id),
+    (v_project_id, 'Medium', '#3182CE', 1, true, v_user_id),
+    (v_project_id, 'High', '#DD6B20', 2, false, v_user_id),
+    (v_project_id, 'Urgent', '#E53E3E', 3, false, v_user_id);
+
+    -- Insert sample labels
+    INSERT INTO public.labels (project_id, name, color, description, created_by) VALUES
+    (v_project_id, 'Bug', '#FC8181', 'Issues that need to be fixed', v_user_id),
+    (v_project_id, 'Feature', '#68D391', 'New features to be implemented', v_user_id),
+    (v_project_id, 'Enhancement', '#63B3ED', 'Improvements to existing features', v_user_id),
+    (v_project_id, 'Documentation', '#B794F4', 'Documentation related tasks', v_user_id);
+
+    -- Insert sample tasks
+    INSERT INTO public.tasks (
+        title,
+        description,
+        status_id,
+        priority_id,
+        project_id,
+        created_by
+    ) VALUES
+    (
+        'Set up project infrastructure',
+        'Initialize the project with basic configuration and dependencies',
+        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'In Progress'),
+        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'High'),
+        v_project_id,
+        v_user_id
+    ),
+    (
+        'Design database schema',
+        'Create initial database schema with core tables and relationships',
+        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'Done'),
+        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'High'),
+        v_project_id,
+        v_user_id
+    ),
+    (
+        'Implement user authentication',
+        'Set up user authentication system with email and password',
+        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'To Do'),
+        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Urgent'),
+        v_project_id,
+        v_user_id
+    );
+    
+    -- Add metadata for tasks
+    INSERT INTO public.task_metadata (task_id, title, value, created_by)
+    VALUES
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Set up project infrastructure' AND created_by = v_user_id),
+        'estimated_hours',
+        '8',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Set up project infrastructure' AND created_by = v_user_id),
+        'actual_hours',
+        '4',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Design database schema' AND created_by = v_user_id),
+        'estimated_hours',
+        '4',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Design database schema' AND created_by = v_user_id),
+        'actual_hours',
+        '6',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Implement user authentication' AND created_by = v_user_id),
+        'estimated_hours',
+        '12',
+        v_user_id
+    );
+
+    -- Assign tasks to the user
+    INSERT INTO public.entity_assignees (entity_type, entity_id, user_id, assigned_by) 
+    SELECT 
+        'task',
+        id,
+        v_user_id,
+        v_user_id
+    FROM public.tasks
+    WHERE created_by = v_user_id;
+
+    -- Add labels to tasks
+    INSERT INTO public.entity_labels (entity_type, entity_id, label_id, created_by)
+    SELECT 
+        'task',
+        t.id,
+        l.id,
+        v_user_id
+    FROM public.tasks t
+    CROSS JOIN public.labels l
+    WHERE t.created_by = v_user_id
+    AND l.name IN ('Feature', 'Enhancement')
+    AND t.title = 'Set up project infrastructure';
+
+    -- Add positions for tasks in different views
+    INSERT INTO public.entity_positions (
+        entity_type,
+        entity_id,
+        context,
+        position,
+        user_id
+    )
+    SELECT
+        'task',
+        id,
+        'list',
+        (ROW_NUMBER() OVER (ORDER BY created_at)) * 100,
+        v_user_id
+    FROM public.tasks
+    WHERE created_by = v_user_id;
+
+    -- Add positions for kanban view
+    INSERT INTO public.entity_positions (
+        entity_type,
+        entity_id,
+        context,
+        position,
+        user_id
+    )
+    SELECT
+        'task',
+        id,
+        'kanban',
+        (ROW_NUMBER() OVER (PARTITION BY status_id ORDER BY created_at)) * 100,
+        v_user_id
+    FROM public.tasks
+    WHERE created_by = v_user_id;
+END $$;
+
+-- Create a sample project for sebapian95@gmail.com
+DO $$
+DECLARE
+    v_user_id uuid := 'f9d42068-621c-4e36-8c7c-1dd408c92183';
+    v_project_id integer := 2;
+BEGIN
+    -- Insert default statuses
+    INSERT INTO public.statuses (project_id, name, color, position, is_default, created_by) VALUES
+    (v_project_id, 'Backlog', '#CBD5E0', 0, true, v_user_id),
+    (v_project_id, 'In Development', '#4299E1', 1, false, v_user_id),
+    (v_project_id, 'Testing', '#9F7AEA', 2, false, v_user_id),
+    (v_project_id, 'Completed', '#48BB78', 3, false, v_user_id);
+
+    -- Insert default priorities
+    INSERT INTO public.priorities (project_id, name, color, position, is_default, created_by) VALUES
+    (v_project_id, 'Low', '#718096', 0, false, v_user_id),
+    (v_project_id, 'Medium', '#4299E1', 1, true, v_user_id),
+    (v_project_id, 'High', '#ED8936', 2, false, v_user_id),
+    (v_project_id, 'Critical', '#E53E3E', 3, false, v_user_id);
+
+    -- Insert sample labels
+    INSERT INTO public.labels (project_id, name, color, description, created_by) VALUES
+    (v_project_id, 'Frontend', '#FC8181', 'Frontend tasks', v_user_id),
+    (v_project_id, 'Backend', '#68D391', 'Backend tasks', v_user_id),
+    (v_project_id, 'UX/UI', '#63B3ED', 'Design related tasks', v_user_id),
+    (v_project_id, 'Testing', '#D6BCFA', 'QA and testing tasks', v_user_id);
+
+    -- Insert sample tasks
+    INSERT INTO public.tasks (
+        title,
+        description,
+        status_id,
+        priority_id,
+        project_id,
+        created_by
+    ) VALUES
+    (
+        'Create login page',
+        'Design and implement a responsive login page with email and password authentication',
+        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'In Development'),
+        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'High'),
+        v_project_id,
+        v_user_id
+    ),
+    (
+        'Set up authentication API',
+        'Implement JWT authentication backend API with refresh tokens',
+        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'Completed'),
+        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Critical'),
+        v_project_id,
+        v_user_id
+    ),
+    (
+        'Implement user dashboard',
+        'Create a dashboard with user statistics and recent activity',
+        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'Backlog'),
+        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Medium'),
+        v_project_id,
+        v_user_id
+    );
+    
+    -- Add metadata for tasks
+    INSERT INTO public.task_metadata (task_id, title, value, created_by)
+    VALUES
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Create login page' AND created_by = v_user_id),
+        'estimated_hours',
+        '6',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Create login page' AND created_by = v_user_id),
+        'actual_hours',
+        '4',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Set up authentication API' AND created_by = v_user_id),
+        'estimated_hours',
+        '8',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Set up authentication API' AND created_by = v_user_id),
+        'actual_hours',
+        '10',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Implement user dashboard' AND created_by = v_user_id),
+        'estimated_hours',
+        '12',
+        v_user_id
+    );
+
+    -- Assign tasks to the user
+    INSERT INTO public.entity_assignees (entity_type, entity_id, user_id, assigned_by) 
+    SELECT 
+        'task',
+        id,
+        v_user_id,
+        v_user_id
+    FROM public.tasks
+    WHERE created_by = v_user_id;
+
+    -- Add labels to tasks
+    INSERT INTO public.entity_labels (entity_type, entity_id, label_id, created_by)
+    SELECT 
+        'task',
+        t.id,
+        l.id,
+        v_user_id
+    FROM public.tasks t
+    CROSS JOIN public.labels l
+    WHERE t.created_by = v_user_id
+    AND l.name IN ('Frontend', 'UX/UI')
+    AND t.title = 'Create login page';
+
+    -- Add positions for tasks in different views
+    INSERT INTO public.entity_positions (
+        entity_type,
+        entity_id,
+        context,
+        position,
+        user_id
+    )
+    SELECT
+        'task',
+        id,
+        'list',
+        (ROW_NUMBER() OVER (ORDER BY created_at)) * 100,
+        v_user_id
+    FROM public.tasks
+    WHERE created_by = v_user_id;
+
+    -- Add positions for kanban view
+    INSERT INTO public.entity_positions (
+        entity_type,
+        entity_id,
+        context,
+        position,
+        user_id
+    )
+    SELECT
+        'task',
+        id,
+        'kanban',
+        (ROW_NUMBER() OVER (PARTITION BY status_id ORDER BY created_at)) * 100,
+        v_user_id
+    FROM public.tasks
+    WHERE created_by = v_user_id;
+END $$;
+
+-- Create a sample project for user@example.com
+DO $$
+DECLARE
+    v_user_id uuid := 'f9d42068-621c-4e36-8c7c-1dd408c92182';
+    v_project_id integer := 3;
+BEGIN
+    -- Insert default statuses
+    INSERT INTO public.statuses (project_id, name, color, position, is_default, created_by) VALUES
+    (v_project_id, 'New', '#E2E8F0', 0, true, v_user_id),
+    (v_project_id, 'Working', '#3182CE', 1, false, v_user_id),
+    (v_project_id, 'Blocked', '#F56565', 2, false, v_user_id),
+    (v_project_id, 'Completed', '#48BB78', 3, false, v_user_id);
+
+    -- Insert default priorities
+    INSERT INTO public.priorities (project_id, name, color, position, is_default, created_by) VALUES
+    (v_project_id, 'Low', '#718096', 0, false, v_user_id),
+    (v_project_id, 'Normal', '#3182CE', 1, true, v_user_id),
+    (v_project_id, 'Important', '#DD6B20', 2, false, v_user_id),
+    (v_project_id, 'Blocker', '#E53E3E', 3, false, v_user_id);
+
+    -- Insert sample labels
+    INSERT INTO public.labels (project_id, name, color, description, created_by) VALUES
+    (v_project_id, 'Performance', '#FC8181', 'Performance optimization tasks', v_user_id),
+    (v_project_id, 'Security', '#68D391', 'Security related tasks', v_user_id),
+    (v_project_id, 'Refactor', '#63B3ED', 'Code refactoring tasks', v_user_id),
+    (v_project_id, 'Research', '#B794F4', 'Research and investigation tasks', v_user_id);
+
+    -- Insert sample tasks
+    INSERT INTO public.tasks (
+        title,
+        description,
+        status_id,
+        priority_id,
+        project_id,
+        created_by,
+        due_date
+    ) VALUES
+    (
+        'Security audit',
+        'Perform a comprehensive security audit of the application',
+        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'Working'),
+        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Blocker'),
+        v_project_id,
+        v_user_id,
+        (CURRENT_DATE + INTERVAL '2 weeks')::date
+    ),
+    (
+        'Optimize database queries',
+        'Identify and optimize slow database queries to improve application performance',
+        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'New'),
+        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Important'),
+        v_project_id,
+        v_user_id,
+        (CURRENT_DATE + INTERVAL '1 month')::date
+    ),
+    (
+        'Refactor authentication service',
+        'Improve code organization and test coverage for the authentication service',
+        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'Completed'),
+        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Normal'),
+        v_project_id,
+        v_user_id,
+        NULL
+    );
+    
+    -- Add metadata for tasks
+    INSERT INTO public.task_metadata (task_id, title, value, created_by)
+    VALUES
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Security audit' AND created_by = v_user_id),
+        'estimated_hours',
+        '16',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Security audit' AND created_by = v_user_id),
+        'actual_hours',
+        '6',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Optimize database queries' AND created_by = v_user_id),
+        'estimated_hours',
+        '8',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Refactor authentication service' AND created_by = v_user_id),
+        'estimated_hours',
+        '10',
+        v_user_id
+    ),
+    (
+        (SELECT id FROM public.tasks WHERE title = 'Refactor authentication service' AND created_by = v_user_id),
+        'actual_hours',
+        '12',
+        v_user_id
+    );
+
+    -- Assign tasks to the user
+    INSERT INTO public.entity_assignees (entity_type, entity_id, user_id, assigned_by) 
+    SELECT 
+        'task',
+        id,
+        v_user_id,
+        v_user_id
+    FROM public.tasks
+    WHERE created_by = v_user_id;
+
+    -- Add labels to tasks
+    INSERT INTO public.entity_labels (entity_type, entity_id, label_id, created_by)
+    SELECT 
+        'task',
+        t.id,
+        l.id,
+        v_user_id
+    FROM public.tasks t
+    CROSS JOIN public.labels l
+    WHERE t.created_by = v_user_id
+    AND ((l.name = 'Security' AND t.title = 'Security audit') OR
+         (l.name = 'Performance' AND t.title = 'Optimize database queries') OR
+         (l.name = 'Refactor' AND t.title = 'Refactor authentication service'));
+
+    -- Add positions for tasks in different views
+    INSERT INTO public.entity_positions (
+        entity_type,
+        entity_id,
+        context,
+        position,
+        user_id
+    )
+    SELECT
+        'task',
+        id,
+        'list',
+        (ROW_NUMBER() OVER (ORDER BY created_at)) * 100,
+        v_user_id
+    FROM public.tasks
+    WHERE created_by = v_user_id;
+
+    -- Add positions for kanban view
+    INSERT INTO public.entity_positions (
+        entity_type,
+        entity_id,
+        context,
+        position,
+        user_id
+    )
+    SELECT
+        'task',
+        id,
+        'kanban',
+        (ROW_NUMBER() OVER (PARTITION BY status_id ORDER BY created_at)) * 100,
+        v_user_id
+    FROM public.tasks
+    WHERE created_by = v_user_id;
+END $$; 

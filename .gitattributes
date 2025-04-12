@@ -1,0 +1,2 @@
+# Mark generated TypeScript definition files as generated in GitHub
+**/*.generated.* linguist-generated=true 
