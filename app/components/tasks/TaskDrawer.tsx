@@ -1,21 +1,32 @@
-import { Database } from '@/lib/supabase/types.generated'
-import { formatDistanceToNow, format } from 'date-fns'
-import { Badge } from '../ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
-import { X, Pencil, Check, Send, Plus, Trash2 } from 'lucide-react'
-import StatusPill from './StatusPill'
-import PriorityPill from './PriorityPill'
-import { useState, useRef, useEffect, ChangeEvent } from 'react'
-import { getSupabaseClient } from '@/lib/supabase/client'
-import { useAuth } from '@/hooks/useAuth'
-import { useTaskComments, TaskComment, useTaskMetadata, TaskMetadata } from '../../protected/tasks/hooks'
-import { DatePicker } from '@/components/ui/date-picker'
-import { TaskWithRelations } from '@/app/protected/tasks/models'
+import { Database } from '@/lib/supabase/types.generated';
+import { formatDistanceToNow, format } from 'date-fns';
+import { Badge } from '../ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { X, Pencil, Check, Send, Plus, Trash2 } from 'lucide-react';
+import StatusPill from './StatusPill';
+import PriorityPill from './PriorityPill';
+import { useState, useRef, useEffect } from 'react';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  useTaskComments,
+  TaskComment,
+  useTaskMetadata,
+  TaskMetadata,
+} from '../../protected/tasks/hooks';
+import { DatePicker } from '@/components/ui/date-picker';
+import { TaskWithRelations } from '@/app/protected/tasks/models';
+import { AssigneeSelector } from '@/components/AssigneeSelector';
+import { ProjectMember } from '@/hooks/useProjectMembers';
 
-type Task = Database['public']['Tables']['tasks']['Row']
-type Status = Database['public']['Tables']['statuses']['Row']
-type Priority = Database['public']['Tables']['priorities']['Row']
-type Label = Database['public']['Tables']['labels']['Row']
+type Task = Database['public']['Tables']['tasks']['Row'];
+type Status = Database['public']['Tables']['statuses']['Row'];
+type Priority = Database['public']['Tables']['priorities']['Row'];
+type Label = Database['public']['Tables']['labels']['Row'];
+type UserMetadata = {
+  name: string;
+  avatar_url?: string;
+};
 
 interface TaskDrawerProps {
   isOpen: boolean
@@ -106,6 +117,8 @@ export function TaskDrawer({
   );
   const [savingDueDate, setSavingDueDate] = useState(false);
   const [dueDateError, setDueDateError] = useState<string | null>(null);
+
+  const [assigneeError, setAssigneeError] = useState<string | null>(null);
 
   // Refresh comments when modal is opened
   useEffect(() => {
@@ -429,7 +442,7 @@ export function TaskDrawer({
   };
 
   // Better typing for the input handlers
-  const handleEstimatedHoursChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleEstimatedHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow numbers and decimal point
     const value = e.target.value;
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
@@ -437,7 +450,7 @@ export function TaskDrawer({
     }
   };
 
-  const handleActualHoursChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleActualHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow numbers and decimal point
     const value = e.target.value;
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
@@ -517,6 +530,66 @@ export function TaskDrawer({
       console.error('Exception updating task due date:', err);
       setDueDateError('An unexpected error occurred');
       setSavingDueDate(false);
+    }
+  };
+
+  const handleAssigneeAdd = async (member: ProjectMember) => {
+    if (!user?.id) return;
+    setAssigneeError(null);
+    
+    try {
+      const supabase = getSupabaseClient();
+
+      // Check if already assigned
+      if (assignees.some(a => a.id === member.id)) {
+        return;
+      }
+
+      const { error } = await supabase
+        .from('entity_assignees')
+        .insert({
+          assigned_by: user.id,
+          entity_id: task.id,
+          entity_type: 'task',
+          user_id: member.id
+        });
+
+      if (error) {
+        console.error('Error adding assignee:', error);
+        setAssigneeError('Failed to add assignee');
+        return;
+      }
+
+      refreshTasks();
+    } catch (err) {
+      console.error('Exception adding assignee:', err);
+      setAssigneeError('An unexpected error occurred');
+    }
+  };
+
+  const handleAssigneeRemove = async (memberId: string) => {
+    setAssigneeError(null);
+    
+    try {
+      const supabase = getSupabaseClient();
+
+      const { error } = await supabase
+        .from('entity_assignees')
+        .delete()
+        .eq('entity_type', 'task')
+        .eq('entity_id', task.id)
+        .eq('user_id', memberId);
+
+      if (error) {
+        console.error('Error removing assignee:', error);
+        setAssigneeError('Failed to remove assignee');
+        return;
+      }
+
+      refreshTasks();
+    } catch (err) {
+      console.error('Exception removing assignee:', err);
+      setAssigneeError('An unexpected error occurred');
     }
   };
 
@@ -750,29 +823,15 @@ export function TaskDrawer({
             </div>
           </div>
 
-          {/* Assignees */}
+          {/* Add the AssigneeSelector in the correct location */}
           <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Assignees</h3>
-            {assignees.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {assignees.map(assignee => (
-                  <div 
-                    key={assignee.id} 
-                    className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-md border border-muted-foreground/20"
-                  >
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={assignee.avatar_url} />
-                      <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
-                        {assignee.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-foreground text-sm">{assignee.name}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-muted-foreground">No assignees</div>
-            )}
+            <AssigneeSelector
+              assignees={assignees}
+              onAssign={handleAssigneeAdd}
+              onUnassign={handleAssigneeRemove}
+              error={assigneeError}
+              disabled={!user?.id}
+            />
           </div>
 
           {/* Labels */}

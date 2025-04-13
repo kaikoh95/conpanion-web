@@ -23,12 +23,21 @@ export interface Form {
   is_synced?: boolean;
   last_synced_at?: string;
   items?: FormItem[];
+  assignees?: {
+    id: string;
+    raw_user_meta_data: {
+      name: string;
+      avatar_url?: string;
+    };
+  }[];
 }
 
 export interface CreateFormRequest {
   name: string;
   description?: string;
   items: Omit<FormItem, 'id' | 'form_id'>[];
+  userId: string;
+  projectId: number;
 }
 
 export interface UpdateFormRequest {

@@ -100,10 +100,10 @@ export function SortableQuestionCard({ question, onUpdate, onDelete, isFirst, is
             </div>
           )}
           <div className="flex-1 space-y-4">
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-4 flex-col">
               {isEditing ? (
                 <>
-                  <div className="flex-1">
+                  <div className="flex-1 w-full">
                     <Textarea
                       ref={textareaRef}
                       value={question.title}
@@ -123,7 +123,7 @@ export function SortableQuestionCard({ question, onUpdate, onDelete, isFirst, is
                       })
                     }
                   >
-                    <SelectTrigger className="w-[150px] text-left">
+                    <SelectTrigger className="w-full text-left">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

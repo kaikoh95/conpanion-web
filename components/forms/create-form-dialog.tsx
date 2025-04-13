@@ -3,18 +3,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
-import { createForm } from "@/lib/api/forms";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '@/components/ui/sheet';
+import { Input } from '@/components/ui/input';
+import { Plus } from 'lucide-react';
+import { createForm } from '@/lib/api/forms';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   DndContext,
   closestCenter,
@@ -42,7 +41,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
+import { useAuth } from '@/hooks/useAuth';
+import { AssigneeSelector } from '@/components/AssigneeSelector';
+import { ProjectMember } from '@/hooks/useProjectMembers';
+import { getSupabaseClient } from '@/lib/supabase/client';
 
 export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuilderProps) {
   const router = useRouter();
@@ -57,6 +60,9 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const { user } = useAuth();
+  const [assignees, setAssignees] = useState<{ id: string; name: string; avatar_url?: string }[]>([]);
+  const [assigneeError, setAssigneeError] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -64,6 +70,10 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  if (!user) {
+    return null;
+  }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -124,16 +134,40 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
-      
-      await createForm({
-        name: title.trim() || "New form",
+
+      // Create the form first
+      const formResponse = await createForm({
+        name: title.trim() || 'New form',
         items: generateFormItems(questions),
+        userId: user.id,
+        projectId: user.activeProjectId,
       });
 
-      toast.success("Form created successfully");
+      // If there are assignees and we have a valid form ID, add them
+      const formId = formResponse.form.id;
+      if (assignees.length > 0 && typeof formId === 'number') {
+        const supabase = getSupabaseClient();
+        const assigneeRecords = assignees.map(assignee => ({
+          assigned_by: user.id,
+          entity_id: formId,
+          entity_type: 'form',
+          user_id: assignee.id
+        }));
+
+        const { error: assigneeError } = await supabase
+          .from('entity_assignees')
+          .insert(assigneeRecords);
+
+        if (assigneeError) {
+          console.error('Error adding assignees:', assigneeError);
+          toast.error('Failed to add some assignees');
+        }
+      }
+
+      toast.success('Form created successfully');
       onOpenChange(false);
       onFormCreated?.();
-      router.refresh(); // Refresh the page to show the new form
+      router.refresh();
     } catch (error) {
       console.error("Error creating form:", error);
       toast.error("Failed to create form. Please try again.");
@@ -144,17 +178,31 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
 
   return (
     <>
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="sr-only">Create Form</DialogTitle>
+      <Sheet open={open} onOpenChange={handleClose}>
+        <SheetContent className="w-full max-w-4xl overflow-y-auto sm:w-[90vw]">
+          <SheetHeader>
+            <SheetTitle className="sr-only">Create Form</SheetTitle>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="New form"
               className="text-2xl font-semibold border-none bg-transparent focus-visible:ring-0 px-0 text-foreground placeholder:text-muted-foreground/60"
             />
-          </DialogHeader>
+          </SheetHeader>
+
+          <div className="my-4">
+            <AssigneeSelector
+              assignees={assignees}
+              onAssign={(member: ProjectMember) => {
+                setAssignees([...assignees, member]);
+              }}
+              onUnassign={(memberId: string) => {
+                setAssignees(assignees.filter(a => a.id !== memberId));
+              }}
+              error={assigneeError}
+              disabled={isSubmitting}
+            />
+          </div>
 
           <div className="space-y-4 my-4">
             <DndContext
@@ -192,7 +240,7 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
             Add question
           </Button>
 
-          <DialogFooter>
+          <SheetFooter className="mt-4">
             <Button variant="outline" onClick={() => handleClose(false)}>
               Cancel
             </Button>
@@ -203,9 +251,9 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
             >
               {isSubmitting ? "Creating..." : "Create form"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
         <AlertDialogContent>

@@ -1,21 +1,120 @@
 import { createClient } from '@/utils/supabase/client';
-import { Form, FormItem, CreateFormRequest, UpdateFormRequest, FormResponse } from '@/lib/types/form';
+import {
+  Form,
+  FormItem,
+  CreateFormRequest,
+  UpdateFormRequest,
+  FormResponse,
+} from '@/lib/types/form';
+import { Database } from '../supabase/types.generated';
 
 const supabase = createClient();
 
+interface DbFormResponse {
+  id: number;
+  name: string;
+  owner_id: string;
+  team_id?: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  version: number;
+  is_synced: boolean;
+  last_synced_at: string | null;
+  assignees: AssigneeResponse[];
+}
+
+interface AssigneeResponse {
+  id: string;
+  raw_user_meta_data: {
+    name: string;
+    avatar_url?: string;
+  };
+}
+
 export async function getForms(): Promise<Form[]> {
-  const { data, error } = await supabase
+  // First, fetch all forms
+  const { data: forms, error: formsError } = await supabase
     .from('forms')
     .select('*')
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching forms:', error);
-    throw error;
+  if (formsError) {
+    console.error('Error fetching forms:', formsError);
+    throw formsError;
   }
 
-  return data || [];
+  if (!forms || forms.length === 0) {
+    return [];
+  }
+
+  // Then, fetch assignees for these forms
+  const formIds = forms.map(form => form.id);
+  const { data: assignees, error: assigneesError } = await supabase
+    .from('entity_assignees')
+    .select('entity_id, user_id')
+    .eq('entity_type', 'form')
+    .in('entity_id', formIds);
+
+  if (assigneesError) {
+    console.error('Error fetching assignees:', assigneesError);
+  }
+
+  if (assigneesError) {
+    console.error('Error fetching assignees:', assigneesError);
+    throw assigneesError;
+  }
+
+  // Get unique user IDs from assignees for user info
+  const getUserIds = (formId: number) => Array.from(
+    new Set((assignees || []).filter((a: { entity_id: number }) => a.entity_id === formId).map((a: { user_id: string }) => a.user_id)),
+  );
+
+  
+
+  // Transform the data to match the expected format
+  const transformedForms = (forms as DbFormResponse[]).map(async (form) => {
+    // Fetch user details if we have any assignees
+    let usersData: Database['public']['Functions']['get_user_details']['Returns'] = [];
+    const userIds = getUserIds(form.id);
+    if (userIds.length > 0) {
+      try {
+        const { data: users, error: usersError } = await supabase.rpc('get_user_details', {
+          user_ids: userIds,
+        });
+
+        if (usersError && usersError.code !== 'PGRST116') {
+          // Ignore if RPC doesn't exist yet
+          console.error('Error fetching users:', usersError);
+        }
+
+        // If the RPC function doesn't exist yet, create a fallback
+        usersData =
+          users ||
+          userIds.map((id) => ({
+            id,
+            raw_user_meta_data: { name: 'User ' + id.substring(0, 6) },
+          }));
+      } catch (err) {
+        console.error('Exception fetching user details:', err);
+        // Provide fallback user data
+        usersData = userIds.map((id) => ({
+          id,
+          raw_user_meta_data: { name: 'User ' + id.substring(0, 6) },
+        }));
+      }
+    }
+
+    return {
+      ...form,
+      deleted_at: form.deleted_at || undefined,
+      last_synced_at: form.last_synced_at || undefined,
+      assignees: usersData as AssigneeResponse[],
+    }
+  });
+
+  return Promise.all(transformedForms);
 }
 
 export async function getFormById(id: number): Promise<FormResponse | null> {
@@ -60,7 +159,8 @@ export async function createForm(request: CreateFormRequest): Promise<FormRespon
     .from('forms')
     .insert({
       name: request.name,
-      owner_id: (await supabase.auth.getUser()).data.user?.id,
+      owner_id: request.userId,
+      project_id: request.projectId,
     })
     .select()
     .single();

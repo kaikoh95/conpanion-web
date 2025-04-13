@@ -18,13 +18,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { CreateFormDialog } from "@/components/forms/create-form-dialog";
-import { getForms } from "@/lib/api/forms";
-import { Form } from "@/lib/types/form";
-import { format } from "date-fns";
-import { useRouter, usePathname } from "next/navigation";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { CreateFormDialog } from '@/components/forms/create-form-dialog';
+import { getForms } from '@/lib/api/forms';
+import { Form } from '@/lib/types/form';
+import { format } from 'date-fns';
+import { useRouter, usePathname } from 'next/navigation';
+import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
+import { AvatarGroup } from "@/app/components/ui/avatar-group";
 
 export default function FormsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -44,6 +46,8 @@ export default function FormsLayout({ children }: { children: React.ReactNode })
       setSelectedFormId(match[1]);
     } else {
       setSelectedFormId(null);
+      // Refresh forms list when returning from form detail
+      fetchForms();
     }
   }, [pathname]);
 
@@ -195,9 +199,26 @@ export default function FormsLayout({ children }: { children: React.ReactNode })
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {form.assigned_to && form.assigned_to.length > 0
-                          ? `${form.assigned_to.length} user${form.assigned_to.length > 1 ? 's' : ''}`
-                          : 'Unassigned'}
+                        {form.assignees && form.assignees.length > 0 ? (
+                          <div className="flex items-center gap-2">
+                            {form.assignees.length < 3 ? (
+                              <AvatarGroup
+                              avatars={form.assignees.map(assignee => ({
+                                name: assignee.raw_user_meta_data.name,
+                                image: assignee.raw_user_meta_data.avatar_url
+                              }))}
+                              />
+                            ) : null}
+                            <span className="text-sm text-muted-foreground">
+                              {form.assignees.length} {form.assignees.length === 1 ? 'user' : 'users'}
+                            </span>
+                          </div>
+                        ) : null}
+                        {form.assignees && form.assignees.length === 0 ? (
+                          <span className="text-sm text-muted-foreground">
+                            No users assigned
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell>
                         {form.updated_at 

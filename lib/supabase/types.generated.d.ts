@@ -225,7 +225,6 @@ export type Database = {
       }
       forms: {
         Row: {
-          assigned_to: string[] | null
           created_at: string
           deleted_at: string | null
           id: number
@@ -233,12 +232,12 @@ export type Database = {
           last_synced_at: string | null
           name: string
           owner_id: string
+          project_id: number | null
           team_id: string | null
           updated_at: string
           version: number
         }
         Insert: {
-          assigned_to?: string[] | null
           created_at?: string
           deleted_at?: string | null
           id?: never
@@ -246,12 +245,12 @@ export type Database = {
           last_synced_at?: string | null
           name: string
           owner_id: string
+          project_id?: number | null
           team_id?: string | null
           updated_at?: string
           version?: number
         }
         Update: {
-          assigned_to?: string[] | null
           created_at?: string
           deleted_at?: string | null
           id?: never
@@ -259,11 +258,20 @@ export type Database = {
           last_synced_at?: string | null
           name?: string
           owner_id?: string
+          project_id?: number | null
           team_id?: string | null
           updated_at?: string
           version?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "forms_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       labels: {
         Row: {

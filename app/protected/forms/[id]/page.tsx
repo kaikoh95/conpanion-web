@@ -28,11 +28,15 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { SortableQuestionCard } from "@/components/forms/sortable-question-card";
-import { FormBuilderQuestion } from "@/lib/types/form-builder";
+} from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { SortableQuestionCard } from '@/components/forms/sortable-question-card';
+import { FormBuilderQuestion } from '@/lib/types/form-builder';
+import { AssigneeSelector } from '@/components/AssigneeSelector';
+import { ProjectMember } from '@/hooks/useProjectMembers';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const questionTypes = [
   { value: "question", label: "Short answer" },
@@ -61,6 +65,7 @@ const fromFormBuilderQuestion = (question: FormBuilderQuestion, displayOrder: nu
 export default function FormDetail({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
+  const { user } = useAuth();
   const [form, setForm] = useState<FormResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -68,6 +73,8 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
   const [editedItems, setEditedItems] = useState<FormItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [assigneeError, setAssigneeError] = useState<string | null>(null);
+  const [assignees, setAssignees] = useState<{ id: string; name: string; avatar_url?: string }[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -77,12 +84,51 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
   );
 
   useEffect(() => {
-    const fetchForm = async () => {
+    const fetchFormAndAssignees = async () => {
       try {
         const data = await getFormById(parseInt(resolvedParams.id));
         setForm(data);
         setEditedTitle(data?.form.name || "");
         setEditedItems(data?.items || []);
+
+        // Fetch assignees from entity_assignees
+        const supabase = getSupabaseClient();
+        const { data: assigneeData, error: assigneeError } = await supabase
+          .from('entity_assignees')
+          .select('user_id')
+          .eq('entity_type', 'form')
+          .eq('entity_id', parseInt(resolvedParams.id));
+
+        if (assigneeError) {
+          console.error('Error fetching assignees:', assigneeError);
+          return;
+        }
+
+        if (assigneeData && assigneeData.length > 0) {
+          // Get user details using the helper function
+          const { data: userData, error: userError } = await supabase
+            .rpc('get_user_details', {
+              user_ids: assigneeData.map(a => a.user_id)
+            });
+
+          if (userError) {
+            console.error('Error fetching users:', userError);
+            return;
+          }
+
+          if (userData) {
+            setAssignees(userData.map(user => {
+              const metadata = user.raw_user_meta_data as { name?: string; avatar_url?: string };
+              return {
+                id: user.id,
+                name: metadata?.name || '',
+                avatar_url: metadata?.avatar_url
+              };
+            }));
+          }
+        } else {
+          setAssignees([]);
+        }
       } catch (error) {
         console.error("Error fetching form:", error);
         toast.error("Failed to load form");
@@ -91,7 +137,7 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
       }
     };
 
-    fetchForm();
+    fetchFormAndAssignees();
   }, [resolvedParams.id]);
 
   const hasChanges = () => {
@@ -197,7 +243,7 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
     if (!form) return 'bg-muted text-muted-foreground';
     if (form.form.is_synced) {
       return 'bg-green-500/10 text-green-700 dark:text-green-400';
-    } else if (form.form.assigned_to?.length) {
+    } else if (assignees.length > 0) {
       return 'bg-blue-500/10 text-blue-700 dark:text-blue-400';
     } else {
       return 'bg-muted text-muted-foreground';
@@ -208,7 +254,7 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
     if (!form) return 'Loading...';
     if (form.form.is_synced) {
       return 'Completed';
-    } else if (form.form.assigned_to?.length) {
+    } else if (assignees.length > 0) {
       return 'In Progress';
     } else {
       return 'Draft';
@@ -253,6 +299,72 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
     }, 300);
   };
 
+  const handleAssigneeAdd = async (member: ProjectMember) => {
+    if (!user?.id) return;
+    setAssigneeError(null);
+    
+    try {
+      const supabase = getSupabaseClient();
+
+      // Check if already assigned
+      if (assignees.some(a => a.id === member.id)) {
+        return;
+      }
+
+      const { error } = await supabase
+        .from('entity_assignees')
+        .insert({
+          assigned_by: user.id,
+          entity_id: parseInt(resolvedParams.id),
+          entity_type: 'form',
+          user_id: member.id
+        });
+
+      if (error) {
+        console.error('Error adding assignee:', error);
+        setAssigneeError('Failed to add assignee');
+        return;
+      }
+
+      // Add the new assignee to the state
+      setAssignees([...assignees, {
+        id: member.id,
+        name: member.name,
+        avatar_url: member.avatar_url,
+      }]);
+    } catch (err) {
+      console.error('Exception adding assignee:', err);
+      setAssigneeError('An unexpected error occurred');
+    }
+  };
+
+  const handleAssigneeRemove = async (memberId: string) => {
+    setAssigneeError(null);
+    
+    try {
+      const supabase = getSupabaseClient();
+
+      const { error } = await supabase
+        .from('entity_assignees')
+        .delete()
+        .eq('entity_type', 'form')
+        .eq('entity_id', parseInt(resolvedParams.id))
+        .eq('user_id', memberId);
+
+      if (error) {
+        console.error('Error removing assignee:', error);
+        setAssigneeError('Failed to remove assignee');
+        return;
+      }
+
+      // Remove the assignee from the state
+      setAssignees(assignees.filter(a => a.id !== memberId));
+    } catch (err) {
+      console.error('Exception removing assignee:', err);
+      setAssigneeError('An unexpected error occurred');
+    }
+  };
+
   return (
     <Sheet 
       open={true} 
@@ -275,8 +387,9 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
       }} 
       modal={false}
     >
-      <SheetContent 
-        className={`!w-[40vw] !max-w-[40vw] h-full p-0 border-l [&>button]:hidden focus-visible:outline-none focus:outline-none transition-transform duration-300 ${
+      <SheetTitle />
+      <SheetContent
+        className={`h-full !w-[40vw] !max-w-[40vw] border-l p-0 transition-transform duration-300 focus:outline-none focus-visible:outline-none [&>button]:hidden ${
           isClosing ? 'translate-x-full' : 'translate-x-0'
         }`}
         side="right"
@@ -393,7 +506,17 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
             <div className="flex-1 overflow-auto">
               <div className="p-6 space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Questions</h3>
+                  <AssigneeSelector
+                    assignees={assignees}
+                    onAssign={handleAssigneeAdd}
+                    onUnassign={handleAssigneeRemove}
+                    error={assigneeError}
+                    disabled={!user?.id}
+                  />
+                </div>
+
+                <div>
+                  <h3 className="mb-4 text-lg font-semibold">Questions</h3>
                   <div className="space-y-4">
                     {isEditing ? (
                       <DndContext
@@ -443,17 +566,6 @@ export default function FormDetail({ params }: { params: Promise<{ id: string }>
                         <Plus className="h-4 w-4 mr-2" />
                         Add question
                       </Button>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Assignments</h3>
-                  <div className="p-4 border rounded-lg">
-                    {form.form.assigned_to && form.form.assigned_to.length > 0 ? (
-                      <p>{form.form.assigned_to.length} user(s) assigned</p>
-                    ) : (
-                      <p className="text-muted-foreground">No users assigned</p>
                     )}
                   </div>
                 </div>
