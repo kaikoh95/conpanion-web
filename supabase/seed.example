@@ -1,686 +1,671 @@
--- Seed Users first
--- Note: The passwords are hashed using bcrypt and the default cost factor
--- The example password used here is 'password123' for all users
-INSERT INTO auth.users (
-    id,
-    instance_id,
-    email,
-    encrypted_password,
-    email_confirmed_at,
-    invited_at,
-    confirmation_token,
-    confirmation_sent_at,
-    recovery_token,
-    recovery_sent_at,
-    email_change_token_new,
-    email_change,
-    email_change_sent_at,
-    last_sign_in_at,
-    raw_app_meta_data,
-    raw_user_meta_data,
-    is_super_admin,
-    created_at,
-    updated_at,
-    phone,
-    phone_confirmed_at,
-    phone_change,
-    phone_change_token,
-    phone_change_sent_at,
-    email_change_token_current,
-    email_change_confirm_status,
-    banned_until,
-    reauthentication_token,
-    reauthentication_sent_at,
-    is_sso_user,
-    deleted_at,
-    is_anonymous,
-    aud,
-    role
-) VALUES 
-(
-    'e9d42068-621c-4e36-8c7c-1dd408c92181', -- id
-    '00000000-0000-0000-0000-000000000000', -- instance_id
-    'kaikoh95@gmail.com', -- email
-    crypt('password123', gen_salt('bf')), -- password123
-    now(), -- email_confirmed_at
-    null, -- invited_at
-    '', -- confirmation_token
-    null, -- confirmation_sent_at
-    '', -- recovery_token
-    null, -- recovery_sent_at
-    '', -- email_change_token_new
-    '', -- email_change
-    null, -- email_change_sent_at
-    now(), -- last_sign_in_at
-    jsonb_build_object(
-        'provider', 'email',
-        'providers', array['email']
-    ), -- raw_app_meta_data
-    jsonb_build_object(
-        'name', 'Admin User',
-        'avatar_url', 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
-    ), -- raw_user_meta_data
-    false, -- is_super_admin
-    now(), -- created_at
-    now(), -- updated_at
-    null, -- phone
-    null, -- phone_confirmed_at
-    '', -- phone_change
-    '', -- phone_change_token
-    null, -- phone_change_sent_at
-    '', -- email_change_token_current
-    0, -- email_change_confirm_status
-    null, -- banned_until
-    '', -- reauthentication_token
-    null, -- reauthentication_sent_at
-    false, -- is_sso_user
-    null, -- deleted_at
-    false, -- is_anonymous
-    'authenticated', -- aud
-    'authenticated' -- role
-),
-(
-    'f9d42068-621c-4e36-8c7c-1dd408c92183', -- id
-    '00000000-0000-0000-0000-000000000000', -- instance_id
-    'sebapian95@gmail.com', -- email
-    crypt('password123', gen_salt('bf')), -- password123
-    now(), -- email_confirmed_at
-    null, -- invited_at
-    '', -- confirmation_token
-    null, -- confirmation_sent_at
-    '', -- recovery_token
-    null, -- recovery_sent_at
-    '', -- email_change_token_new
-    '', -- email_change
-    null, -- email_change_sent_at
-    now(), -- last_sign_in_at
-    jsonb_build_object(
-        'provider', 'email',
-        'providers', array['email']
-    ), -- raw_app_meta_data
-    jsonb_build_object(
-        'name', 'Regular User',
-        'avatar_url', 'https://www.gravatar.com/avatar/11111111111111111111111111111111?d=mp&f=y'
-    ), -- raw_user_meta_data
-    false, -- is_super_admin
-    now(), -- created_at
-    now(), -- updated_at
-    null, -- phone
-    null, -- phone_confirmed_at
-    '', -- phone_change
-    '', -- phone_change_token
-    null, -- phone_change_sent_at
-    '', -- email_change_token_current
-    0, -- email_change_confirm_status
-    null, -- banned_until
-    '', -- reauthentication_token
-    null, -- reauthentication_sent_at
-    false, -- is_sso_user
-    null, -- deleted_at
-    false, -- is_anonymous
-    'authenticated', -- aud
-    'authenticated' -- role
-),
-(
-    'f9d42068-621c-4e36-8c7c-1dd408c92182', -- id
-    '00000000-0000-0000-0000-000000000000', -- instance_id
-    'user@example.com', -- email
-    crypt('password123', gen_salt('bf')), -- password123
-    now(), -- email_confirmed_at
-    null, -- invited_at
-    '', -- confirmation_token
-    null, -- confirmation_sent_at
-    '', -- recovery_token
-    null, -- recovery_sent_at
-    '', -- email_change_token_new
-    '', -- email_change
-    null, -- email_change_sent_at
-    now(), -- last_sign_in_at
-    jsonb_build_object(
-        'provider', 'email',
-        'providers', array['email']
-    ), -- raw_app_meta_data
-    jsonb_build_object(
-        'name', 'Regular User',
-        'avatar_url', 'https://www.gravatar.com/avatar/11111111111111111111111111111111?d=mp&f=y'
-    ), -- raw_user_meta_data
-    false, -- is_super_admin
-    now(), -- created_at
-    now(), -- updated_at
-    null, -- phone
-    null, -- phone_confirmed_at
-    '', -- phone_change
-    '', -- phone_change_token
-    null, -- phone_change_sent_at
-    '', -- email_change_token_current
-    0, -- email_change_confirm_status
-    null, -- banned_until
-    '', -- reauthentication_token
-    null, -- reauthentication_sent_at
-    false, -- is_sso_user
-    null, -- deleted_at
-    false, -- is_anonymous
-    'authenticated', -- aud
-    'authenticated' -- role
-);
+SET session_replication_role = replica;
 
--- Insert identities for the users (required for email authentication)
-INSERT INTO auth.identities (
-    id,
-    user_id,
-    identity_data,
-    provider,
-    provider_id,
-    last_sign_in_at,
-    created_at,
-    updated_at
-) VALUES 
-(
-    'e9d42068-621c-4e36-8c7c-1dd408c92181',
-    'e9d42068-621c-4e36-8c7c-1dd408c92181',
-    jsonb_build_object(
-        'sub', 'e9d42068-621c-4e36-8c7c-1dd408c92181',
-        'email', 'kaikoh95@gmail.com',
-        'email_verified', true,
-        'phone_verified', false
-    ),
-    'email',
-    'kaikoh95@gmail.com',
-    now(),
-    now(),
-    now()
-),
-(
-    'f9d42068-621c-4e36-8c7c-1dd408c92183',
-    'f9d42068-621c-4e36-8c7c-1dd408c92183',
-    jsonb_build_object(
-        'sub', 'f9d42068-621c-4e36-8c7c-1dd408c92183',
-        'email', 'sebapian95@gmail.com',
-        'email_verified', true,
-        'phone_verified', false
-    ),
-    'email',
-    'sebapian95@gmail.com',
-    now(),
-    now(),
-    now()
-),
-(
-    'f9d42068-621c-4e36-8c7c-1dd408c92182',
-    'f9d42068-621c-4e36-8c7c-1dd408c92182',
-    jsonb_build_object(
-        'sub', 'f9d42068-621c-4e36-8c7c-1dd408c92182',
-        'email', 'user@example.com',
-        'email_verified', true,
-        'phone_verified', false
-    ),
-    'email',
-    'user@example.com',
-    now(),
-    now(),
-    now()
-);
+--
+-- PostgreSQL database dump
+--
 
--- Create a sample project (we'll create the projects table later)
-DO $$
-DECLARE
-    v_user_id uuid := 'e9d42068-621c-4e36-8c7c-1dd408c92181';
-    v_project_id integer := 1;
-BEGIN
-    -- Insert default statuses
-    INSERT INTO public.statuses (project_id, name, color, position, is_default, created_by) VALUES
-    (v_project_id, 'To Do', '#E2E8F0', 0, true, v_user_id),
-    (v_project_id, 'In Progress', '#3182CE', 1, false, v_user_id),
-    (v_project_id, 'In Review', '#805AD5', 2, false, v_user_id),
-    (v_project_id, 'Done', '#48BB78', 3, false, v_user_id);
+-- Dumped from database version 15.8
+-- Dumped by pg_dump version 15.8
 
-    -- Insert default priorities
-    INSERT INTO public.priorities (project_id, name, color, position, is_default, created_by) VALUES
-    (v_project_id, 'Low', '#718096', 0, false, v_user_id),
-    (v_project_id, 'Medium', '#3182CE', 1, true, v_user_id),
-    (v_project_id, 'High', '#DD6B20', 2, false, v_user_id),
-    (v_project_id, 'Urgent', '#E53E3E', 3, false, v_user_id);
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
 
-    -- Insert sample labels
-    INSERT INTO public.labels (project_id, name, color, description, created_by) VALUES
-    (v_project_id, 'Bug', '#FC8181', 'Issues that need to be fixed', v_user_id),
-    (v_project_id, 'Feature', '#68D391', 'New features to be implemented', v_user_id),
-    (v_project_id, 'Enhancement', '#63B3ED', 'Improvements to existing features', v_user_id),
-    (v_project_id, 'Documentation', '#B794F4', 'Documentation related tasks', v_user_id);
+--
+-- Data for Name: audit_log_entries; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
 
-    -- Insert sample tasks
-    INSERT INTO public.tasks (
-        title,
-        description,
-        status_id,
-        priority_id,
-        project_id,
-        created_by
-    ) VALUES
-    (
-        'Set up project infrastructure',
-        'Initialize the project with basic configuration and dependencies',
-        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'In Progress'),
-        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'High'),
-        v_project_id,
-        v_user_id
-    ),
-    (
-        'Design database schema',
-        'Create initial database schema with core tables and relationships',
-        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'Done'),
-        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'High'),
-        v_project_id,
-        v_user_id
-    ),
-    (
-        'Implement user authentication',
-        'Set up user authentication system with email and password',
-        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'To Do'),
-        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Urgent'),
-        v_project_id,
-        v_user_id
-    );
-    
-    -- Add metadata for tasks
-    INSERT INTO public.task_metadata (task_id, title, value, created_by)
-    VALUES
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Set up project infrastructure' AND created_by = v_user_id),
-        'estimated_hours',
-        '8',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Set up project infrastructure' AND created_by = v_user_id),
-        'actual_hours',
-        '4',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Design database schema' AND created_by = v_user_id),
-        'estimated_hours',
-        '4',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Design database schema' AND created_by = v_user_id),
-        'actual_hours',
-        '6',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Implement user authentication' AND created_by = v_user_id),
-        'estimated_hours',
-        '12',
-        v_user_id
-    );
+INSERT INTO "auth"."audit_log_entries" ("instance_id", "id", "payload", "created_at", "ip_address") VALUES
+	('00000000-0000-0000-0000-000000000000', '692a1e2d-07db-455f-b3a5-05830a6737e2', '{"action":"user_confirmation_requested","actor_id":"317706ad-1540-4f4f-be16-de5b1714c882","actor_username":"test123@gmail.com","actor_via_sso":false,"log_type":"user","traits":{"provider":"email"}}', '2025-03-23 09:38:30.359423+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'c50d0be2-111b-4b10-b59f-fafaa5fbc9c4', '{"action":"user_signedup","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"team","traits":{"provider":"email"}}', '2025-03-23 09:41:40.394652+00', ''),
+	('00000000-0000-0000-0000-000000000000', '75a8fa90-6cd1-425b-ba5b-f8b8531d5a79', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-23 09:41:40.401226+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'ab53cd8f-07d2-4fcb-ac13-8fdf2fdae36a', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-23 10:04:13.155272+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'e1e64b1d-3784-40b8-bbb5-c98df7b3c889', '{"action":"logout","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account"}', '2025-03-23 10:04:22.790053+00', ''),
+	('00000000-0000-0000-0000-000000000000', '1a27e679-5189-4b6e-8ad6-b2b3b84e9e5f', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-24 08:56:44.138723+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'd51435cf-0086-4e1c-b22b-e18ac9db0db7', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-24 10:08:40.687699+00', ''),
+	('00000000-0000-0000-0000-000000000000', '361135ea-5611-4ba5-aad2-7975f032c0ef', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-24 10:08:40.68988+00', ''),
+	('00000000-0000-0000-0000-000000000000', '10f4b73b-4190-4420-9173-1a190ebf4145', '{"action":"logout","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account"}', '2025-03-24 10:08:59.557287+00', ''),
+	('00000000-0000-0000-0000-000000000000', '1fc378d8-392f-4d34-bbc4-2240ea7f2615', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-24 10:09:07.525891+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'ba3250c7-d432-4626-85c2-c57e34ac5df4', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-24 10:37:00.24178+00', ''),
+	('00000000-0000-0000-0000-000000000000', '92d9410c-6dc8-4183-8980-04de1fa35e29', '{"action":"logout","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account"}', '2025-03-24 10:37:20.03667+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'b92c0aaf-42a4-446e-a171-dc8dccfb7fe0', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-25 05:37:36.076229+00', ''),
+	('00000000-0000-0000-0000-000000000000', '9478ba8b-872f-4665-a5d9-e6374375cc52', '{"action":"user_signedup","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"team","traits":{"provider":"email"}}', '2025-03-26 08:09:35.872219+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'cd57dd97-c077-44ca-83c1-4354be3e73ce', '{"action":"login","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-26 08:09:35.883709+00', ''),
+	('00000000-0000-0000-0000-000000000000', '8055fb1f-5e78-4058-bc11-583071e5d76c', '{"action":"token_refreshed","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-26 09:24:40.907222+00', ''),
+	('00000000-0000-0000-0000-000000000000', '31683af4-cf85-4108-89d8-84dbba79e814', '{"action":"token_revoked","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-26 09:24:40.91623+00', ''),
+	('00000000-0000-0000-0000-000000000000', '80fd6aef-352f-46e5-b452-efa381f0a264', '{"action":"token_refreshed","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-26 09:24:42.922356+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'de675242-6e64-4575-ba31-cb3f3ae30165', '{"action":"token_refreshed","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-26 09:24:45.426708+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'b7725ff2-c908-48a9-bba8-a5c4bc74ec57', '{"action":"token_refreshed","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-26 09:24:47.377+00', ''),
+	('00000000-0000-0000-0000-000000000000', '29556116-9360-4ac7-bb8d-7f07004076f5', '{"action":"user_signedup","actor_id":"00000000-0000-0000-0000-000000000000","actor_username":"service_role","actor_via_sso":false,"log_type":"team","traits":{"user_email":"test@gmail.com","user_id":"6334f456-9dbc-4a27-946b-f0a3a2bc827e","user_phone":""}}', '2025-03-26 12:36:57.531471+00', ''),
+	('00000000-0000-0000-0000-000000000000', '56711f2a-f3c2-4802-9d48-59535de4c8db', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-27 07:58:34.509146+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'd745e4e6-5fb8-4b31-80e6-cd61d264af21', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-27 07:58:34.520319+00', ''),
+	('00000000-0000-0000-0000-000000000000', '3c8e35c7-4e61-4bd9-8693-022f566b5372', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-27 07:58:35.111231+00', ''),
+	('00000000-0000-0000-0000-000000000000', '07dc7d6a-f4d0-4c9d-a61f-686f065fdfa0', '{"action":"logout","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account"}', '2025-03-27 07:59:50.931916+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'c8817ccc-7ee0-44b3-aac6-f6ac9c8dbbc1', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-27 07:59:59.273206+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'cf74e23c-7465-41bb-813e-3c554c2bac10', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-27 08:58:32.862024+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'e37c10aa-6223-48f0-a695-3dc4c8b40943', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-27 08:58:32.874099+00', ''),
+	('00000000-0000-0000-0000-000000000000', '6c1c27ac-d3b1-463f-8c64-828180ab6e14', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-27 10:20:56.467493+00', ''),
+	('00000000-0000-0000-0000-000000000000', '37298025-159a-4673-bb06-424a2143f5f3', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-27 10:20:56.4714+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'f15786be-a2e7-4b32-ab6a-b290bdcd817b', '{"action":"logout","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account"}', '2025-03-27 10:48:04.183682+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'c7907088-fcbd-451b-a578-4e3dcc2de377', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-27 10:48:12.570666+00', ''),
+	('00000000-0000-0000-0000-000000000000', '9cd34b22-e98e-46ea-9bfd-20e7162df6fd', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-29 00:51:37.51531+00', ''),
+	('00000000-0000-0000-0000-000000000000', '4f8a0322-0494-4388-9e11-b7812e5cc1c7', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-29 00:51:37.527044+00', ''),
+	('00000000-0000-0000-0000-000000000000', '8ff6493a-2070-4c52-ab24-90e98705254e', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-29 02:00:36.009951+00', ''),
+	('00000000-0000-0000-0000-000000000000', '7d8fc51d-b58c-443a-9cd9-b3f7d781c537', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-29 02:00:36.015411+00', ''),
+	('00000000-0000-0000-0000-000000000000', '3e1c7118-4266-436d-93de-26aa6c1b597c', '{"action":"logout","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account"}', '2025-03-29 02:03:54.885253+00', ''),
+	('00000000-0000-0000-0000-000000000000', '0fa089bb-9594-481d-b59e-85723bfc7450', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-29 03:29:51.44959+00', ''),
+	('00000000-0000-0000-0000-000000000000', '9bb39029-4883-418c-b965-b63b762395fe', '{"action":"logout","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account"}', '2025-03-29 03:29:57.213235+00', ''),
+	('00000000-0000-0000-0000-000000000000', '4f6e470d-82cd-40d4-80cb-17ef76b2d020', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-29 03:31:36.334268+00', ''),
+	('00000000-0000-0000-0000-000000000000', '4a93f581-fc0c-4d77-bce7-03292f5c60fc', '{"action":"logout","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account"}', '2025-03-29 03:57:08.844806+00', ''),
+	('00000000-0000-0000-0000-000000000000', '1e64a0d7-fa7e-462f-9054-23a203d94c6b', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-29 03:58:17.26937+00', ''),
+	('00000000-0000-0000-0000-000000000000', '15c0ec5a-8a52-4dc8-a96a-dc7c9696542c', '{"action":"logout","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account"}', '2025-03-29 03:58:31.784779+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'c9f08b95-9ee8-4229-9154-41db34bf12bf', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-29 04:07:34.266285+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'c293e4a6-7bf2-426c-a544-b4fecbafbc91', '{"action":"user_repeated_signup","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"user","traits":{"provider":"email"}}', '2025-03-29 19:55:47.776259+00', ''),
+	('00000000-0000-0000-0000-000000000000', '90d0a9c1-7f43-4c67-b8f7-0f2e86a2de79', '{"action":"user_repeated_signup","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"user","traits":{"provider":"email"}}', '2025-03-29 19:55:57.536539+00', ''),
+	('00000000-0000-0000-0000-000000000000', '563da748-67dc-456d-95fe-eef0ff7dc069', '{"action":"login","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-29 19:56:03.023064+00', ''),
+	('00000000-0000-0000-0000-000000000000', '44f5ebdc-c59c-4755-877c-1fd0947221cc', '{"action":"token_refreshed","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-29 20:55:17.293595+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'e5374c1f-1857-4ec6-b3c2-a4824b7e7b5d', '{"action":"token_revoked","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-29 20:55:17.29519+00', ''),
+	('00000000-0000-0000-0000-000000000000', '930289d0-aec9-4dc8-aad6-4f904df6ef23', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-03-29 21:19:23.215239+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'c2c33e4c-8a09-443a-80dc-34362346a74a', '{"action":"token_refreshed","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-29 21:54:50.325318+00', ''),
+	('00000000-0000-0000-0000-000000000000', '5dec6574-5978-4f0a-9bcf-b86676f1f8dc', '{"action":"token_revoked","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-29 21:54:50.328079+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'ef6a36e2-e9ae-40ef-966e-831e216d8191', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-29 22:43:56.446025+00', ''),
+	('00000000-0000-0000-0000-000000000000', '2e261fb7-9922-4afe-bdc5-c2d7efb41771', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-29 22:43:56.449513+00', ''),
+	('00000000-0000-0000-0000-000000000000', '51530d48-a600-400d-989d-1da1be64cc8d', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-29 22:43:57.132072+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'ae7a6535-fa97-4a95-b955-315179e32262', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-30 05:10:48.901366+00', ''),
+	('00000000-0000-0000-0000-000000000000', '5b7a8a30-20e8-462b-be27-9e53ea4f9317', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-30 05:10:48.905635+00', ''),
+	('00000000-0000-0000-0000-000000000000', '982bbae6-62cb-4e93-a9d7-c8512c3c094c', '{"action":"token_refreshed","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-30 07:16:54.778254+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'aacbcf5f-b0b8-40f0-9ea5-802b520ce219', '{"action":"token_revoked","actor_id":"36424010-bbc2-4379-90df-0b4c01bd7088","actor_username":"kaikoh95@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-30 07:16:54.800842+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'b7d6f9a7-94b7-4349-89fe-5a0cae6c25bf', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-30 08:04:53.239933+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'aa464c41-dbd4-4859-863f-dd7449385500', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-30 08:04:53.241354+00', ''),
+	('00000000-0000-0000-0000-000000000000', '010372c3-f634-4c5f-97e8-76a8a512e79f', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-30 08:04:53.882812+00', ''),
+	('00000000-0000-0000-0000-000000000000', '641fb228-a91b-4127-b383-1c8a172e3a87', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-31 05:34:52.475335+00', ''),
+	('00000000-0000-0000-0000-000000000000', '068ce75c-52a1-4ffb-b386-036874827644', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-31 05:34:52.488136+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'f1002c97-95fe-4001-b3bd-0ba09d267bf5', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-31 07:23:21.639534+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'e2164c85-f202-40a2-bf83-fc9ac8103f12', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-31 07:23:21.647105+00', ''),
+	('00000000-0000-0000-0000-000000000000', '1061a105-8143-4fb5-afe7-b275cb4effb9', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-31 08:53:17.311359+00', ''),
+	('00000000-0000-0000-0000-000000000000', '85d2b90e-7208-4bec-8182-9af5ff58713b', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-03-31 08:53:17.312723+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'be713d07-e2df-41ed-a380-0499648ab394', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-03 08:37:02.944122+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'c7dbeeb0-2d63-4740-b7dd-8b3f2b5b7adf', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-03 08:37:02.96213+00', ''),
+	('00000000-0000-0000-0000-000000000000', '2758a279-7085-4f85-a516-b7615d56f317', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-03 08:37:03.917394+00', ''),
+	('00000000-0000-0000-0000-000000000000', '13525ee6-51a8-4a86-b3dd-e9441a2e83c9', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-03 08:56:34.194976+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'c5bfa72a-7c46-48ef-a3b0-d594f981515d', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-03 08:56:34.195822+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'c0e73101-6866-4844-8cf0-34b19c666c89', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-03 09:56:39.492808+00', ''),
+	('00000000-0000-0000-0000-000000000000', '9ea21a5e-ee00-4b75-bb5c-05ed9e0928c9', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-03 09:56:39.494254+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'e6ea6789-0226-4754-9e06-f9112a48d817', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-03 09:56:40.080164+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'd4a26fe7-d697-48c0-9041-446aae3365d4', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-03 11:16:35.061381+00', ''),
+	('00000000-0000-0000-0000-000000000000', '8a597234-f68f-4822-aa45-308604b6f61d', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-03 11:16:35.069924+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'b0bfb98b-87a6-4c72-a13b-e68213e50a63', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 00:32:41.20932+00', ''),
+	('00000000-0000-0000-0000-000000000000', '3eebc905-c6de-4890-b02e-fe25393ad209', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 00:32:41.222159+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'cb928fa9-86c3-4c02-ad77-41315a09fe3a', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 02:01:01.322401+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'c8f5a159-6537-4e76-a170-cd608c51e41a', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 02:01:01.328608+00', ''),
+	('00000000-0000-0000-0000-000000000000', '443dea7c-a770-42b7-ba88-26e14572e667', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 02:59:25.215379+00', ''),
+	('00000000-0000-0000-0000-000000000000', '499800e0-ec7e-4d4e-a184-33c0afd47552', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 02:59:25.21811+00', ''),
+	('00000000-0000-0000-0000-000000000000', '5a8e982f-f34b-46f8-8f4e-62a762197a45', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 05:39:54.214369+00', ''),
+	('00000000-0000-0000-0000-000000000000', '9b20f0fc-6ae4-4104-843a-bfb992ba47fe', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 05:39:54.215234+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'abececeb-feb0-42de-9720-32da3e896eb1', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-04-05 05:44:20.134356+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'a8ead44c-6f93-42a7-a33d-dd21870b51d3', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 06:42:37.998787+00', ''),
+	('00000000-0000-0000-0000-000000000000', '3cdade3f-5da2-42f0-a0aa-3efc27e913fc', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 06:42:37.999703+00', ''),
+	('00000000-0000-0000-0000-000000000000', '8d25747e-9a19-4346-bfde-075c06a337ea', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-04-05 07:18:28.391099+00', ''),
+	('00000000-0000-0000-0000-000000000000', '1673d565-7e4c-46d9-a2be-827e647cbda3', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 08:34:30.175793+00', ''),
+	('00000000-0000-0000-0000-000000000000', '3ba2f532-259d-4d09-83b5-7b4317ada69c', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 08:34:30.178106+00', ''),
+	('00000000-0000-0000-0000-000000000000', '2e6d1c24-573d-47ef-abd5-182459110afb', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-04-05 08:48:34.6217+00', ''),
+	('00000000-0000-0000-0000-000000000000', '6cb64929-884e-4171-b8eb-5c1a9d70e5e1', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-04-05 09:36:18.964755+00', ''),
+	('00000000-0000-0000-0000-000000000000', '63ea68bf-8f1f-4c6b-86d2-a4b6ea3aa20c', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 09:46:48.590285+00', ''),
+	('00000000-0000-0000-0000-000000000000', '1beca4c8-d83f-45e7-95ff-48bb5f3c9fa7', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-05 09:46:48.592842+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'c4433ce2-f6db-4643-a064-76bcafef0a66', '{"action":"logout","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account"}', '2025-04-05 10:09:59.219738+00', ''),
+	('00000000-0000-0000-0000-000000000000', '78081e25-293d-40ca-be3f-69bbae66a934', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-04-05 22:40:53.346481+00', ''),
+	('00000000-0000-0000-0000-000000000000', '7bdc04db-c67d-4dc0-91fe-b4c1161b2be0', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-06 00:32:29.68522+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'b4e7890d-927b-4043-ae5b-66ba3c126a97', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-06 00:32:29.689545+00', ''),
+	('00000000-0000-0000-0000-000000000000', '82b67cc2-f275-46f6-a018-0cbad25f657a', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-06 00:32:53.533145+00', ''),
+	('00000000-0000-0000-0000-000000000000', '2a80cc98-87d3-4e23-a559-91cf75b4a5f3', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-06 00:32:54.345478+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'da6af0d8-084c-4821-bc52-bbdd17b9d76b', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-06 00:33:23.143704+00', ''),
+	('00000000-0000-0000-0000-000000000000', '757ec164-9556-416b-a36d-1727e92c87ed', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-06 00:33:23.477894+00', ''),
+	('00000000-0000-0000-0000-000000000000', '85a884ee-a914-4e7d-89f9-a2180f04bab6', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-06 00:33:55.020134+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'ca5b7625-b135-4161-8b28-da1dc14a5a2b', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-06 00:33:55.349139+00', ''),
+	('00000000-0000-0000-0000-000000000000', '33dd53ce-9f94-49d9-b593-12a43506accb', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-04-06 00:40:54.631416+00', ''),
+	('00000000-0000-0000-0000-000000000000', '4b10c3bb-e833-4df2-8252-29721ae6ed99', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-04-06 00:41:13.98723+00', ''),
+	('00000000-0000-0000-0000-000000000000', '2046d3ef-983e-4d98-9440-b4b361877f81', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-07 08:08:54.698633+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'f4b87148-1a72-4e5a-8d6b-91b4456959c2', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-07 08:08:54.71454+00', ''),
+	('00000000-0000-0000-0000-000000000000', '4c76fa44-cf78-467f-a76c-590963ceb991', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-07 09:30:38.761755+00', ''),
+	('00000000-0000-0000-0000-000000000000', '34f6bddb-4f1c-4693-a457-da35b809a187', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-07 09:30:38.763785+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'd3d9a427-9998-4be4-a712-61e0bc04df78', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-07 10:30:48.302721+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'b21e672d-2457-42fc-bc99-ed6cba5f6ada', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-07 10:30:48.305151+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'e1f78f53-8b54-40d4-b465-d548e905abf3', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-04-07 23:39:39.979429+00', ''),
+	('00000000-0000-0000-0000-000000000000', '7d9f0c4e-fa55-4101-bc65-14bce22a968b', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-08 04:38:58.228905+00', ''),
+	('00000000-0000-0000-0000-000000000000', '01120c2b-8b5c-4c00-92c0-f126fe213b0b', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-08 04:38:58.239702+00', ''),
+	('00000000-0000-0000-0000-000000000000', '6d6c685a-4806-4aea-9e39-47815015d4f4', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-08 05:49:47.466991+00', ''),
+	('00000000-0000-0000-0000-000000000000', '71ca0170-9bd8-45c2-829a-6d5a911bd1c3', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-08 05:49:47.469394+00', ''),
+	('00000000-0000-0000-0000-000000000000', '123f0263-c7b7-4dd8-95d4-7f2a9b43b0dc', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-09 03:31:43.011434+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'd0cf6d47-04c5-4a65-aadd-8aabc883cb47', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-09 03:31:43.022382+00', ''),
+	('00000000-0000-0000-0000-000000000000', '12771024-d4a1-435e-a67b-12657a61a16f', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-04-09 03:32:13.271168+00', ''),
+	('00000000-0000-0000-0000-000000000000', '2b869fd9-3e17-4dbe-8d9d-891b93cf2c15', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-09 05:11:38.774473+00', ''),
+	('00000000-0000-0000-0000-000000000000', '0bc5d6be-dc43-46de-a45d-9d2a4333e693', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-09 05:11:38.776546+00', ''),
+	('00000000-0000-0000-0000-000000000000', '3bf7c6a8-e1b6-4077-a0bb-446b91dc13bb', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-09 06:53:56.521384+00', ''),
+	('00000000-0000-0000-0000-000000000000', '27a10ac2-e31a-468a-8921-6139d4d42076', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-09 06:53:56.52768+00', ''),
+	('00000000-0000-0000-0000-000000000000', '8582d790-c0c1-4aea-adcf-26e92b59ed8b', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-09 10:07:35.769109+00', ''),
+	('00000000-0000-0000-0000-000000000000', '51bf6471-6316-4324-8557-388c46b595ee', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-09 10:07:35.771249+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'b16c4175-b3f9-486e-866a-8b8055e81460', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-10 22:00:11.945657+00', ''),
+	('00000000-0000-0000-0000-000000000000', '9b3bde2f-e9f5-468d-b076-ae0881d13083', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-10 22:00:11.960275+00', ''),
+	('00000000-0000-0000-0000-000000000000', '6b62442f-ab4e-4834-95ce-9699550e679c', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-10 22:00:12.002726+00', ''),
+	('00000000-0000-0000-0000-000000000000', '98b33b19-b231-4dc1-8107-4a00f7f895c0', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-10 22:00:12.715038+00', ''),
+	('00000000-0000-0000-0000-000000000000', '507a2f0c-b048-4fb0-9711-0f98b00c2052', '{"action":"login","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"account","traits":{"provider":"email"}}', '2025-04-10 22:00:44.521278+00', ''),
+	('00000000-0000-0000-0000-000000000000', '27875224-f765-402a-ac33-fca02a547deb', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-12 05:41:44.442153+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'ed7e667b-a336-4a2c-989f-57ce60cacfdf', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-12 05:41:44.455485+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'e85e8b72-7bdd-4a43-b278-671bece14c69', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-12 06:39:58.382272+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'e5237060-46f9-4cc1-8119-00e5c4345f37', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-12 06:39:58.393386+00', ''),
+	('00000000-0000-0000-0000-000000000000', 'd33c4ca9-41ce-42cb-a216-e526a0e988ae', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-12 07:45:41.471192+00', ''),
+	('00000000-0000-0000-0000-000000000000', '6450f3d6-7e72-4e0f-82c1-a9bbd1457577', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-12 07:45:41.472736+00', ''),
+	('00000000-0000-0000-0000-000000000000', '37934a3b-d69f-4fc3-95b9-5cd1a8d98870', '{"action":"token_refreshed","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-12 09:46:06.194194+00', ''),
+	('00000000-0000-0000-0000-000000000000', '411a4bf9-b7ae-4bdc-8109-25b291a44f62', '{"action":"token_revoked","actor_id":"c0b0abdc-1472-41fc-8844-b44d1691004a","actor_username":"sebatest@gmail.com","actor_via_sso":false,"log_type":"token"}', '2025-04-12 09:46:06.195892+00', '');
 
-    -- Assign tasks to the user
-    INSERT INTO public.entity_assignees (entity_type, entity_id, user_id, assigned_by) 
-    SELECT 
-        'task',
-        id,
-        v_user_id,
-        v_user_id
-    FROM public.tasks
-    WHERE created_by = v_user_id;
 
-    -- Add labels to tasks
-    INSERT INTO public.entity_labels (entity_type, entity_id, label_id, created_by)
-    SELECT 
-        'task',
-        t.id,
-        l.id,
-        v_user_id
-    FROM public.tasks t
-    CROSS JOIN public.labels l
-    WHERE t.created_by = v_user_id
-    AND l.name IN ('Feature', 'Enhancement')
-    AND t.title = 'Set up project infrastructure';
+--
+-- Data for Name: flow_state; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
 
-    -- Add positions for tasks in different views
-    INSERT INTO public.entity_positions (
-        entity_type,
-        entity_id,
-        context,
-        position,
-        user_id
-    )
-    SELECT
-        'task',
-        id,
-        'list',
-        (ROW_NUMBER() OVER (ORDER BY created_at)) * 100,
-        v_user_id
-    FROM public.tasks
-    WHERE created_by = v_user_id;
+INSERT INTO "auth"."flow_state" ("id", "user_id", "auth_code", "code_challenge_method", "code_challenge", "provider_type", "provider_access_token", "provider_refresh_token", "created_at", "updated_at", "authentication_method", "auth_code_issued_at") VALUES
+	('eebdfdf5-5d0f-4963-9f81-70b8736a4ed9', '317706ad-1540-4f4f-be16-de5b1714c882', '99523bee-7f33-4464-8a12-9c16be166793', 's256', 'tPM8iPrcf8KBLWu_mQ-QULUq3nfNl1tvZ9AON5hCJcQ', 'email', '', '', '2025-03-23 09:38:30.364586+00', '2025-03-23 09:38:30.364586+00', 'email/signup', NULL);
 
-    -- Add positions for kanban view
-    INSERT INTO public.entity_positions (
-        entity_type,
-        entity_id,
-        context,
-        position,
-        user_id
-    )
-    SELECT
-        'task',
-        id,
-        'kanban',
-        (ROW_NUMBER() OVER (PARTITION BY status_id ORDER BY created_at)) * 100,
-        v_user_id
-    FROM public.tasks
-    WHERE created_by = v_user_id;
-END $$;
 
--- Create a sample project for sebapian95@gmail.com
-DO $$
-DECLARE
-    v_user_id uuid := 'f9d42068-621c-4e36-8c7c-1dd408c92183';
-    v_project_id integer := 2;
-BEGIN
-    -- Insert default statuses
-    INSERT INTO public.statuses (project_id, name, color, position, is_default, created_by) VALUES
-    (v_project_id, 'Backlog', '#CBD5E0', 0, true, v_user_id),
-    (v_project_id, 'In Development', '#4299E1', 1, false, v_user_id),
-    (v_project_id, 'Testing', '#9F7AEA', 2, false, v_user_id),
-    (v_project_id, 'Completed', '#48BB78', 3, false, v_user_id);
+--
+-- Data for Name: users; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
 
-    -- Insert default priorities
-    INSERT INTO public.priorities (project_id, name, color, position, is_default, created_by) VALUES
-    (v_project_id, 'Low', '#718096', 0, false, v_user_id),
-    (v_project_id, 'Medium', '#4299E1', 1, true, v_user_id),
-    (v_project_id, 'High', '#ED8936', 2, false, v_user_id),
-    (v_project_id, 'Critical', '#E53E3E', 3, false, v_user_id);
+INSERT INTO "auth"."users" ("instance_id", "id", "aud", "role", "email", "encrypted_password", "email_confirmed_at", "invited_at", "confirmation_token", "confirmation_sent_at", "recovery_token", "recovery_sent_at", "email_change_token_new", "email_change", "email_change_sent_at", "last_sign_in_at", "raw_app_meta_data", "raw_user_meta_data", "is_super_admin", "created_at", "updated_at", "phone", "phone_confirmed_at", "phone_change", "phone_change_token", "phone_change_sent_at", "email_change_token_current", "email_change_confirm_status", "banned_until", "reauthentication_token", "reauthentication_sent_at", "is_sso_user", "deleted_at", "is_anonymous") VALUES
+	('00000000-0000-0000-0000-000000000000', '317706ad-1540-4f4f-be16-de5b1714c882', 'authenticated', 'authenticated', 'test123@gmail.com', '$2a$10$sQxfq64ysVEojLMYcFiX5.CBERrbw1HPvOX4XSi7qU/.ilikr9xYi', NULL, NULL, 'pkce_2f0533dcfeefa228d1e377d343f200141e323afa2f6d2324eca8b850', '2025-03-23 09:38:30.373254+00', '', NULL, '', '', NULL, NULL, '{"provider": "email", "providers": ["email"]}', '{"sub": "317706ad-1540-4f4f-be16-de5b1714c882", "email": "test123@gmail.com", "email_verified": false, "phone_verified": false}', NULL, '2025-03-23 09:38:30.310686+00', '2025-03-23 09:38:32.42007+00', NULL, NULL, '', '', NULL, '', 0, NULL, '', NULL, false, NULL, false),
+	('00000000-0000-0000-0000-000000000000', '6334f456-9dbc-4a27-946b-f0a3a2bc827e', 'authenticated', 'authenticated', 'test@gmail.com', '$2a$10$UAf6hidnIN3/AFAXs1kPEe.hF2exZbBYOi.quETPRd8q/hgsIS6YW', '2025-03-26 12:36:57.535378+00', NULL, '', NULL, '', NULL, '', '', NULL, NULL, '{"provider": "email", "providers": ["email"]}', '{"email_verified": true}', NULL, '2025-03-26 12:36:57.509002+00', '2025-03-26 12:36:57.537543+00', NULL, NULL, '', '', NULL, '', 0, NULL, '', NULL, false, NULL, false),
+	('00000000-0000-0000-0000-000000000000', '36424010-bbc2-4379-90df-0b4c01bd7088', 'authenticated', 'authenticated', 'kaikoh95@gmail.com', '$2a$10$xilzIocKz84uX0SjbghhbOejpN8j7kpqv35AIwxefcwrXa7og2xtO', '2025-03-26 08:09:35.876306+00', NULL, '', NULL, '', NULL, '', '', NULL, '2025-03-29 19:56:03.023767+00', '{"provider": "email", "providers": ["email"]}', '{"sub": "36424010-bbc2-4379-90df-0b4c01bd7088", "email": "kaikoh95@gmail.com", "email_verified": true, "phone_verified": false}', NULL, '2025-03-26 08:09:35.846123+00', '2025-03-30 07:16:54.812126+00', NULL, NULL, '', '', NULL, '', 0, NULL, '', NULL, false, NULL, false),
+	('00000000-0000-0000-0000-000000000000', 'c0b0abdc-1472-41fc-8844-b44d1691004a', 'authenticated', 'authenticated', 'sebatest@gmail.com', '$2a$10$kMvO0HX2F06QRLU2ZcnSguJs6iMhbjgGdU99MvPDcSmZ6OhbvZLfi', '2025-03-23 09:41:40.395407+00', NULL, '', NULL, '', NULL, '', '', NULL, '2025-04-10 22:00:44.522223+00', '{"provider": "email", "providers": ["email"]}', '{"sub": "c0b0abdc-1472-41fc-8844-b44d1691004a", "email": "sebatest@gmail.com", "email_verified": true, "phone_verified": false}', NULL, '2025-03-23 09:41:40.379863+00', '2025-04-12 09:46:06.199284+00', NULL, NULL, '', '', NULL, '', 0, NULL, '', NULL, false, NULL, false);
 
-    -- Insert sample labels
-    INSERT INTO public.labels (project_id, name, color, description, created_by) VALUES
-    (v_project_id, 'Frontend', '#FC8181', 'Frontend tasks', v_user_id),
-    (v_project_id, 'Backend', '#68D391', 'Backend tasks', v_user_id),
-    (v_project_id, 'UX/UI', '#63B3ED', 'Design related tasks', v_user_id),
-    (v_project_id, 'Testing', '#D6BCFA', 'QA and testing tasks', v_user_id);
 
-    -- Insert sample tasks
-    INSERT INTO public.tasks (
-        title,
-        description,
-        status_id,
-        priority_id,
-        project_id,
-        created_by
-    ) VALUES
-    (
-        'Create login page',
-        'Design and implement a responsive login page with email and password authentication',
-        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'In Development'),
-        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'High'),
-        v_project_id,
-        v_user_id
-    ),
-    (
-        'Set up authentication API',
-        'Implement JWT authentication backend API with refresh tokens',
-        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'Completed'),
-        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Critical'),
-        v_project_id,
-        v_user_id
-    ),
-    (
-        'Implement user dashboard',
-        'Create a dashboard with user statistics and recent activity',
-        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'Backlog'),
-        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Medium'),
-        v_project_id,
-        v_user_id
-    );
-    
-    -- Add metadata for tasks
-    INSERT INTO public.task_metadata (task_id, title, value, created_by)
-    VALUES
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Create login page' AND created_by = v_user_id),
-        'estimated_hours',
-        '6',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Create login page' AND created_by = v_user_id),
-        'actual_hours',
-        '4',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Set up authentication API' AND created_by = v_user_id),
-        'estimated_hours',
-        '8',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Set up authentication API' AND created_by = v_user_id),
-        'actual_hours',
-        '10',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Implement user dashboard' AND created_by = v_user_id),
-        'estimated_hours',
-        '12',
-        v_user_id
-    );
+--
+-- Data for Name: identities; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
 
-    -- Assign tasks to the user
-    INSERT INTO public.entity_assignees (entity_type, entity_id, user_id, assigned_by) 
-    SELECT 
-        'task',
-        id,
-        v_user_id,
-        v_user_id
-    FROM public.tasks
-    WHERE created_by = v_user_id;
+INSERT INTO "auth"."identities" ("provider_id", "user_id", "identity_data", "provider", "last_sign_in_at", "created_at", "updated_at", "id") VALUES
+	('317706ad-1540-4f4f-be16-de5b1714c882', '317706ad-1540-4f4f-be16-de5b1714c882', '{"sub": "317706ad-1540-4f4f-be16-de5b1714c882", "email": "test123@gmail.com", "email_verified": false, "phone_verified": false}', 'email', '2025-03-23 09:38:30.349652+00', '2025-03-23 09:38:30.3502+00', '2025-03-23 09:38:30.3502+00', 'e8c0d59e-e360-4945-ae96-2a84be9486cb'),
+	('c0b0abdc-1472-41fc-8844-b44d1691004a', 'c0b0abdc-1472-41fc-8844-b44d1691004a', '{"sub": "c0b0abdc-1472-41fc-8844-b44d1691004a", "email": "sebatest@gmail.com", "email_verified": false, "phone_verified": false}', 'email', '2025-03-23 09:41:40.388389+00', '2025-03-23 09:41:40.388454+00', '2025-03-23 09:41:40.388454+00', '469f1c9d-211c-4f19-8b1b-5de951d720ce'),
+	('36424010-bbc2-4379-90df-0b4c01bd7088', '36424010-bbc2-4379-90df-0b4c01bd7088', '{"sub": "36424010-bbc2-4379-90df-0b4c01bd7088", "email": "kaikoh95@gmail.com", "email_verified": false, "phone_verified": false}', 'email', '2025-03-26 08:09:35.869262+00', '2025-03-26 08:09:35.869311+00', '2025-03-26 08:09:35.869311+00', '0c956438-c63b-47e1-9a2d-7d29c3629797'),
+	('6334f456-9dbc-4a27-946b-f0a3a2bc827e', '6334f456-9dbc-4a27-946b-f0a3a2bc827e', '{"sub": "6334f456-9dbc-4a27-946b-f0a3a2bc827e", "email": "test@gmail.com", "email_verified": false, "phone_verified": false}', 'email', '2025-03-26 12:36:57.529845+00', '2025-03-26 12:36:57.529899+00', '2025-03-26 12:36:57.529899+00', '5a161cb7-517b-465d-9c0c-ff5e18e8b5a8');
 
-    -- Add labels to tasks
-    INSERT INTO public.entity_labels (entity_type, entity_id, label_id, created_by)
-    SELECT 
-        'task',
-        t.id,
-        l.id,
-        v_user_id
-    FROM public.tasks t
-    CROSS JOIN public.labels l
-    WHERE t.created_by = v_user_id
-    AND l.name IN ('Frontend', 'UX/UI')
-    AND t.title = 'Create login page';
 
-    -- Add positions for tasks in different views
-    INSERT INTO public.entity_positions (
-        entity_type,
-        entity_id,
-        context,
-        position,
-        user_id
-    )
-    SELECT
-        'task',
-        id,
-        'list',
-        (ROW_NUMBER() OVER (ORDER BY created_at)) * 100,
-        v_user_id
-    FROM public.tasks
-    WHERE created_by = v_user_id;
+--
+-- Data for Name: instances; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
 
-    -- Add positions for kanban view
-    INSERT INTO public.entity_positions (
-        entity_type,
-        entity_id,
-        context,
-        position,
-        user_id
-    )
-    SELECT
-        'task',
-        id,
-        'kanban',
-        (ROW_NUMBER() OVER (PARTITION BY status_id ORDER BY created_at)) * 100,
-        v_user_id
-    FROM public.tasks
-    WHERE created_by = v_user_id;
-END $$;
 
--- Create a sample project for user@example.com
-DO $$
-DECLARE
-    v_user_id uuid := 'f9d42068-621c-4e36-8c7c-1dd408c92182';
-    v_project_id integer := 3;
-BEGIN
-    -- Insert default statuses
-    INSERT INTO public.statuses (project_id, name, color, position, is_default, created_by) VALUES
-    (v_project_id, 'New', '#E2E8F0', 0, true, v_user_id),
-    (v_project_id, 'Working', '#3182CE', 1, false, v_user_id),
-    (v_project_id, 'Blocked', '#F56565', 2, false, v_user_id),
-    (v_project_id, 'Completed', '#48BB78', 3, false, v_user_id);
 
-    -- Insert default priorities
-    INSERT INTO public.priorities (project_id, name, color, position, is_default, created_by) VALUES
-    (v_project_id, 'Low', '#718096', 0, false, v_user_id),
-    (v_project_id, 'Normal', '#3182CE', 1, true, v_user_id),
-    (v_project_id, 'Important', '#DD6B20', 2, false, v_user_id),
-    (v_project_id, 'Blocker', '#E53E3E', 3, false, v_user_id);
+--
+-- Data for Name: sessions; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
 
-    -- Insert sample labels
-    INSERT INTO public.labels (project_id, name, color, description, created_by) VALUES
-    (v_project_id, 'Performance', '#FC8181', 'Performance optimization tasks', v_user_id),
-    (v_project_id, 'Security', '#68D391', 'Security related tasks', v_user_id),
-    (v_project_id, 'Refactor', '#63B3ED', 'Code refactoring tasks', v_user_id),
-    (v_project_id, 'Research', '#B794F4', 'Research and investigation tasks', v_user_id);
+INSERT INTO "auth"."sessions" ("id", "user_id", "created_at", "updated_at", "factor_id", "aal", "not_after", "refreshed_at", "user_agent", "ip", "tag") VALUES
+	('a800d76e-283d-4304-87ac-99d1e98461aa', '36424010-bbc2-4379-90df-0b4c01bd7088', '2025-03-26 08:09:35.884423+00', '2025-03-26 09:24:47.378174+00', NULL, 'aal1', NULL, '2025-03-26 09:24:47.378108', 'Vercel Edge Functions', '3.90.145.150', NULL),
+	('2a9ce310-acd0-4298-a033-44e2110ef9d7', 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-05 22:40:53.357523+00', '2025-04-06 00:33:55.350441+00', NULL, 'aal1', NULL, '2025-04-06 00:33:55.350365', 'Next.js Middleware', '118.148.74.153', NULL),
+	('c6611955-4402-45da-9a62-efed7bc793ff', 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-06 00:40:54.633637+00', '2025-04-06 00:40:54.633637+00', NULL, 'aal1', NULL, NULL, 'node', '118.148.74.153', NULL),
+	('03957c15-107a-47c6-b808-752322eb3454', '36424010-bbc2-4379-90df-0b4c01bd7088', '2025-03-29 19:56:03.023848+00', '2025-03-30 07:16:54.818914+00', NULL, 'aal1', NULL, '2025-03-30 07:16:54.818841', 'Next.js Middleware', '182.48.133.115', NULL),
+	('929efd1b-101a-4aaf-a597-96cff7c6be06', 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-07 23:39:40.002967+00', '2025-04-09 03:31:43.043724+00', NULL, 'aal1', NULL, '2025-04-09 03:31:43.04365', 'Vercel Edge Functions', '3.27.125.84', NULL),
+	('4dc1b7b1-4738-4075-a7ca-013f1b4a6af4', 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-09 03:32:13.272604+00', '2025-04-10 22:00:12.719431+00', NULL, 'aal1', NULL, '2025-04-10 22:00:12.719356', 'Vercel Edge Functions', '3.26.49.173', NULL),
+	('3e461298-f24a-4a02-9d55-5f730f5fa578', 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-10 22:00:44.522288+00', '2025-04-10 22:00:44.522288+00', NULL, 'aal1', NULL, NULL, 'node', '98.80.64.157', NULL),
+	('f012de08-8034-46f1-a7bf-16717533525f', 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-06 00:41:13.988683+00', '2025-04-12 09:46:06.201122+00', NULL, 'aal1', NULL, '2025-04-12 09:46:06.20105', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36', '121.98.185.190', NULL);
 
-    -- Insert sample tasks
-    INSERT INTO public.tasks (
-        title,
-        description,
-        status_id,
-        priority_id,
-        project_id,
-        created_by,
-        due_date
-    ) VALUES
-    (
-        'Security audit',
-        'Perform a comprehensive security audit of the application',
-        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'Working'),
-        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Blocker'),
-        v_project_id,
-        v_user_id,
-        (CURRENT_DATE + INTERVAL '2 weeks')::date
-    ),
-    (
-        'Optimize database queries',
-        'Identify and optimize slow database queries to improve application performance',
-        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'New'),
-        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Important'),
-        v_project_id,
-        v_user_id,
-        (CURRENT_DATE + INTERVAL '1 month')::date
-    ),
-    (
-        'Refactor authentication service',
-        'Improve code organization and test coverage for the authentication service',
-        (SELECT id FROM public.statuses WHERE project_id = v_project_id AND name = 'Completed'),
-        (SELECT id FROM public.priorities WHERE project_id = v_project_id AND name = 'Normal'),
-        v_project_id,
-        v_user_id,
-        NULL
-    );
-    
-    -- Add metadata for tasks
-    INSERT INTO public.task_metadata (task_id, title, value, created_by)
-    VALUES
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Security audit' AND created_by = v_user_id),
-        'estimated_hours',
-        '16',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Security audit' AND created_by = v_user_id),
-        'actual_hours',
-        '6',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Optimize database queries' AND created_by = v_user_id),
-        'estimated_hours',
-        '8',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Refactor authentication service' AND created_by = v_user_id),
-        'estimated_hours',
-        '10',
-        v_user_id
-    ),
-    (
-        (SELECT id FROM public.tasks WHERE title = 'Refactor authentication service' AND created_by = v_user_id),
-        'actual_hours',
-        '12',
-        v_user_id
-    );
 
-    -- Assign tasks to the user
-    INSERT INTO public.entity_assignees (entity_type, entity_id, user_id, assigned_by) 
-    SELECT 
-        'task',
-        id,
-        v_user_id,
-        v_user_id
-    FROM public.tasks
-    WHERE created_by = v_user_id;
+--
+-- Data for Name: mfa_amr_claims; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
 
-    -- Add labels to tasks
-    INSERT INTO public.entity_labels (entity_type, entity_id, label_id, created_by)
-    SELECT 
-        'task',
-        t.id,
-        l.id,
-        v_user_id
-    FROM public.tasks t
-    CROSS JOIN public.labels l
-    WHERE t.created_by = v_user_id
-    AND ((l.name = 'Security' AND t.title = 'Security audit') OR
-         (l.name = 'Performance' AND t.title = 'Optimize database queries') OR
-         (l.name = 'Refactor' AND t.title = 'Refactor authentication service'));
+INSERT INTO "auth"."mfa_amr_claims" ("session_id", "created_at", "updated_at", "authentication_method", "id") VALUES
+	('a800d76e-283d-4304-87ac-99d1e98461aa', '2025-03-26 08:09:35.897534+00', '2025-03-26 08:09:35.897534+00', 'password', '3d48c9fd-0939-4d1b-b8ba-3cee0d755b89'),
+	('03957c15-107a-47c6-b808-752322eb3454', '2025-03-29 19:56:03.044193+00', '2025-03-29 19:56:03.044193+00', 'password', 'e24e8f8a-f876-4fa0-9ba8-8495e75f0b0f'),
+	('2a9ce310-acd0-4298-a033-44e2110ef9d7', '2025-04-05 22:40:53.379756+00', '2025-04-05 22:40:53.379756+00', 'password', '9f1fd155-3352-4477-8362-399ac755a732'),
+	('c6611955-4402-45da-9a62-efed7bc793ff', '2025-04-06 00:40:54.637537+00', '2025-04-06 00:40:54.637537+00', 'password', 'aa2c28c0-5860-41dd-a2d6-714761d81520'),
+	('f012de08-8034-46f1-a7bf-16717533525f', '2025-04-06 00:41:13.991015+00', '2025-04-06 00:41:13.991015+00', 'password', 'c13c90c4-ecde-4528-87ac-5ec2e35b6f6e'),
+	('929efd1b-101a-4aaf-a597-96cff7c6be06', '2025-04-07 23:39:40.027949+00', '2025-04-07 23:39:40.027949+00', 'password', 'b44bb9e5-156e-4fde-bd0c-cfb1ca36a8b4'),
+	('4dc1b7b1-4738-4075-a7ca-013f1b4a6af4', '2025-04-09 03:32:13.278239+00', '2025-04-09 03:32:13.278239+00', 'password', 'a51efcbb-9194-4d63-944c-1fbe8b4bfb7a'),
+	('3e461298-f24a-4a02-9d55-5f730f5fa578', '2025-04-10 22:00:44.530018+00', '2025-04-10 22:00:44.530018+00', 'password', 'dd896ff6-266b-4405-98ff-e12aa87dd17d');
 
-    -- Add positions for tasks in different views
-    INSERT INTO public.entity_positions (
-        entity_type,
-        entity_id,
-        context,
-        position,
-        user_id
-    )
-    SELECT
-        'task',
-        id,
-        'list',
-        (ROW_NUMBER() OVER (ORDER BY created_at)) * 100,
-        v_user_id
-    FROM public.tasks
-    WHERE created_by = v_user_id;
 
-    -- Add positions for kanban view
-    INSERT INTO public.entity_positions (
-        entity_type,
-        entity_id,
-        context,
-        position,
-        user_id
-    )
-    SELECT
-        'task',
-        id,
-        'kanban',
-        (ROW_NUMBER() OVER (PARTITION BY status_id ORDER BY created_at)) * 100,
-        v_user_id
-    FROM public.tasks
-    WHERE created_by = v_user_id;
-END $$; 
+--
+-- Data for Name: mfa_factors; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
+
+
+
+--
+-- Data for Name: mfa_challenges; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
+
+
+
+--
+-- Data for Name: one_time_tokens; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
+
+INSERT INTO "auth"."one_time_tokens" ("id", "user_id", "token_type", "token_hash", "relates_to", "created_at", "updated_at") VALUES
+	('e579d0f0-7549-4333-8fd0-4a357d8a9641', '317706ad-1540-4f4f-be16-de5b1714c882', 'confirmation_token', 'pkce_2f0533dcfeefa228d1e377d343f200141e323afa2f6d2324eca8b850', 'test123@gmail.com', '2025-03-23 09:38:32.425891', '2025-03-23 09:38:32.425891');
+
+
+--
+-- Data for Name: refresh_tokens; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
+
+INSERT INTO "auth"."refresh_tokens" ("instance_id", "id", "token", "user_id", "revoked", "created_at", "updated_at", "parent", "session_id") VALUES
+	('00000000-0000-0000-0000-000000000000', 47, 'Oe0CerMl5pBZE2uUoalNBQ', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-05 22:40:53.365895+00', '2025-04-06 00:32:29.690073+00', NULL, '2a9ce310-acd0-4298-a033-44e2110ef9d7'),
+	('00000000-0000-0000-0000-000000000000', 48, 'Kd7lCQMIJJ4X0KylphqQVw', 'c0b0abdc-1472-41fc-8844-b44d1691004a', false, '2025-04-06 00:32:29.6934+00', '2025-04-06 00:32:29.6934+00', 'Oe0CerMl5pBZE2uUoalNBQ', '2a9ce310-acd0-4298-a033-44e2110ef9d7'),
+	('00000000-0000-0000-0000-000000000000', 49, 'hG_67KBnH79G-xtWDfq_1w', 'c0b0abdc-1472-41fc-8844-b44d1691004a', false, '2025-04-06 00:40:54.635656+00', '2025-04-06 00:40:54.635656+00', NULL, 'c6611955-4402-45da-9a62-efed7bc793ff'),
+	('00000000-0000-0000-0000-000000000000', 50, 'KftZ0obK1Tfa2SEEf_An2Q', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-06 00:41:13.989395+00', '2025-04-07 08:08:54.715155+00', NULL, 'f012de08-8034-46f1-a7bf-16717533525f'),
+	('00000000-0000-0000-0000-000000000000', 51, '9rJFoqtfZSzIowRJ_bcs8w', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-07 08:08:54.728709+00', '2025-04-07 09:30:38.764279+00', 'KftZ0obK1Tfa2SEEf_An2Q', 'f012de08-8034-46f1-a7bf-16717533525f'),
+	('00000000-0000-0000-0000-000000000000', 8, '4HOcgA-pieIK4-vu6APo7g', '36424010-bbc2-4379-90df-0b4c01bd7088', true, '2025-03-26 08:09:35.889643+00', '2025-03-26 09:24:40.916737+00', NULL, 'a800d76e-283d-4304-87ac-99d1e98461aa'),
+	('00000000-0000-0000-0000-000000000000', 9, 'HFVwlyIuOB0UEFfvn_QlpA', '36424010-bbc2-4379-90df-0b4c01bd7088', false, '2025-03-26 09:24:40.923211+00', '2025-03-26 09:24:40.923211+00', '4HOcgA-pieIK4-vu6APo7g', 'a800d76e-283d-4304-87ac-99d1e98461aa'),
+	('00000000-0000-0000-0000-000000000000', 52, 'CASPO0GbW3rS_jAp-6319g', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-07 09:30:38.765553+00', '2025-04-07 10:30:48.305646+00', '9rJFoqtfZSzIowRJ_bcs8w', 'f012de08-8034-46f1-a7bf-16717533525f'),
+	('00000000-0000-0000-0000-000000000000', 54, 'UrbBxcyyLg8QQ6BF6K06wg', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-07 23:39:40.011406+00', '2025-04-08 04:38:58.240874+00', NULL, '929efd1b-101a-4aaf-a597-96cff7c6be06'),
+	('00000000-0000-0000-0000-000000000000', 53, 'uUzRhJJkRunG7vW10Mwy3Q', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-07 10:30:48.306785+00', '2025-04-08 05:49:47.469888+00', 'CASPO0GbW3rS_jAp-6319g', 'f012de08-8034-46f1-a7bf-16717533525f'),
+	('00000000-0000-0000-0000-000000000000', 55, 's5-k6izancauG1ufScBmUA', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-08 04:38:58.247886+00', '2025-04-09 03:31:43.02287+00', 'UrbBxcyyLg8QQ6BF6K06wg', '929efd1b-101a-4aaf-a597-96cff7c6be06'),
+	('00000000-0000-0000-0000-000000000000', 57, 'yQiykBu2rI7aYpC-x4PjTA', 'c0b0abdc-1472-41fc-8844-b44d1691004a', false, '2025-04-09 03:31:43.028366+00', '2025-04-09 03:31:43.028366+00', 's5-k6izancauG1ufScBmUA', '929efd1b-101a-4aaf-a597-96cff7c6be06'),
+	('00000000-0000-0000-0000-000000000000', 58, 'f7FzEYc3zPNRRT5aJM_8jA', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-09 03:32:13.277081+00', '2025-04-09 05:11:38.777035+00', NULL, '4dc1b7b1-4738-4075-a7ca-013f1b4a6af4'),
+	('00000000-0000-0000-0000-000000000000', 56, 'zIV0UG4CcMO6pKckksl_Cw', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-08 05:49:47.472205+00', '2025-04-09 06:53:56.528249+00', 'uUzRhJJkRunG7vW10Mwy3Q', 'f012de08-8034-46f1-a7bf-16717533525f'),
+	('00000000-0000-0000-0000-000000000000', 60, 'NNRBkD6WDxSG-p3_Vpnrjw', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-09 06:53:56.533188+00', '2025-04-09 10:07:35.772281+00', 'zIV0UG4CcMO6pKckksl_Cw', 'f012de08-8034-46f1-a7bf-16717533525f'),
+	('00000000-0000-0000-0000-000000000000', 59, 'xPqx80--IzJ--a5hhRaTBg', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-09 05:11:38.780269+00', '2025-04-10 22:00:11.961494+00', 'f7FzEYc3zPNRRT5aJM_8jA', '4dc1b7b1-4738-4075-a7ca-013f1b4a6af4'),
+	('00000000-0000-0000-0000-000000000000', 21, 'IbtF9LmUKnzLMf0Pegxrbw', '36424010-bbc2-4379-90df-0b4c01bd7088', true, '2025-03-29 19:56:03.031868+00', '2025-03-29 20:55:17.295651+00', NULL, '03957c15-107a-47c6-b808-752322eb3454'),
+	('00000000-0000-0000-0000-000000000000', 62, 'kRfREVhmWTmfHfDaTwo8WQ', 'c0b0abdc-1472-41fc-8844-b44d1691004a', false, '2025-04-10 22:00:11.972176+00', '2025-04-10 22:00:11.972176+00', 'xPqx80--IzJ--a5hhRaTBg', '4dc1b7b1-4738-4075-a7ca-013f1b4a6af4'),
+	('00000000-0000-0000-0000-000000000000', 63, 'jHXhBkcLPeoDGnnXDjgc8A', 'c0b0abdc-1472-41fc-8844-b44d1691004a', false, '2025-04-10 22:00:44.52843+00', '2025-04-10 22:00:44.52843+00', NULL, '3e461298-f24a-4a02-9d55-5f730f5fa578'),
+	('00000000-0000-0000-0000-000000000000', 22, 'GgsKgfonTdHz-PD5pbPKDA', '36424010-bbc2-4379-90df-0b4c01bd7088', true, '2025-03-29 20:55:17.297738+00', '2025-03-29 21:54:50.328558+00', 'IbtF9LmUKnzLMf0Pegxrbw', '03957c15-107a-47c6-b808-752322eb3454'),
+	('00000000-0000-0000-0000-000000000000', 61, 'CJo7uEeSt4GLVDBRXhyhXA', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-09 10:07:35.773929+00', '2025-04-12 05:41:44.456064+00', 'NNRBkD6WDxSG-p3_Vpnrjw', 'f012de08-8034-46f1-a7bf-16717533525f'),
+	('00000000-0000-0000-0000-000000000000', 64, 'uruqCFUUtqnJUxI3DWnleA', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-12 05:41:44.468758+00', '2025-04-12 06:39:58.393883+00', 'CJo7uEeSt4GLVDBRXhyhXA', 'f012de08-8034-46f1-a7bf-16717533525f'),
+	('00000000-0000-0000-0000-000000000000', 65, 'DXn11tyJZF6MxErzfTagaw', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-12 06:39:58.399177+00', '2025-04-12 07:45:41.473255+00', 'uruqCFUUtqnJUxI3DWnleA', 'f012de08-8034-46f1-a7bf-16717533525f'),
+	('00000000-0000-0000-0000-000000000000', 24, 'WT2jusbN0jOpoah3YKDURQ', '36424010-bbc2-4379-90df-0b4c01bd7088', true, '2025-03-29 21:54:50.331145+00', '2025-03-30 07:16:54.801398+00', 'GgsKgfonTdHz-PD5pbPKDA', '03957c15-107a-47c6-b808-752322eb3454'),
+	('00000000-0000-0000-0000-000000000000', 27, 'SKZavqJgldp0pxWGsXb6VA', '36424010-bbc2-4379-90df-0b4c01bd7088', false, '2025-03-30 07:16:54.810173+00', '2025-03-30 07:16:54.810173+00', 'WT2jusbN0jOpoah3YKDURQ', '03957c15-107a-47c6-b808-752322eb3454'),
+	('00000000-0000-0000-0000-000000000000', 66, '-ctvf-oETcLrU6K6rH2iow', 'c0b0abdc-1472-41fc-8844-b44d1691004a', true, '2025-04-12 07:45:41.474525+00', '2025-04-12 09:46:06.197+00', 'DXn11tyJZF6MxErzfTagaw', 'f012de08-8034-46f1-a7bf-16717533525f'),
+	('00000000-0000-0000-0000-000000000000', 67, '7vKBNc-PpLA0N9MntQm2TQ', 'c0b0abdc-1472-41fc-8844-b44d1691004a', false, '2025-04-12 09:46:06.198223+00', '2025-04-12 09:46:06.198223+00', '-ctvf-oETcLrU6K6rH2iow', 'f012de08-8034-46f1-a7bf-16717533525f');
+
+
+--
+-- Data for Name: sso_providers; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
+
+
+
+--
+-- Data for Name: saml_providers; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
+
+
+
+--
+-- Data for Name: saml_relay_states; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
+
+
+
+--
+-- Data for Name: sso_domains; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin
+--
+
+
+
+--
+-- Data for Name: key; Type: TABLE DATA; Schema: pgsodium; Owner: supabase_admin
+--
+
+
+
+--
+-- Data for Name: approvals; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."approvals" ("id", "created_at", "entity_id", "entity_type", "last_updated", "requester_id", "status", "user_id") VALUES
+	(1, '2025-03-24 10:24:50.060663+00', 123, 'site_diary', '2025-03-24 10:24:50.060663', 'c0b0abdc-1472-41fc-8844-b44d1691004a', 'draft', NULL),
+	(2, '2025-03-24 10:37:07.880672+00', 123, 'site_diary', '2025-03-24 10:37:07.880672', 'c0b0abdc-1472-41fc-8844-b44d1691004a', 'draft', NULL),
+	(3, '2025-03-25 05:47:14.255834+00', 123, 'site_diary', '2025-03-25 05:47:14.255834', 'c0b0abdc-1472-41fc-8844-b44d1691004a', 'draft', NULL),
+	(4, '2025-03-26 08:09:58.967717+00', 123, 'site_diary', '2025-03-26 08:09:58.967717', '36424010-bbc2-4379-90df-0b4c01bd7088', 'draft', NULL),
+	(5, '2025-03-26 08:10:14.707343+00', 123, 'site_diary', '2025-03-26 08:10:14.707343', '36424010-bbc2-4379-90df-0b4c01bd7088', 'draft', NULL),
+	(16, '2025-03-27 08:18:21.3475+00', 123, 'site_diary', '2025-03-27 08:18:21.3475', 'c0b0abdc-1472-41fc-8844-b44d1691004a', 'draft', NULL),
+	(28, '2025-03-27 08:59:25.443637+00', 123, 'site_diary', '2025-03-27 08:59:25.443637', 'c0b0abdc-1472-41fc-8844-b44d1691004a', 'draft', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(29, '2025-03-27 09:27:37.543008+00', 123, 'site_diary', '2025-03-27 09:27:37.543008', 'c0b0abdc-1472-41fc-8844-b44d1691004a', 'draft', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(30, '2025-03-27 10:20:57.010412+00', 123, 'site_diary', '2025-03-27 10:20:57.010412', 'c0b0abdc-1472-41fc-8844-b44d1691004a', 'draft', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(31, '2025-03-27 10:27:04.08379+00', 123, 'site_diary', '2025-03-27 10:27:04.08379', 'c0b0abdc-1472-41fc-8844-b44d1691004a', 'approved', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(32, '2025-03-29 19:56:19.114771+00', 123, 'site_diary', '2025-03-29 19:56:19.114771', '36424010-bbc2-4379-90df-0b4c01bd7088', 'draft', '36424010-bbc2-4379-90df-0b4c01bd7088');
+
+
+--
+-- Data for Name: approval_approvers; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."approval_approvers" ("approver_id", "approval_id") VALUES
+	('36424010-bbc2-4379-90df-0b4c01bd7088', 29),
+	('6334f456-9dbc-4a27-946b-f0a3a2bc827e', 29),
+	('36424010-bbc2-4379-90df-0b4c01bd7088', 30),
+	('6334f456-9dbc-4a27-946b-f0a3a2bc827e', 30),
+	('c0b0abdc-1472-41fc-8844-b44d1691004a', 31),
+	('6334f456-9dbc-4a27-946b-f0a3a2bc827e', 31),
+	('c0b0abdc-1472-41fc-8844-b44d1691004a', 32),
+	('6334f456-9dbc-4a27-946b-f0a3a2bc827e', 32);
+
+
+--
+-- Data for Name: entity_assignees; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."entity_assignees" ("id", "entity_type", "entity_id", "user_id", "assigned_at", "assigned_by") VALUES
+	(1, 'task', 1, '36424010-bbc2-4379-90df-0b4c01bd7088', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(2, 'task', 2, '36424010-bbc2-4379-90df-0b4c01bd7088', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(3, 'task', 3, '36424010-bbc2-4379-90df-0b4c01bd7088', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(4, 'task', 4, 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(5, 'task', 5, 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(6, 'task', 6, 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(7, 'task', 7, '317706ad-1540-4f4f-be16-de5b1714c882', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(8, 'task', 8, '317706ad-1540-4f4f-be16-de5b1714c882', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(9, 'task', 9, '317706ad-1540-4f4f-be16-de5b1714c882', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882');
+
+
+--
+-- Data for Name: labels; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."labels" ("id", "project_id", "name", "color", "description", "created_at", "created_by") VALUES
+	(1, 1, 'Bug', '#FC8181', 'Issues that need to be fixed', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(2, 1, 'Feature', '#68D391', 'New features to be implemented', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(3, 1, 'Enhancement', '#63B3ED', 'Improvements to existing features', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(4, 1, 'Documentation', '#B794F4', 'Documentation related tasks', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(5, 2, 'Frontend', '#FC8181', 'Frontend tasks', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(6, 2, 'Backend', '#68D391', 'Backend tasks', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(7, 2, 'UX/UI', '#63B3ED', 'Design related tasks', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(8, 2, 'Testing', '#D6BCFA', 'QA and testing tasks', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(9, 3, 'Performance', '#FC8181', 'Performance optimization tasks', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(10, 3, 'Security', '#68D391', 'Security related tasks', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(11, 3, 'Refactor', '#63B3ED', 'Code refactoring tasks', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(12, 3, 'Research', '#B794F4', 'Research and investigation tasks', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882');
+
+
+--
+-- Data for Name: entity_labels; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."entity_labels" ("id", "entity_type", "entity_id", "label_id", "created_at", "created_by") VALUES
+	(1, 'task', 1, 2, '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(2, 'task', 1, 3, '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(3, 'task', 4, 5, '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(4, 'task', 4, 7, '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(5, 'task', 7, 10, '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(6, 'task', 8, 9, '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(7, 'task', 9, 11, '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882');
+
+
+--
+-- Data for Name: entity_positions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."entity_positions" ("id", "entity_type", "entity_id", "context", "position", "user_id", "created_at", "updated_at") VALUES
+	(1, 'task', 1, 'list', 100, '36424010-bbc2-4379-90df-0b4c01bd7088', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(2, 'task', 2, 'list', 200, '36424010-bbc2-4379-90df-0b4c01bd7088', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(3, 'task', 3, 'list', 300, '36424010-bbc2-4379-90df-0b4c01bd7088', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(4, 'task', 3, 'kanban', 100, '36424010-bbc2-4379-90df-0b4c01bd7088', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(5, 'task', 1, 'kanban', 100, '36424010-bbc2-4379-90df-0b4c01bd7088', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(6, 'task', 2, 'kanban', 100, '36424010-bbc2-4379-90df-0b4c01bd7088', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(7, 'task', 4, 'list', 100, 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(8, 'task', 5, 'list', 200, 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(9, 'task', 6, 'list', 300, 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(10, 'task', 6, 'kanban', 100, 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(11, 'task', 4, 'kanban', 100, 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(12, 'task', 5, 'kanban', 100, 'c0b0abdc-1472-41fc-8844-b44d1691004a', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(13, 'task', 7, 'list', 100, '317706ad-1540-4f4f-be16-de5b1714c882', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(14, 'task', 8, 'list', 200, '317706ad-1540-4f4f-be16-de5b1714c882', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(15, 'task', 9, 'list', 300, '317706ad-1540-4f4f-be16-de5b1714c882', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(16, 'task', 8, 'kanban', 100, '317706ad-1540-4f4f-be16-de5b1714c882', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(17, 'task', 7, 'kanban', 100, '317706ad-1540-4f4f-be16-de5b1714c882', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00'),
+	(18, 'task', 9, 'kanban', 100, '317706ad-1540-4f4f-be16-de5b1714c882', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00');
+
+
+--
+-- Data for Name: forms; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."forms" ("id", "name", "owner_id", "team_id", "created_at", "updated_at", "deleted_at", "assigned_to", "version", "is_synced", "last_synced_at") OVERRIDING SYSTEM VALUE VALUES
+	(1, 'Trial 1', 'c0b0abdc-1472-41fc-8844-b44d1691004a', NULL, '2025-04-03 10:00:43.189088+00', '2025-04-03 10:00:43.189088+00', NULL, '{}', 1, false, NULL),
+	(2, 'Form 1', 'c0b0abdc-1472-41fc-8844-b44d1691004a', NULL, '2025-04-03 10:33:06.795617+00', '2025-04-05 09:29:19.8465+00', NULL, '{}', 1, false, NULL),
+	(3, 'When does life givesy ou tanegerinf', 'c0b0abdc-1472-41fc-8844-b44d1691004a', NULL, '2025-04-05 09:45:23.833518+00', '2025-04-05 09:45:23.833518+00', NULL, '{}', 1, false, NULL);
+
+
+--
+-- Data for Name: form_items; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."form_items" ("id", "form_id", "item_type", "question_value", "options", "is_required", "display_order") OVERRIDING SYSTEM VALUE VALUES
+	(1, 1, 'question', 'Question 1', '[]', false, 0),
+	(2, 1, 'radio_box', 'Question 2', '["Option 1", "Option 2"]', true, 1),
+	(29, 2, 'question', 'Surprised very long very long very long very long ', '[""]', false, 0),
+	(30, 2, 'radio_box', 'How do you feel about something?', '[""]', false, 1),
+	(31, 3, 'question', 'Helllo what do ou tinidwa', '[]', false, 0),
+	(32, 3, 'question', 'dwad awidj iwaojdi oajw idj aj', '[]', false, 1),
+	(33, 3, 'question', ' dawioj dioa jdioj waidj ai jdi oajdoi jaw ', '[]', false, 2);
+
+
+--
+-- Data for Name: priorities; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."priorities" ("id", "project_id", "name", "color", "position", "is_default", "created_at", "created_by") VALUES
+	(1, 1, 'Low', '#718096', 0, false, '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(2, 1, 'Medium', '#3182CE', 1, true, '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(3, 1, 'High', '#DD6B20', 2, false, '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(4, 1, 'Urgent', '#E53E3E', 3, false, '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(5, 2, 'Low', '#718096', 0, false, '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(6, 2, 'Medium', '#4299E1', 1, true, '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(7, 2, 'High', '#ED8936', 2, false, '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(8, 2, 'Critical', '#E53E3E', 3, false, '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(9, 3, 'Low', '#718096', 0, false, '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(10, 3, 'Normal', '#3182CE', 1, true, '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(11, 3, 'Important', '#DD6B20', 2, false, '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(12, 3, 'Blocker', '#E53E3E', 3, false, '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882');
+
+
+--
+-- Data for Name: statuses; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."statuses" ("id", "project_id", "name", "color", "position", "is_default", "created_at", "created_by") VALUES
+	(1, 1, 'To Do', '#E2E8F0', 0, true, '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(2, 1, 'In Progress', '#3182CE', 1, false, '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(3, 1, 'In Review', '#805AD5', 2, false, '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(4, 1, 'Done', '#48BB78', 3, false, '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(5, 2, 'Backlog', '#CBD5E0', 0, true, '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(6, 2, 'In Development', '#4299E1', 1, false, '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(7, 2, 'Testing', '#9F7AEA', 2, false, '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(8, 2, 'Completed', '#48BB78', 3, false, '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(9, 3, 'New', '#E2E8F0', 0, true, '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(10, 3, 'Working', '#3182CE', 1, false, '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(11, 3, 'Blocked', '#F56565', 2, false, '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(12, 3, 'Completed', '#48BB78', 3, false, '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882');
+
+
+--
+-- Data for Name: tasks; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."tasks" ("id", "title", "description", "status_id", "priority_id", "created_at", "updated_at", "due_date", "created_by", "project_id", "parent_task_id") VALUES
+	(1, 'Set up project infrastructure', 'Initialize the project with basic configuration and dependencies', 2, 3, '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', NULL, '36424010-bbc2-4379-90df-0b4c01bd7088', 1, NULL),
+	(2, 'Design database schema', 'Create initial database schema with core tables and relationships', 4, 3, '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', NULL, '36424010-bbc2-4379-90df-0b4c01bd7088', 1, NULL),
+	(3, 'Implement user authentication', 'Set up user authentication system with email and password', 1, 4, '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', NULL, '36424010-bbc2-4379-90df-0b4c01bd7088', 1, NULL),
+	(4, 'Create login page', 'Design and implement a responsive login page with email and password authentication', 6, 7, '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', NULL, 'c0b0abdc-1472-41fc-8844-b44d1691004a', 2, NULL),
+	(5, 'Set up authentication API', 'Implement JWT authentication backend API with refresh tokens', 8, 8, '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', NULL, 'c0b0abdc-1472-41fc-8844-b44d1691004a', 2, NULL),
+	(6, 'Implement user dashboard', 'Create a dashboard with user statistics and recent activity', 5, 6, '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', NULL, 'c0b0abdc-1472-41fc-8844-b44d1691004a', 2, NULL),
+	(7, 'Security audit', 'Perform a comprehensive security audit of the application', 10, 12, '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '2025-04-26 00:00:00+00', '317706ad-1540-4f4f-be16-de5b1714c882', 3, NULL),
+	(8, 'Optimize database queries', 'Identify and optimize slow database queries to improve application performance', 9, 11, '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '2025-05-12 00:00:00+00', '317706ad-1540-4f4f-be16-de5b1714c882', 3, NULL),
+	(9, 'Refactor authentication service', 'Improve code organization and test coverage for the authentication service', 12, 10, '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', NULL, '317706ad-1540-4f4f-be16-de5b1714c882', 3, NULL);
+
+
+--
+-- Data for Name: task_comments; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+
+
+--
+-- Data for Name: task_metadata; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO "public"."task_metadata" ("id", "task_id", "title", "value", "created_at", "updated_at", "created_by") VALUES
+	(1, 1, 'estimated_hours', '8', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(2, 1, 'actual_hours', '4', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(3, 2, 'estimated_hours', '4', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(4, 2, 'actual_hours', '6', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(5, 3, 'estimated_hours', '12', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '36424010-bbc2-4379-90df-0b4c01bd7088'),
+	(6, 4, 'estimated_hours', '6', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(7, 4, 'actual_hours', '4', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(8, 5, 'estimated_hours', '8', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(9, 5, 'actual_hours', '10', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(10, 6, 'estimated_hours', '12', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', 'c0b0abdc-1472-41fc-8844-b44d1691004a'),
+	(11, 7, 'estimated_hours', '16', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(12, 7, 'actual_hours', '6', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(13, 8, 'estimated_hours', '8', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(14, 9, 'estimated_hours', '10', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882'),
+	(15, 9, 'actual_hours', '12', '2025-04-12 20:12:21.755157+00', '2025-04-12 20:12:21.755157+00', '317706ad-1540-4f4f-be16-de5b1714c882');
+
+
+--
+-- Data for Name: buckets; Type: TABLE DATA; Schema: storage; Owner: supabase_storage_admin
+--
+
+
+
+--
+-- Data for Name: objects; Type: TABLE DATA; Schema: storage; Owner: supabase_storage_admin
+--
+
+
+
+--
+-- Data for Name: s3_multipart_uploads; Type: TABLE DATA; Schema: storage; Owner: supabase_storage_admin
+--
+
+
+
+--
+-- Data for Name: s3_multipart_uploads_parts; Type: TABLE DATA; Schema: storage; Owner: supabase_storage_admin
+--
+
+
+
+--
+-- Data for Name: secrets; Type: TABLE DATA; Schema: vault; Owner: supabase_admin
+--
+
+
+
+--
+-- Name: refresh_tokens_id_seq; Type: SEQUENCE SET; Schema: auth; Owner: supabase_auth_admin
+--
+
+SELECT pg_catalog.setval('"auth"."refresh_tokens_id_seq"', 67, true);
+
+
+--
+-- Name: key_key_id_seq; Type: SEQUENCE SET; Schema: pgsodium; Owner: supabase_admin
+--
+
+SELECT pg_catalog.setval('"pgsodium"."key_key_id_seq"', 1, false);
+
+
+--
+-- Name: approvals_entity_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."approvals_entity_id_seq"', 1, false);
+
+
+--
+-- Name: approvals_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."approvals_id_seq"', 32, true);
+
+
+--
+-- Name: entity_assignees_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."entity_assignees_id_seq"', 9, true);
+
+
+--
+-- Name: entity_labels_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."entity_labels_id_seq"', 7, true);
+
+
+--
+-- Name: entity_positions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."entity_positions_id_seq"', 18, true);
+
+
+--
+-- Name: form_items_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."form_items_id_seq"', 33, true);
+
+
+--
+-- Name: forms_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."forms_id_seq"', 3, true);
+
+
+--
+-- Name: labels_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."labels_id_seq"', 12, true);
+
+
+--
+-- Name: priorities_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."priorities_id_seq"', 12, true);
+
+
+--
+-- Name: statuses_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."statuses_id_seq"', 12, true);
+
+
+--
+-- Name: task_comments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."task_comments_id_seq"', 1, false);
+
+
+--
+-- Name: task_metadata_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."task_metadata_id_seq"', 15, true);
+
+
+--
+-- Name: tasks_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('"public"."tasks_id_seq"', 9, true);
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+RESET ALL;

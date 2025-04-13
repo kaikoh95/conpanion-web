@@ -433,10 +433,10 @@ export default function TasksPage() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <TaskColumnSkeleton />
-          <TaskColumnSkeleton />
-          <TaskColumnSkeleton />
-          <TaskColumnSkeleton />
+            <TaskColumnSkeleton />
+            <TaskColumnSkeleton />
+            <TaskColumnSkeleton />
+            <TaskColumnSkeleton />
         </div>
       </div>
     );
@@ -555,24 +555,24 @@ function TaskColumnsStatic({
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {statuses.map(status => (
-        <div
-          key={status.id}
+            <div
+              key={status.id}
           className="bg-card border border-border rounded-lg p-4"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-medium">{status.name}</h3>
-            <div 
-              className="w-6 h-6 rounded-full"
-              style={{ backgroundColor: status.color || '#E2E8F0' }}
-            />
-          </div>
-          
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium">{status.name}</h3>
+                <div 
+                  className="w-6 h-6 rounded-full"
+                  style={{ backgroundColor: status.color || '#E2E8F0' }}
+                />
+              </div>
+              
           <div className="space-y-4">
             {(tasksByStatus[status.id] || []).map(task => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                status={status}
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      status={status}
                 priority={task.priorities || { 
                   id: 0, name: 'No Priority', color: '#E2E8F0',
                   position: 0, is_default: false, project_id: 0, 
@@ -582,15 +582,15 @@ function TaskColumnsStatic({
                   ?.map(el => el.labels)
                   .filter((label): label is NonNullable<typeof label> => label !== null) || []}
                 assignees={task.entity_assignees?.map(ea => ({
-                  id: ea.user_id,
-                  name: ea.users.raw_user_meta_data.name,
-                  avatar_url: ea.users.raw_user_meta_data.avatar_url,
+                        id: ea.user_id,
+                        name: ea.users.raw_user_meta_data.name,
+                        avatar_url: ea.users.raw_user_meta_data.avatar_url,
                 })) || []}
                 allStatuses={statuses}
                 allPriorities={priorities}
                 refreshTasks={refreshTasks}
-              />
-            ))}
+                    />
+                  ))}
             
             {(tasksByStatus[status.id] || []).length === 0 && (
               <div className="text-center py-6 text-muted-foreground text-sm">
@@ -600,7 +600,7 @@ function TaskColumnsStatic({
           </div>
         </div>
       ))}
-    </div>
+            </div>
   );
 }
 
