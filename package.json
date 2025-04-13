@@ -5,6 +5,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "prettier": "prettier --check .",
+    "prettier:fix": "prettier --write .",
     "sb": "supabase",
     "types:db": "supabase gen types typescript --local > lib/supabase/types.generated.d.ts",
     "db:dump": "supabase db dump --linked --data-only -f ./supabase/seed.sql",
@@ -45,9 +47,12 @@
     "@types/node": "22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "19.0.2",
+    "eslint": "9.24.0",
+    "eslint-config-next": "15.3.0",
     "husky": "^8.0.0",
     "lint-staged": "^15.0.0",
     "postcss": "8.4.49",
+    "prettier-plugin-tailwindcss": "^0.6.11",
     "supabase": "^2.19.7",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "3.4.17",
@@ -55,6 +60,7 @@
     "typescript": "5.7.2"
   },
   "lint-staged": {
-    "supabase/migrations/*.sql": "npm run types:db"
+    "supabase/migrations/*.sql": "npm run types:db",
+    "*": "npm run prettier:fix"
   }
 }
