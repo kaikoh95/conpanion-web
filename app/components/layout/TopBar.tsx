@@ -1,17 +1,35 @@
 'use client';
 
-import { Search, Bell, User } from 'lucide-react';
+import { Search, Bell, User, Menu } from 'lucide-react';
 import { signOutAction } from '@/app/actions';
 import { ThemeSwitcher } from '@/components/theme-switcher';
+import { Button } from '@/components/ui/button';
+import { RefObject } from 'react';
 
-export default function TopBar() {
+interface TopBarProps {
+  isSidebarOpen: boolean;
+  onSidebarToggle: () => void;
+  toggleButtonRef: RefObject<HTMLButtonElement | null>;
+}
+
+export default function TopBar({ isSidebarOpen, onSidebarToggle, toggleButtonRef }: TopBarProps) {
   return (
     <header 
-      className="h-14 bg-background/80 dark:bg-background/95 border-b flex items-center justify-between px-4 fixed top-0 right-0 z-20 transition-[left] duration-300"
-      style={{ left: 'var(--sidebar-width)' }}
+      className="h-14 bg-background/80 dark:bg-background/95 border-b flex items-center justify-between px-4 fixed top-0 right-0 left-0 z-20 lg:left-[var(--sidebar-width)]"
     >
-      <div className="flex items-center flex-1 max-w-2xl">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex items-center gap-4">
+        <Button
+          ref={toggleButtonRef}
+          variant="ghost"
+          size="icon"
+          className="lg:hidden"
+          onClick={onSidebarToggle}
+        >
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Toggle menu</span>
+        </Button>
+
+        <div className="relative flex-1 max-w-md hidden md:block">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <input
             type="text"
