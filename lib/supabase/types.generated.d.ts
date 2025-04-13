@@ -293,7 +293,15 @@ export type Database = {
           name?: string
           project_id?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "labels_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       priorities: {
         Row: {
@@ -326,7 +334,89 @@ export type Database = {
           position?: number
           project_id?: number
         }
+        Relationships: [
+          {
+            foreignKeyName: "priorities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: number
+          is_archived: boolean
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: number
+          is_archived?: boolean
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: number
+          is_archived?: boolean
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
         Relationships: []
+      }
+      projects_users: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: number
+          project_id: number
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: number
+          project_id: number
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: number
+          project_id?: number
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_users_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       statuses: {
         Row: {
@@ -359,7 +449,15 @@ export type Database = {
           position?: number
           project_id?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "statuses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_comments: {
         Row: {
@@ -490,6 +588,13 @@ export type Database = {
             columns: ["priority_id"]
             isOneToOne: false
             referencedRelation: "priorities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {

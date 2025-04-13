@@ -95,6 +95,11 @@ export function AddTaskDrawer({
       return;
     }
 
+    if (!statusId || !priorityId || !user?.id) {
+      setError('Status, priority and user ID are required');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -113,7 +118,8 @@ export function AddTaskDrawer({
           due_date: dueDate ? dueDate.toISOString() : null,
           created_at: now,
           updated_at: now,
-          created_by: user?.id
+          created_by: user?.id,
+          project_id: user?.activeProjectId
         })
         .select('id')
         .single();
@@ -130,12 +136,14 @@ export function AddTaskDrawer({
       // 2. Add labels if any are selected
       if (selectedLabels.length > 0) {
         const labelLinks = selectedLabels.map(label => ({
-          task_id: taskId,
-          label_id: label.id
+          entity_type: 'tasks',
+          entity_id: taskId,
+          label_id: label.id,
+          created_by: user.id,
         }));
         
         const { error: labelError } = await supabase
-          .from('task_labels')
+          .from('entity_labels')
           .insert(labelLinks);
           
         if (labelError) {
@@ -216,7 +224,12 @@ export function AddTaskDrawer({
     try {
       const supabase = getSupabaseClient();
       
-      // First check if the label already exists
+      if (!user?.id) {
+        setLabelError('User ID is required');
+        setSavingLabel(false);
+        return;
+      }
+
       const { data: existingLabels, error: searchError } = await supabase
         .from('labels')
         .select('*')
@@ -251,8 +264,10 @@ export function AddTaskDrawer({
       const { data: newLabel, error: labelError } = await supabase
         .from('labels')
         .insert({ 
-          name: labelName.trim(), 
-          color: labelColor 
+          name: labelName.trim(),
+          color: labelColor,
+          created_by: user.id,
+          project_id: user.activeProjectId,
         })
         .select('*')
         .single();

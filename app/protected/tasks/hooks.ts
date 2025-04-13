@@ -5,15 +5,11 @@ import { TaskWithRelations } from "./models";
 import { UserData } from "./models";
 import { useAuth } from "@/hooks/useAuth";
 
-export interface TaskMetadata {
-  id: number;
-  task_id: number;
-  title: string;
-  value: string;
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-}
+export type TaskComment = Omit<Database['public']['Tables']['task_comments']['Row'], 'user_avatar'> & {
+  user_avatar?: string;
+};
+
+export type TaskMetadata = Database['public']['Tables']['task_metadata']['Row'];
 
 export const useTasks = (options?: { projectId?: number }) => {
   const [tasks, setTasks] = useState<TaskWithRelations[]>([]);
@@ -116,7 +112,7 @@ export const useTasks = (options?: { projectId?: number }) => {
       );
       
       // Fetch user details if we have any assignees
-      let usersData: UserData[] = [];
+      let usersData: Database['public']['Functions']['get_user_details']['Returns'] = [];
       if (userIds.length > 0) {
         try {
           const { data: users, error: usersError } = await supabase.rpc('get_user_details', {
@@ -161,12 +157,12 @@ export const useTasks = (options?: { projectId?: number }) => {
         const taskMetadataItems = taskMetadata?.filter(m => m.task_id === task.id) || [];
         
         // Convert metadata array to object for easier access
-        const metadataObj = taskMetadataItems.reduce((acc, item) => {
-          if (item.title && item.value) {
+        const metadataObj = taskMetadataItems?.reduce((acc, item) => {
+          if (item.title) {
             acc[item.title] = item.value;
           }
           return acc;
-        }, {} as Record<string, string>);
+        }, {} as Record<string, string | null>) || {};
         
         // Extract hours from metadata for convenience
         const estimatedHours = parseFloat(metadataObj['estimated_hours'] || '0');
@@ -175,12 +171,27 @@ export const useTasks = (options?: { projectId?: number }) => {
         return {
           ...task,
           assignees: taskAssignees,
+          entity_assignees: assignees?.filter(a => a.entity_id === task.id).map(a => ({
+            entity_id: a.entity_id,
+            user_id: a.user_id,
+            users: usersData?.find(u => u.id === a.user_id) || {
+              id: a.user_id,
+              raw_user_meta_data: { name: 'Unknown' }
+            }
+          })) || [],
+          entity_labels: entityLabels?.filter(l => l.entity_id === task.id).map(l => ({
+            entity_id: l.entity_id,
+            label_id: l.label_id,
+            labels: l.labels
+          })) || [],
           labels: taskLabels,
-          metadata: taskMetadataItems,
+          metadata: taskMetadataItems || [],
           metadataObj,
-          estimated_hours: isNaN(estimatedHours) ? 0 : estimatedHours,
-          actual_hours: isNaN(actualHours) ? 0 : actualHours,
+          estimated_hours: isNaN(estimatedHours) ? null : estimatedHours,
+          actual_hours: isNaN(actualHours) ? null : actualHours,
           position: taskPosition,
+          priorities: task.priorities,
+          statuses: task.statuses
         } as TaskWithRelations;
       });
       
@@ -295,17 +306,6 @@ export const useTaskPriorities = (options?: { projectId?: number }) => {
   return { priorities, loading, error, refresh: getPriorities };
 }
 
-// Comment type definition
-export interface TaskComment {
-  id: number
-  task_id: number
-  user_id: string
-  content: string
-  created_at: string
-  user_name: string
-  user_avatar?: string
-}
-
 export const useTaskComments = (taskId: number) => {
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -340,7 +340,12 @@ export const useTaskComments = (taskId: number) => {
         setError(error.message);
         setComments([]);
       } else {
-        setComments(data || []);
+        // Transform the data to handle null user_avatar
+        const transformedComments = (data || []).map(comment => ({
+          ...comment,
+          user_avatar: comment.user_avatar || undefined
+        }));
+        setComments(transformedComments);
       }
     } catch (err) {
       console.error('Exception fetching comments:', err);
@@ -414,164 +419,84 @@ export const useTaskComments = (taskId: number) => {
 // Updated hook for managing task metadata
 export const useTaskMetadata = (taskId: number) => {
   const [metadata, setMetadata] = useState<TaskMetadata[]>([]);
-  const [metadataMap, setMetadataMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const { user } = useAuth();
 
   const fetchMetadata = useCallback(async () => {
-    if (!taskId) return;
-    
     setLoading(true);
     setError(null);
     
     try {
       const supabase = getSupabaseClient();
       
+      // Fetch metadata for this task
       const { data, error } = await supabase
         .from('task_metadata')
         .select('*')
         .eq('task_id', taskId);
       
       if (error) {
-        console.error('Error fetching task metadata:', error);
+        console.error('Error fetching metadata:', error);
         setError(error.message);
         setMetadata([]);
-        setMetadataMap({});
       } else {
         setMetadata(data || []);
-        
-        // Create a map of metadata for easier access
-        const metadataObject = (data || []).reduce((acc: Record<string, string>, item: TaskMetadata) => {
-          acc[item.title] = item.value;
-          return acc;
-        }, {});
-        
-        setMetadataMap(metadataObject);
       }
     } catch (err) {
-      console.error('Exception fetching task metadata:', err);
-      setError('Failed to load task metadata');
+      console.error('Exception fetching metadata:', err);
+      setError('Failed to load metadata');
       setMetadata([]);
-      setMetadataMap({});
     } finally {
       setLoading(false);
     }
   }, [taskId]);
-  
-  const saveMetadataItem = useCallback(async (
-    title: string,
-    value: string | number | null
-  ) => {
-    if (!taskId || !user) return { success: false, error: 'No task ID or user' };
-    
-    // Convert value to string for storage
-    const stringValue = value !== null ? String(value) : null;
-    
-    setSaving(true);
-    setError(null);
-    
+
+  const setMetadataValue = useCallback(async (title: string, value: string | null) => {
     try {
       const supabase = getSupabaseClient();
       
-      // Find if this metadata already exists
-      const existingItem = metadata.find(item => item.title === title);
+      // Check if metadata already exists
+      const { data: existingMetadata } = await supabase
+        .from('task_metadata')
+        .select('id')
+        .eq('task_id', taskId)
+        .eq('title', title)
+        .single();
       
-      if (stringValue === null) {
-        // If value is null, delete the metadata if it exists
-        if (existingItem) {
-          const { error } = await supabase
-            .from('task_metadata')
-            .delete()
-            .eq('id', existingItem.id);
-          
-          if (error) {
-            console.error('Error deleting task metadata:', error);
-            setError(error.message);
-            setSaving(false);
-            return { success: false, error: error.message };
-          }
-        }
-      } else if (existingItem) {
+      if (existingMetadata) {
         // Update existing metadata
         const { error } = await supabase
           .from('task_metadata')
-          .update({ 
-            value: stringValue,
-            updated_at: new Date().toISOString() 
-          })
-          .eq('id', existingItem.id);
-        
-        if (error) {
-          console.error('Error updating task metadata:', error);
-          setError(error.message);
-          setSaving(false);
-          return { success: false, error: error.message };
-        }
+          .update({ value })
+          .eq('id', existingMetadata.id);
+          
+        if (error) throw error;
       } else {
         // Insert new metadata
         const { error } = await supabase
           .from('task_metadata')
-          .insert({ 
+          .insert({
             task_id: taskId,
             title,
-            value: stringValue,
-            created_by: user.id
+            value,
+            created_by: user?.id || ''
           });
-        
-        if (error) {
-          console.error('Error creating task metadata:', error);
-          setError(error.message);
-          setSaving(false);
-          return { success: false, error: error.message };
-        }
+          
+        if (error) throw error;
       }
       
-      // Fetch the updated metadata
+      // Refresh metadata
       await fetchMetadata();
-      
-      return { success: true };
     } catch (err) {
-      console.error('Exception saving task metadata:', err);
-      const errorMessage = 'An unexpected error occurred';
-      setError(errorMessage);
-      setSaving(false);
-      return { success: false, error: errorMessage };
-    } finally {
-      setSaving(false);
+      console.error('Error setting metadata:', err);
+      throw err;
     }
-  }, [taskId, user, metadata, fetchMetadata]);
+  }, [taskId, user?.id, fetchMetadata]);
 
-  // Fetch metadata on initial load
   useEffect(() => {
     fetchMetadata();
   }, [fetchMetadata]);
 
-  // Helper function to safely access and parse numeric metadata
-  const getNumber = useCallback((key: string): number | null => {
-    const value = metadataMap[key];
-    if (value === undefined || value === null) return null;
-    const num = parseFloat(value);
-    return isNaN(num) ? null : num;
-  }, [metadataMap]);
-
-  // Helper function to safely access string metadata
-  const getString = useCallback((key: string): string | null => {
-    return metadataMap[key] || null;
-  }, [metadataMap]);
-
-  return {
-    metadata,
-    metadataMap,
-    estimated_hours: getNumber('estimated_hours'),
-    actual_hours: getNumber('actual_hours'),
-    loading,
-    error,
-    saving,
-    saveMetadataItem,
-    getNumber,
-    getString,
-    refresh: fetchMetadata
-  };
+  return { metadata, loading, error, setMetadataValue };
 }

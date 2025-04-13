@@ -45,9 +45,9 @@ type TaskPosition = {
 };
 
 export default function TasksPage() {
-  const { statuses, loading: loadingStatuses } = useTaskStatuses();
-  const { priorities, loading: loadingPriorities } = useTaskPriorities();
-  const { tasks: remoteTasks, loading: loadingTasks, refresh: refreshTasks } = useTasks();
+  const { statuses, loading: loadingStatuses } = useTaskStatuses({ projectId: 1 });
+  const { priorities, loading: loadingPriorities } = useTaskPriorities({ projectId: 1 });
+  const { tasks: remoteTasks, loading: loadingTasks, refresh: refreshTasks } = useTasks({ projectId: 1 });
   const [tasks, setTasks] = useState<TaskWithRelations[]>([]);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [isAddTaskDrawerOpen, setIsAddTaskDrawerOpen] = useState(false);
