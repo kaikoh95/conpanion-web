@@ -1,6 +1,11 @@
 ---
 description: 
 globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
 alwaysApply: true
 ---
 
@@ -69,3 +74,7 @@ if you don't know the answer to a request, say so instead of making something up
 try to reuse existing code as much as possible rather than always creating new ones.
 
 when dealing with complex functions, break them into smaller functions and abstract them for reusability.
+
+Before adding new functionality to an existing component, you should always check if there are other existing components that you can reuse.
+
+When adding a complex functionality into an existing component, you should always split it out into a separate component that can be reused

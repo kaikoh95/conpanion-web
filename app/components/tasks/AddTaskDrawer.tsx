@@ -1,17 +1,18 @@
-'use client'
-import { Database } from '@/lib/supabase/types.generated'
-import { formatDistanceToNow, format } from 'date-fns'
-import { Badge } from '../ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
-import { X, Pencil, Check, Send, Plus, Calendar } from 'lucide-react'
-import StatusPill from './StatusPill'
-import PriorityPill from './PriorityPill'
-import { useState, useRef, useEffect, ChangeEvent } from 'react'
-import { getSupabaseClient } from '@/lib/supabase/client'
-import { useAuth } from '@/hooks/useAuth'
-import { useTaskMetadata } from '../../protected/tasks/hooks'
-import { Button } from '@/components/ui/button'
-import { DatePicker } from '@/components/ui/date-picker'
+'use client';
+import { Database } from '@/lib/supabase/types.generated';
+import { formatDistanceToNow, format } from 'date-fns';
+import { Badge } from '../ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { X, Pencil, Check, Send, Plus, Calendar } from 'lucide-react';
+import StatusPill from './StatusPill';
+import PriorityPill from './PriorityPill';
+import { useState, useRef, useEffect, ChangeEvent } from 'react';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useTaskMetadata } from '../../protected/tasks/hooks';
+import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
+import { AssigneeSelector } from '@/components/AssigneeSelector';
 
 type Status = Database['public']['Tables']['statuses']['Row']
 type Priority = Database['public']['Tables']['priorities']['Row']
@@ -89,6 +90,9 @@ export function AddTaskDrawer({
   const [estimatedHours, setEstimatedHours] = useState<string>('');
   const [manpower, setManpower] = useState<string>('');
 
+  // Add assignees state
+  const [assignees, setAssignees] = useState<{ id: string; name: string; avatar_url?: string }[]>([]);
+
   const handleCreateTask = async () => {
     if (!title.trim()) {
       setError('Title is required');
@@ -132,8 +136,26 @@ export function AddTaskDrawer({
       }
       
       const taskId = taskData.id;
-      
-      // 2. Add labels if any are selected
+
+      // 2. Add assignees if any are selected
+      if (assignees.length > 0) {
+        const assigneeRecords = assignees.map(assignee => ({
+          assigned_by: user.id,
+          entity_id: taskId,
+          entity_type: 'task',
+          user_id: assignee.id
+        }));
+
+        const { error: assigneeError } = await supabase
+          .from('entity_assignees')
+          .insert(assigneeRecords);
+
+        if (assigneeError) {
+          console.error('Error adding assignees:', assigneeError);
+        }
+      }
+
+      // 3. Add labels if any are selected
       if (selectedLabels.length > 0) {
         const labelLinks = selectedLabels.map(label => ({
           entity_type: 'tasks',
@@ -150,8 +172,8 @@ export function AddTaskDrawer({
           console.error('Error adding labels:', labelError);
         }
       }
-      
-      // 3. Add metadata including estimated_hours and actual_hours
+
+      // 4. Add metadata including estimated_hours and actual_hours
       const metadata = [...customMetadata];
       
       if (estimatedHours.trim()) {
@@ -209,6 +231,7 @@ export function AddTaskDrawer({
     setCustomMetadata([]);
     setEstimatedHours('');
     setManpower('');
+    setAssignees([]);
     setError(null);
   };
   
@@ -503,7 +526,26 @@ export function AddTaskDrawer({
               />
             </div>
           </div>
-          
+
+          {/* Assignees */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-muted-foreground">
+              Assignees
+            </label>
+            <div className="rounded-md border border-muted-foreground/20 bg-muted p-3">
+              <AssigneeSelector
+                assignees={assignees}
+                onAssign={(assignee) => {
+                  setAssignees([...assignees, assignee]);
+                }}
+                onUnassign={(assigneeId) => {
+                  setAssignees(assignees.filter(a => a.id !== assigneeId));
+                }}
+                disabled={saving}
+              />
+            </div>
+          </div>
+
           {/* Labels */}
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-2">
