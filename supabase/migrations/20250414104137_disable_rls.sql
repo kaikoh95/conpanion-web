@@ -1,0 +1,9 @@
+alter table public.entity_assignees disable row level security;
+alter table public.entity_positions disable row level security;
+alter table public.entity_labels disable row level security;
+alter table public.tasks disable row level security;
+alter table public.task_metadata disable row level security;
+alter table public.task_comments disable row level security;
+alter table public.statuses disable row level security;
+alter table public.priorities disable row level security;
+alter table public.labels disable row level security;
