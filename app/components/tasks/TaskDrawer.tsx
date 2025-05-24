@@ -1088,10 +1088,10 @@ export function TaskDrawer({
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={comment.user_avatar} />
                         <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
-                          {comment.user_name.split(' ').map((n: string) => n[0]).join('')}
+                          {comment.user_name ? comment.user_name.split(' ').map((n: string) => n[0]).join('') : '?'}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-foreground text-sm font-medium">{comment.user_name}</span>
+                      <span className="text-foreground text-sm font-medium">{comment.user_name || 'Unknown User'}</span>
                       <span className="text-muted-foreground text-xs">
                         {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                       </span>

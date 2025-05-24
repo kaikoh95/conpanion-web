@@ -185,6 +185,92 @@ export type Database = {
         }
         Relationships: []
       }
+      form_entries: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          form_id: number
+          id: number
+          is_synced: boolean
+          last_synced_at: string | null
+          name: string | null
+          submitted_by_user_id: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          form_id: number
+          id?: never
+          is_synced?: boolean
+          last_synced_at?: string | null
+          name?: string | null
+          submitted_by_user_id: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          form_id?: number
+          id?: never
+          is_synced?: boolean
+          last_synced_at?: string | null
+          name?: string | null
+          submitted_by_user_id?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_entries_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_entry_answers: {
+        Row: {
+          answer_value: Json | null
+          created_at: string
+          entry_id: number
+          id: number
+          item_id: number
+        }
+        Insert: {
+          answer_value?: Json | null
+          created_at?: string
+          entry_id: number
+          id?: never
+          item_id: number
+        }
+        Update: {
+          answer_value?: Json | null
+          created_at?: string
+          entry_id?: number
+          id?: never
+          item_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_entry_answers_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "form_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_entry_answers_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "form_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_items: {
         Row: {
           display_order: number

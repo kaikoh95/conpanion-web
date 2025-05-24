@@ -129,41 +129,100 @@ export async function declineApproval(approvalId: number) {
 export async function submitApproval(approvalId: number) {
   const supabase = createClient();
   
-  // Get the current session to access the auth token
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (!session) {
-    throw new Error("No active session");
+  try {
+    // Get the current session to access the auth token
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error("Session error:", sessionError);
+      throw new Error("Failed to get session");
+    }
+    
+    if (!session) {
+      throw new Error("No active session");
+    }
+
+    console.log("Submitting approval:", { approvalId, userId: session.user.id });
+
+    // Get the approval details including the entity_id
+    const { data: approvalCheck, error: approvalError } = await supabase
+      .from('approvals')
+      .select('entity_id, entity_type, status')
+      .eq('id', approvalId)
+      .maybeSingle();
+
+    if (approvalError) {
+      console.error("Error fetching approval:", approvalError);
+      throw new Error(`Failed to fetch approval details: ${approvalError.message}`);
+    }
+
+    if (!approvalCheck) {
+      console.error("No approval found for ID:", approvalId);
+      throw new Error("No approval found with the provided ID");
+    }
+
+    console.log("Found approval:", approvalCheck);
+
+    // Check if the approval is in a state that can be submitted
+    if (approvalCheck.status !== 'draft' && approvalCheck.status !== 'revision_requested') {
+      console.error("Invalid approval status:", approvalCheck.status);
+      throw new Error(`Cannot submit approval in ${approvalCheck.status} status`);
+    }
+
+    // Get the entry details to check if the user is the requester
+    const { data: entryData, error: entryError } = await supabase
+      .from('form_entries')
+      .select('submitted_by_user_id')
+      .eq('id', approvalCheck.entity_id)
+      .single();
+
+    if (entryError) {
+      console.error("Error fetching entry:", entryError);
+      throw new Error(`Failed to fetch entry details: ${entryError.message}`);
+    }
+
+    if (!entryData) {
+      console.error("No entry found for ID:", approvalCheck.entity_id);
+      throw new Error("Entry not found");
+    }
+
+    console.log("Found entry:", entryData);
+
+    if (entryData.submitted_by_user_id !== session.user.id) {
+      console.error("Unauthorized submission attempt:", {
+        entryUserId: entryData.submitted_by_user_id,
+        currentUserId: session.user.id
+      });
+      throw new Error("You are not authorized to submit this request");
+    }
+
+    // Update the approval status
+    const { data: approval, error: updateError } = await supabase
+      .from('approvals')
+      .update({ 
+        status: 'submitted',
+        last_updated: new Date().toISOString()
+      })
+      .eq('id', approvalId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("Error updating approval:", updateError);
+      throw new Error(`Failed to update approval status: ${updateError.message}`);
+    }
+
+    if (!approval) {
+      console.error("No approval returned after update for ID:", approvalId);
+      throw new Error("Failed to update approval status");
+    }
+
+    console.log("Successfully updated approval:", approval);
+    return approval;
+  } catch (error) {
+    console.error("Error in submitApproval:", error);
+    throw error; // Re-throw the error to be handled by the caller
   }
-
-  // Verify that the current user is the requester
-  const { data: approvalCheck, error: approvalError } = await supabase
-    .from('approvals')
-    .select('requester_id')
-    .eq('id', approvalId)
-    .single();
-
-  if (approvalError || !approvalCheck) {
-    throw new Error("Approval not found");
-  }
-
-  if (approvalCheck.requester_id !== session.user.id) {
-    throw new Error("You are not authorized to submit this request");
-  }
-
-  // Update the approval status
-  const { data: approval, error: updateError } = await supabase
-    .from('approvals')
-    .update({ status: 'submitted' })
-    .eq('id', approvalId)
-    .select()
-    .single();
-
-  if (updateError) {
-    throw updateError;
-  }
-
-  return approval;
 }
 
 export async function updateApprovers(approvalId: number, approvers_id: string[]) {
