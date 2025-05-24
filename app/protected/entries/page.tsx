@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,7 @@ import { getFormById } from "@/lib/api/forms";
 import { FormItem } from "@/lib/types/form";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 // Add imports for AlertDialog components
 import {
   AlertDialog,
@@ -62,9 +62,20 @@ const APPROVAL_STATUSES: { value: ApprovalStatus | 'all', label: string }[] = [
 
 const DEFAULT_STATUS_FILTERS: ApprovalStatus[] = ["draft", "revision_requested"];
 
-export default function EntriesPage() {
-  const supabase = createClient();
+// SearchParamsWrapper component to handle the useSearchParams hook
+function SearchParamsWrapper() {
   const searchParams = useSearchParams();
+  const entryId = searchParams.get('entryId');
+  
+  return (
+    <EntriesPageContent entryId={entryId} />
+  );
+}
+
+// Main component content without direct useSearchParams usage
+function EntriesPageContent({ entryId }: { entryId: string | null }) {
+  const supabase = createClient();
+  const router = useRouter();
   const { user } = useAuth();
   const [allEntries, setAllEntries] = useState<FormEntry[]>([]); // Store all fetched entries
   const [filteredEntries, setFilteredEntries] = useState<FormEntry[]>([]); // Entries displayed after filtering
@@ -100,16 +111,15 @@ export default function EntriesPage() {
   // Add state for submitting approval
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Effect to handle initial entryId from URL
+  // Set initial entryId from URL
   useEffect(() => {
-    const entryId = searchParams.get('entryId');
     if (entryId) {
       const id = parseInt(entryId);
       if (!isNaN(id)) {
         setSelectedEntryId(id);
       }
     }
-  }, [searchParams]);
+  }, [entryId]);
 
   // Effect to fetch data initially
   useEffect(() => {
@@ -782,7 +792,7 @@ export default function EntriesPage() {
   };
 
   return (
-    <>
+    <div className="container py-6 space-y-6">
       <h1 className="text-2xl font-semibold mb-4">Entries</h1>
 
       {/* Search and Filters */}
@@ -1072,6 +1082,15 @@ export default function EntriesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
+  );
+}
+
+// Default export using the wrapper
+export default function EntriesPage() {
+  return (
+    <Suspense fallback={<div className="container py-6">Loading entries...</div>}>
+      <SearchParamsWrapper />
+    </Suspense>
   );
 } 

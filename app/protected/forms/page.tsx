@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,9 +78,20 @@ const fromFormBuilderQuestion = (question: FormBuilderQuestion, displayOrder: nu
   display_order: displayOrder,
 });
 
-export default function FormsPage() {
-  const router = useRouter();
+// SearchParamsWrapper component to handle the useSearchParams hook
+function SearchParamsWrapper() {
   const searchParams = useSearchParams();
+  const formId = searchParams.get('formId');
+  const entryMode = searchParams.get('entryMode');
+  
+  return (
+    <FormsPageContent formId={formId} entryMode={entryMode} />
+  );
+}
+
+// Main component content without direct useSearchParams usage
+function FormsPageContent({ formId, entryMode }: { formId: string | null; entryMode: string | null }) {
+  const router = useRouter();
   const { user } = useAuth();
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,9 +139,6 @@ export default function FormsPage() {
 
   // Effect to handle initial formId from URL
   useEffect(() => {
-    const formId = searchParams.get('formId');
-    const entryMode = searchParams.get('entryMode');
-    
     if (formId) {
       const id = parseInt(formId);
       if (!isNaN(id)) {
@@ -142,7 +150,7 @@ export default function FormsPage() {
         }
       }
     }
-  }, [searchParams]);
+  }, [formId, entryMode]);
 
   // Effect to fetch forms initially
   useEffect(() => {
@@ -1072,5 +1080,14 @@ export default function FormsPage() {
         </SheetContent>
       </Sheet>
     </div>
+  );
+}
+
+// Default export using the wrapper
+export default function FormsPage() {
+  return (
+    <Suspense fallback={<div className="container py-6">Loading forms...</div>}>
+      <SearchParamsWrapper />
+    </Suspense>
   );
 } 

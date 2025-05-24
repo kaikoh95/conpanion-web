@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,20 +18,39 @@ import { getForms } from "@/lib/api/forms";
 import { Form } from "@/lib/types/form";
 import { format } from "date-fns";
 
-export function FormsList() {
-  const router = useRouter();
+// SearchParamsWrapper component to handle the useSearchParams hook
+function SearchParamsWrapper() {
   const searchParams = useSearchParams();
+  const formId = searchParams.get('formId');
+  
+  return (
+    <FormsListContent formId={formId} />
+  );
+}
+
+// Main component content without direct useSearchParams usage
+function FormsListContent({ formId }: { formId: string | null }) {
+  const router = useRouter();
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
-  // Effect to handle initial formId from URL
-  const formId = searchParams.get('formId');
+  // State for selected form
   const [selectedFormId, setSelectedFormId] = useState<number | null>(
     formId ? parseInt(formId) : null
   );
+
+  // Effect to handle initial formId from URL
+  useEffect(() => {
+    if (formId) {
+      const id = parseInt(formId);
+      if (!isNaN(id)) {
+        setSelectedFormId(id);
+      }
+    }
+  }, [formId]);
 
   // Effect to fetch forms initially
   useEffect(() => {
@@ -52,16 +71,6 @@ export function FormsList() {
 
     loadForms();
   }, []);
-
-  // Effect to handle initial formId from URL
-  useEffect(() => {
-    if (formId) {
-      const id = parseInt(formId);
-      if (!isNaN(id)) {
-        setSelectedFormId(id);
-      }
-    }
-  }, [searchParams]);
 
   const filteredForms = forms.filter(
     (form) => form.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -196,5 +205,13 @@ export function FormsList() {
         }}
       />
     </div>
+  );
+}
+
+export function FormsList() {
+  return (
+    <Suspense fallback={<div className="container mx-auto p-4 md:p-6">Loading forms...</div>}>
+      <SearchParamsWrapper />
+    </Suspense>
   );
 } 
