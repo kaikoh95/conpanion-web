@@ -37,9 +37,17 @@ type User = {
 
 interface ApprovalStatusAccordianProps {
   entryId: number;
+  entityType?: string;
+  currentStatus?: string | null;
+  onRefreshData?: () => void;
 }
 
-export function ApprovalStatusAccordian({ entryId }: ApprovalStatusAccordianProps) {
+export function ApprovalStatusAccordian({ 
+  entryId, 
+  entityType = 'entries', 
+  currentStatus,
+  onRefreshData
+}: ApprovalStatusAccordianProps) {
   const [approval, setApproval] = useState<Approval | null>(null);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -71,7 +79,7 @@ export function ApprovalStatusAccordian({ entryId }: ApprovalStatusAccordianProp
             approver_id
           )
         `)
-        .eq('entity_type', 'entries')
+        .eq('entity_type', entityType)
         .eq('entity_id', entryId)
         .maybeSingle(); // Use maybeSingle instead of single
 
@@ -210,38 +218,40 @@ export function ApprovalStatusAccordian({ entryId }: ApprovalStatusAccordianProp
 
   const handleCreateApproval = async () => {
     try {
+      setCreateLoading(true);
+      
+      // Validate that at least one approver is selected
       if (selectedApprovers.length === 0) {
         alert("Please select at least one approver");
+        setCreateLoading(false);
         return;
       }
-
-      setCreateLoading(true);
-
-      // Create the approval using the API
-      const approval = await createApproval({
-        entity_type: 'entries',
+      
+      await createApproval({
+        entity_type: entityType,
         entity_id: entryId,
         approvers_id: selectedApprovers
       });
-
-      console.log("Approval created:", approval);
       
-      // Close the dialog and reset state
       setDialogOpen(false);
-      setSelectedApprovers([]);
-      setApproverSearchInput("");
-      setCreateLoading(false);
-
-      // Refresh the approval status
-      await fetchApproval();
-
-      // Trigger a custom event to notify the parent component to refresh the entries list
-      const refreshEvent = new CustomEvent('approvalCreated', { detail: { entryId } });
-      window.dispatchEvent(refreshEvent);
       
+      // Trigger a refresh of the approval data
+      fetchApproval();
+      
+      // Dispatch custom event to notify parent components that approval has been updated
+      const customEvent = new CustomEvent('approvalUpdated', {
+        detail: { entityId: entryId, entityType }
+      });
+      window.dispatchEvent(customEvent);
+      
+      // Notify parent component if needed
+      if (onRefreshData) {
+        onRefreshData();
+      }
     } catch (err) {
       console.error("Failed to create approval:", err);
-      alert("Failed to create approval. Please try again.");
+      alert("Failed to create approval request. Please try again.");
+    } finally {
       setCreateLoading(false);
     }
   };

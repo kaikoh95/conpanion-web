@@ -126,7 +126,92 @@ export async function declineApproval(approvalId: number) {
   return approval;
 }
 
-export async function submitApproval(approvalId: number) {
+export interface SubmitApprovalRequest {
+  entityId: number;
+  entityType: string;
+  status: 'submitted' | 'approved' | 'declined' | 'revision_requested';
+  userId: string;
+}
+
+export async function submitApprovalForEntity(request: SubmitApprovalRequest) {
+  const supabase = createClient();
+  
+  try {
+    // First, check if there's an existing approval for this entity
+    const { data: existingApproval, error: checkError } = await supabase
+      .from('approvals')
+      .select('id, status')
+      .eq('entity_type', request.entityType)
+      .eq('entity_id', request.entityId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error("Error checking existing approval:", checkError);
+      throw new Error(`Failed to check existing approval: ${checkError.message}`);
+    }
+
+    if (existingApproval) {
+      // Update existing approval
+      const { data: updatedApproval, error: updateError } = await supabase
+        .from('approvals')
+        .update({ 
+          status: request.status,
+          user_id: request.userId,
+          last_updated: new Date().toISOString()
+        })
+        .eq('id', existingApproval.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Error updating approval:", updateError);
+        throw new Error(`Failed to update approval: ${updateError.message}`);
+      }
+
+      return updatedApproval;
+    } else {
+      // Create new approval
+      const { data: newApproval, error: createError } = await supabase
+        .from('approvals')
+        .insert({
+          entity_type: request.entityType,
+          entity_id: request.entityId,
+          status: request.status,
+          user_id: request.userId,
+          requester_id: request.userId,
+          last_updated: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("Error creating approval:", createError);
+        throw new Error(`Failed to create approval: ${createError.message}`);
+      }
+
+      return newApproval;
+    }
+  } catch (error) {
+    console.error("Error in submitApprovalForEntity:", error);
+    throw error;
+  }
+}
+
+// For backward compatibility
+export async function submitApproval(request: SubmitApprovalRequest | number) {
+  if (typeof request === 'number') {
+    // Old function signature, handle for backward compatibility
+    return submitApprovalLegacy(request);
+  } else {
+    // New function signature
+    return submitApprovalForEntity(request);
+  }
+}
+
+// Renamed old implementation to avoid conflicts
+async function submitApprovalLegacy(approvalId: number) {
   const supabase = createClient();
   
   try {
