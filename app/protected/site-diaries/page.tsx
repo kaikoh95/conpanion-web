@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -413,5 +413,9 @@ function SiteDiariesPageContent({
 }
 
 export default function SiteDiariesPage() {
-  return <SearchParamsWrapper />;
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center p-8">Loading site diaries...</div>}>
+      <SearchParamsWrapper />
+    </Suspense>
+  );
 } 
