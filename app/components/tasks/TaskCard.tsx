@@ -90,7 +90,7 @@ export function TaskCard({
                 <Avatar key={assignee.id} className="h-6 w-6 border-2 border-background">
                   <AvatarImage src={assignee.avatar_url} />
                   <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
-                    {assignee.name.split(' ').map(n => n[0]).join('')}
+                    {assignee.name ? assignee.name.split(' ').map(n => n[0]).join('') : '?'}
                   </AvatarFallback>
                 </Avatar>
               ))}

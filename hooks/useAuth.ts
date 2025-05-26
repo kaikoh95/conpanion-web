@@ -56,7 +56,17 @@ export function useAuth() {
           }).select('id').single();
 
           if (projectError || !newProject) {
-            console.error('Error creating project:', projectError)
+            // Enhanced error logging
+            console.error(
+              'Error creating project:',
+              {
+                message: projectError?.message,
+                code: projectError?.code,
+                details: projectError?.details,
+                hint: projectError?.hint,
+                fullError: projectError
+              }
+            );
             setUser(null)
             setLoading(false)
             return

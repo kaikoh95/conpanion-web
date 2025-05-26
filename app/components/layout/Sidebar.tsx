@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, CheckSquare, FileText, Book, Settings } from 'lucide-react';
+import { Home, CheckSquare, FileText, Book, Settings, List } from 'lucide-react';
 import { useState, useEffect, forwardRef } from 'react';
 
 const navItems = [
   { name: 'Home', icon: Home, href: '/protected' },
   { name: 'Tasks', icon: CheckSquare, href: '/protected/tasks' },
   { name: 'Forms', icon: FileText, href: '/protected/forms' },
+  { name: 'Entries', icon: List, href: '/protected/entries' },
   { name: 'Site Diaries', icon: Book, href: '/protected/site-diaries' },
 ];
 

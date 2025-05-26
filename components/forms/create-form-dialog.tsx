@@ -166,7 +166,9 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
 
       toast.success('Form created successfully');
       onOpenChange(false);
-      onFormCreated?.();
+      if (onFormCreated) {
+        onFormCreated(formResponse.form);
+      }
       router.refresh();
     } catch (error) {
       console.error("Error creating form:", error);
@@ -179,7 +181,7 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
   return (
     <>
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent className="w-full max-w-4xl overflow-y-auto sm:w-[90vw]">
+        <SheetContent className="w-full md:w-[40vw] md:max-w-[40vw] overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="sr-only">Create Form</SheetTitle>
             <Input

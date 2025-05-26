@@ -1,3 +1,5 @@
+import { Form } from "@/lib/types/form";
+
 export type QuestionType = 'question' | 'checklist' | 'radio_box' | 'photo';
 
 export interface FormBuilderQuestion {
@@ -11,7 +13,7 @@ export interface FormBuilderQuestion {
 export interface FormBuilderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onFormCreated?: () => void;
+  onFormCreated?: (newForm: Form) => void;
 }
 
 export interface SortableQuestionCardProps {
