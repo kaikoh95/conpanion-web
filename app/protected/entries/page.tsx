@@ -154,14 +154,34 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
       setFilteredEntries(filterEntries(fetchedEntries, searchTerm, selectedStatus));
     };
 
-    // Add the event listener
+    // Add event listener for approval updates
+    const handleApprovalUpdated = async (event: Event) => {
+      const customEvent = event as CustomEvent<{ entityId: number, entityType: string }>;
+      
+      // Fetch fresh data
+      const fetchedEntries = await fetchFormEntriesWithStatus(supabase);
+      setAllEntries(fetchedEntries);
+      setFilteredEntries(filterEntries(fetchedEntries, searchTerm, selectedStatus));
+      
+      // If the updated entry is the one we're currently viewing, also refresh the detail view
+      if (selectedEntryId === customEvent.detail.entityId) {
+        const entryWithStatus = fetchedEntries.find(entry => entry.id === selectedEntryId);
+        if (entryWithStatus) {
+          setApprovalStatus(entryWithStatus.approval_status);
+        }
+      }
+    };
+
+    // Add the event listeners
     window.addEventListener('approvalCreated', handleApprovalCreated);
+    window.addEventListener('approvalUpdated', handleApprovalUpdated);
 
     // Cleanup
     return () => {
       window.removeEventListener('approvalCreated', handleApprovalCreated);
+      window.removeEventListener('approvalUpdated', handleApprovalUpdated);
     };
-  }, [supabase, searchTerm, selectedStatus]); // Fetch only when supabase client changes (effectively once)
+  }, [supabase, searchTerm, selectedStatus, selectedEntryId]); // Add selectedEntryId to dependencies
 
   // Effect to apply filters whenever search term or status changes
   useEffect(() => {
