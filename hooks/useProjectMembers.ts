@@ -17,48 +17,29 @@ export function useProjectMembers() {
   useEffect(() => {
     const fetchProjectMembers = async () => {
       if (!user?.activeProjectId) return;
-      
+
       setLoading(true);
       setError(null);
-      
+
       try {
         const supabase = getSupabaseClient();
-        
-        // First get all users in the project
-        const { data: projectUsers, error: projectError } = await supabase
-          .from('projects_users')
-          .select('user_id')
-          .eq('project_id', user.activeProjectId);
 
-        if (projectError) {
-          throw new Error('Error fetching project users');
+        // Use the updated get_project_members function that returns user_profiles data
+        const { data: members, error: membersError } = await supabase.rpc('get_project_members', {
+          p_project_id: user.activeProjectId,
+        });
+
+        if (membersError) {
+          throw new Error('Error fetching project members');
         }
 
-        if (!projectUsers?.length) {
-          setMembers([]);
-          return;
-        }
+        const formattedMembers = (members || []).map((member: any) => ({
+          id: member.user_id,
+          name: member.user_name,
+          avatar_url: member.user_avatar_url, // This now comes from user_profiles.global_avatar_url
+        }));
 
-        // Then get user details
-        const userIds = projectUsers.map(pu => pu.user_id);
-        const { data: userData, error: userError } = await supabase
-          .rpc('get_user_details', { user_ids: userIds });
-
-        if (userError) {
-          throw new Error('Error fetching user details');
-        }
-
-        const members = (userData || [])
-          .filter((user): user is { id: string; raw_user_meta_data: { name: string; avatar_url?: string } } => 
-            Boolean(user?.raw_user_meta_data && typeof user.raw_user_meta_data === 'object' && 'name' in user.raw_user_meta_data)
-          )
-          .map(user => ({
-            id: user.id,
-            name: user.raw_user_meta_data.name,
-            avatar_url: user.raw_user_meta_data.avatar_url
-          }));
-
-        setMembers(members);
+        setMembers(formattedMembers);
       } catch (err) {
         console.error('Error fetching project members:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
@@ -71,4 +52,4 @@ export function useProjectMembers() {
   }, [user?.activeProjectId]);
 
   return { members, loading, error };
-} 
+}

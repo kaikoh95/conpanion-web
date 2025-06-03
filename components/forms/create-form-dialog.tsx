@@ -1,14 +1,8 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from '@/components/ui/sheet';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Plus } from 'lucide-react';
 import { createForm } from '@/lib/api/forms';
@@ -22,16 +16,16 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { FormBuilderProps, FormBuilderQuestion } from "@/lib/types/form-builder";
-import { generateFormItems } from "@/lib/utils/form-utils";
-import { SortableQuestionCard } from "./sortable-question-card";
+} from '@dnd-kit/sortable';
+import { FormBuilderProps, FormBuilderQuestion } from '@/lib/types/form-builder';
+import { generateFormItems } from '@/lib/utils/form-utils';
+import { SortableQuestionCard } from './sortable-question-card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,26 +43,28 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 
 export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuilderProps) {
   const router = useRouter();
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState('');
   const [questions, setQuestions] = useState<FormBuilderQuestion[]>([
     {
-      id: "1",
-      type: "question",
-      title: "",
+      id: '1',
+      type: 'question',
+      title: '',
       required: false,
     },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   const { user } = useAuth();
-  const [assignees, setAssignees] = useState<{ id: string; name: string; avatar_url?: string }[]>([]);
+  const [assignees, setAssignees] = useState<{ id: string; name: string; avatar_url?: string }[]>(
+    [],
+  );
   const [assigneeError, setAssigneeError] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   if (!user) {
@@ -77,7 +73,7 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (over && active.id !== over.id) {
       setQuestions((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id);
@@ -90,17 +86,15 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
   const addQuestion = () => {
     const newQuestion: FormBuilderQuestion = {
       id: String(questions.length + 1),
-      type: "question",
-      title: "",
+      type: 'question',
+      title: '',
       required: false,
     };
     setQuestions([...questions, newQuestion]);
   };
 
   const updateQuestion = (id: string, updates: Partial<FormBuilderQuestion>) => {
-    setQuestions(
-      questions.map((q) => (q.id === id ? { ...q, ...updates } : q))
-    );
+    setQuestions(questions.map((q) => (q.id === id ? { ...q, ...updates } : q)));
   };
 
   const deleteQuestion = (id: string) => {
@@ -108,7 +102,10 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
   };
 
   const hasUnsavedChanges = () => {
-    return title.trim() !== "" || questions.some(q => q.title.trim() !== "" || q.options?.some(opt => opt.trim() !== ""));
+    return (
+      title.trim() !== '' ||
+      questions.some((q) => q.title.trim() !== '' || q.options?.some((opt) => opt.trim() !== ''))
+    );
   };
 
   const handleClose = (open: boolean) => {
@@ -120,13 +117,15 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
   };
 
   const handleDiscard = () => {
-    setTitle("");
-    setQuestions([{
-      id: "1",
-      type: "question",
-      title: "",
-      required: false,
-    }]);
+    setTitle('');
+    setQuestions([
+      {
+        id: '1',
+        type: 'question',
+        title: '',
+        required: false,
+      },
+    ]);
     setShowDiscardDialog(false);
     onOpenChange(false);
   };
@@ -147,11 +146,11 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
       const formId = formResponse.form.id;
       if (assignees.length > 0 && typeof formId === 'number') {
         const supabase = getSupabaseClient();
-        const assigneeRecords = assignees.map(assignee => ({
+        const assigneeRecords = assignees.map((assignee) => ({
           assigned_by: user.id,
           entity_id: formId,
           entity_type: 'form',
-          user_id: assignee.id
+          user_id: assignee.id,
         }));
 
         const { error: assigneeError } = await supabase
@@ -171,8 +170,8 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
       }
       router.refresh();
     } catch (error) {
-      console.error("Error creating form:", error);
-      toast.error("Failed to create form. Please try again.");
+      console.error('Error creating form:', error);
+      toast.error('Failed to create form. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -181,14 +180,14 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
   return (
     <>
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent className="w-full md:w-[40vw] md:max-w-[40vw] overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto md:w-[40vw] md:max-w-[40vw]">
           <SheetHeader>
             <SheetTitle className="sr-only">Create Form</SheetTitle>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="New form"
-              className="text-2xl font-semibold border-none bg-transparent focus-visible:ring-0 px-0 text-foreground placeholder:text-muted-foreground/60"
+              className="border-none bg-transparent px-0 text-2xl font-semibold text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0"
             />
           </SheetHeader>
 
@@ -199,14 +198,14 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
                 setAssignees([...assignees, member]);
               }}
               onUnassign={(memberId: string) => {
-                setAssignees(assignees.filter(a => a.id !== memberId));
+                setAssignees(assignees.filter((a) => a.id !== memberId));
               }}
               error={assigneeError}
               disabled={isSubmitting}
             />
           </div>
 
-          <div className="space-y-4 my-4">
+          <div className="my-4 space-y-4">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -214,7 +213,7 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
               modifiers={[]}
             >
               <SortableContext
-                items={questions.map(q => q.id)}
+                items={questions.map((q) => q.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-4">
@@ -233,12 +232,8 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
             </DndContext>
           </div>
 
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={addQuestion}
-          >
-            <Plus className="h-4 w-4 mr-2" />
+          <Button variant="outline" className="w-full" onClick={addQuestion}>
+            <Plus className="mr-2 h-4 w-4" />
             Add question
           </Button>
 
@@ -246,12 +241,8 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
             <Button variant="outline" onClick={() => handleClose(false)}>
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Creating..." : "Create form"}
+            <Button type="submit" onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create form'}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -273,4 +264,4 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
       </AlertDialog>
     </>
   );
-} 
+}

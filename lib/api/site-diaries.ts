@@ -32,7 +32,9 @@ export async function getSiteDiaryTemplates(projectId: number): Promise<SiteDiar
   return data || [];
 }
 
-export async function getSiteDiaryTemplateById(id: number): Promise<SiteDiaryTemplateResponse | null> {
+export async function getSiteDiaryTemplateById(
+  id: number,
+): Promise<SiteDiaryTemplateResponse | null> {
   // Get the template
   const { data: templateData, error: templateError } = await supabase
     .from('site_diary_templates')
@@ -68,7 +70,9 @@ export async function getSiteDiaryTemplateById(id: number): Promise<SiteDiaryTem
   };
 }
 
-export async function createSiteDiaryTemplate(request: CreateSiteDiaryTemplateRequest): Promise<SiteDiaryTemplateResponse> {
+export async function createSiteDiaryTemplate(
+  request: CreateSiteDiaryTemplateRequest,
+): Promise<SiteDiaryTemplateResponse> {
   // Start a transaction
   const { data: templateData, error: templateError } = await supabase
     .from('site_diary_templates')
@@ -95,7 +99,7 @@ export async function createSiteDiaryTemplate(request: CreateSiteDiaryTemplateRe
   const templateItems = request.items.map((item, index) => {
     // Create a new object without the id field
     const { id: itemId, ...itemWithoutId } = item as { id?: number; [key: string]: any };
-    
+
     return {
       ...itemWithoutId,
       template_id: templateData.id,
@@ -119,7 +123,10 @@ export async function createSiteDiaryTemplate(request: CreateSiteDiaryTemplateRe
   };
 }
 
-export async function updateSiteDiaryTemplate(id: number, request: UpdateSiteDiaryTemplateRequest): Promise<SiteDiaryTemplateResponse> {
+export async function updateSiteDiaryTemplate(
+  id: number,
+  request: UpdateSiteDiaryTemplateRequest,
+): Promise<SiteDiaryTemplateResponse> {
   // Update the template
   const { data: templateData, error: templateError } = await supabase
     .from('site_diary_templates')
@@ -160,7 +167,7 @@ export async function updateSiteDiaryTemplate(id: number, request: UpdateSiteDia
       // Create a new object without the id field
       // Using object destructuring with a default empty object to prevent errors
       const { id: itemId, ...itemWithoutId } = item as { id?: number; [key: string]: any };
-      
+
       return {
         ...itemWithoutId,
         template_id: id,
@@ -320,10 +327,10 @@ export async function createSiteDiary(request: CreateSiteDiaryRequest): Promise<
 
   // Insert diary answers
   if (request.answers && request.answers.length > 0) {
-    const diaryAnswers = request.answers.map(answer => ({
+    const diaryAnswers = request.answers.map((answer) => ({
       diary_id: diaryData.id,
       item_id: answer.item_id,
-      answer_value: answer.value
+      answer_value: answer.value,
     }));
 
     const { data: answersData, error: answersError } = await supabase
@@ -382,9 +389,11 @@ export async function deleteSiteDiary(id: number): Promise<void> {
 }
 
 // Function to get site diaries with approval status
-export async function getSiteDiariesWithStatus(projectId: number): Promise<(SiteDiary & { approval_status: ApprovalStatus | null })[]> {
+export async function getSiteDiariesWithStatus(
+  projectId: number,
+): Promise<(SiteDiary & { approval_status: ApprovalStatus | null })[]> {
   const supabase = createClient();
-  
+
   // Get all site diaries for the project
   const { data: diaries, error: diariesError } = await supabase
     .from('site_diaries')
@@ -403,7 +412,7 @@ export async function getSiteDiariesWithStatus(projectId: number): Promise<(Site
   }
 
   // Get diary IDs
-  const diaryIds = diaries.map(diary => diary.id);
+  const diaryIds = diaries.map((diary) => diary.id);
 
   // Fetch approval statuses
   const { data: approvals, error: approvalsError } = await supabase
@@ -433,4 +442,4 @@ export async function getSiteDiariesWithStatus(projectId: number): Promise<(Site
     ...diary,
     approval_status: latestStatusMap[diary.id as number] || null,
   }));
-} 
+}

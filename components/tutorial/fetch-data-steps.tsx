@@ -1,5 +1,5 @@
-import { TutorialStep } from "./tutorial-step";
-import { CodeBlock } from "./code-block";
+import { TutorialStep } from './tutorial-step';
+import { CodeBlock } from './code-block';
 
 const create = `create table notes (
   id bigserial primary key,
@@ -49,26 +49,25 @@ export default function FetchDataSteps() {
     <ol className="flex flex-col gap-6">
       <TutorialStep title="Create some tables and insert some data">
         <p>
-          Head over to the{" "}
+          Head over to the{' '}
           <a
             href="https://supabase.com/dashboard/project/_/editor"
-            className="font-bold hover:underline text-foreground/80"
+            className="font-bold text-foreground/80 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
             Table Editor
-          </a>{" "}
-          for your Supabase project to create a table and insert some example
-          data. If you're stuck for creativity, you can copy and paste the
-          following into the{" "}
+          </a>{' '}
+          for your Supabase project to create a table and insert some example data. If you're stuck
+          for creativity, you can copy and paste the following into the{' '}
           <a
             href="https://supabase.com/dashboard/project/_/sql/new"
-            className="font-bold hover:underline text-foreground/80"
+            className="font-bold text-foreground/80 hover:underline"
             target="_blank"
             rel="noreferrer"
           >
             SQL Editor
-          </a>{" "}
+          </a>{' '}
           and click RUN!
         </p>
         <CodeBlock code={create} />
@@ -76,11 +75,11 @@ export default function FetchDataSteps() {
 
       <TutorialStep title="Query Supabase data from Next.js">
         <p>
-          To create a Supabase client and query data from an Async Server
-          Component, create a new page.tsx file at{" "}
-          <span className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-xs font-medium text-secondary-foreground border">
+          To create a Supabase client and query data from an Async Server Component, create a new
+          page.tsx file at{' '}
+          <span className="relative rounded border bg-muted px-[0.3rem] py-[0.2rem] font-mono text-xs font-medium text-secondary-foreground">
             /app/notes/page.tsx
-          </span>{" "}
+          </span>{' '}
           and add the following.
         </p>
         <CodeBlock code={server} />

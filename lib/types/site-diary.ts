@@ -15,7 +15,7 @@ export interface SiteDiaryTemplateItem {
 export interface SiteDiaryMetadataConfig {
   enableWeather?: boolean;
   enableTemperature?: boolean;
-  enableManpower?: boolean; 
+  enableManpower?: boolean;
   enableEquipment?: boolean;
   enableMaterials?: boolean;
   enableSafety?: boolean;
@@ -105,4 +105,4 @@ export interface SiteDiaryResponse {
   answers: SiteDiaryAnswer[];
   template?: SiteDiaryTemplate;
   template_items?: SiteDiaryTemplateItem[];
-} 
+}

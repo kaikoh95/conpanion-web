@@ -13,21 +13,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        ref={sidebarRef} 
-        onNavigate={handleCloseSidebar}
-      />
-      <TopBar 
-        isSidebarOpen={isSidebarOpen} 
+      <Sidebar isOpen={isSidebarOpen} ref={sidebarRef} onNavigate={handleCloseSidebar} />
+      <TopBar
+        isSidebarOpen={isSidebarOpen}
         onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         toggleButtonRef={toggleButtonRef}
       />
-      <main className="lg:pl-[var(--sidebar-width)] pt-14 transition-[padding] duration-300">
-        <div className="p-4 md:p-6">
-          {children}
-        </div>
+      <main className="pt-14 transition-[padding] duration-300 lg:pl-[var(--sidebar-width)]">
+        <div className="p-4 md:p-6">{children}</div>
       </main>
     </div>
   );
-} 
+}

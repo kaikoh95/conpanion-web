@@ -1,15 +1,8 @@
 ---
 description: 
 globs: 
-alwaysApply: false
----
----
-description: 
-globs: 
 alwaysApply: true
 ---
-
-
 # Your rule content
 
 - You can @ files here
@@ -77,4 +70,8 @@ when dealing with complex functions, break them into smaller functions and abstr
 
 Before adding new functionality to an existing component, you should always check if there are other existing components that you can reuse.
 
-When adding a complex functionality into an existing component, you should always split it out into a separate component that can be reused
+When adding a complex functionality into an existing component, you should always split it out into a separate component that can be reused.
+
+When you need to add a new dependency, always run `nvm use` first before proceeding with `npm` installations.
+
+When you need to add a new Supabase migration file, first use `npx supabase migration new ` and attach the file name at the end of this command. This is to ensure we always follow the sequence of migrations.

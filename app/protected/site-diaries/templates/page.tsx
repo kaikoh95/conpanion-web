@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, X, Pencil, Trash2 } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus, Search, X, Pencil, Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -12,13 +12,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { format } from "date-fns";
-import { useAuth } from "@/hooks/useAuth";
-import { getSiteDiaryTemplates, deleteSiteDiaryTemplate } from "@/lib/api/site-diaries";
-import { SiteDiaryTemplate } from "@/lib/types/site-diary";
-import { CreateTemplateDialog } from "./create-template-dialog";
-import { toast } from "sonner";
+} from '@/components/ui/table';
+import { format } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
+import { getSiteDiaryTemplates, deleteSiteDiaryTemplate } from '@/lib/api/site-diaries';
+import { SiteDiaryTemplate } from '@/lib/types/site-diary';
+import { CreateTemplateDialog } from './create-template-dialog';
+import { toast } from 'sonner';
 
 // Default project ID (as per requirement to assume one project for now)
 const DEFAULT_PROJECT_ID = 1;
@@ -26,14 +26,14 @@ const DEFAULT_PROJECT_ID = 1;
 export default function SiteDiaryTemplatesPage() {
   const router = useRouter();
   const { user } = useAuth();
-  
+
   // State for templates
   const [templates, setTemplates] = useState<SiteDiaryTemplate[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<SiteDiaryTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  
+  const [searchTerm, setSearchTerm] = useState('');
+
   // State for create/edit dialog
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
@@ -44,15 +44,15 @@ export default function SiteDiaryTemplatesPage() {
     const loadTemplates = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         // Fetch templates
         const fetchedTemplates = await getSiteDiaryTemplates(DEFAULT_PROJECT_ID);
         setTemplates(fetchedTemplates);
         setFilteredTemplates(filterTemplates(fetchedTemplates, searchTerm));
       } catch (err: any) {
-        console.error("Error loading templates:", err);
-        setError(err.message || "Failed to load templates");
+        console.error('Error loading templates:', err);
+        setError(err.message || 'Failed to load templates');
       } finally {
         setLoading(false);
       }
@@ -67,15 +67,13 @@ export default function SiteDiaryTemplatesPage() {
   }, [templates, searchTerm]);
 
   // Filter templates by search term
-  const filterTemplates = (
-    templatesToFilter: SiteDiaryTemplate[],
-    currentSearchTerm: string
-  ) => {
+  const filterTemplates = (templatesToFilter: SiteDiaryTemplate[], currentSearchTerm: string) => {
     if (!currentSearchTerm.trim()) return templatesToFilter;
-    
-    return templatesToFilter.filter(template => 
-      template.name.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
-      template.description?.toLowerCase().includes(currentSearchTerm.toLowerCase())
+
+    return templatesToFilter.filter(
+      (template) =>
+        template.name.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
+        template.description?.toLowerCase().includes(currentSearchTerm.toLowerCase()),
     );
   };
 
@@ -95,22 +93,22 @@ export default function SiteDiaryTemplatesPage() {
   // Handle delete template
   const handleDeleteTemplate = async (templateId: number | undefined) => {
     if (!templateId) return;
-    
-    if (confirm("Are you sure you want to delete this template? This action cannot be undone.")) {
+
+    if (confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
       setIsDeleting(true);
-      
+
       try {
         await deleteSiteDiaryTemplate(templateId);
-        
+
         // Update templates list
-        setTemplates(prevTemplates => 
-          prevTemplates.filter(template => template.id !== templateId)
+        setTemplates((prevTemplates) =>
+          prevTemplates.filter((template) => template.id !== templateId),
         );
-        
-        toast.success("Template deleted successfully");
+
+        toast.success('Template deleted successfully');
       } catch (err: any) {
-        console.error("Error deleting template:", err);
-        toast.error(err.message || "Failed to delete template");
+        console.error('Error deleting template:', err);
+        toast.error(err.message || 'Failed to delete template');
       } finally {
         setIsDeleting(false);
       }
@@ -120,17 +118,17 @@ export default function SiteDiaryTemplatesPage() {
   // Handle template created or updated
   const handleTemplateChange = (updatedTemplate: SiteDiaryTemplate) => {
     // If template with this ID already exists, update it
-    if (updatedTemplate.id && templates.some(t => t.id === updatedTemplate.id)) {
-      setTemplates(prevTemplates => 
-        prevTemplates.map(template => 
-          template.id === updatedTemplate.id ? updatedTemplate : template
-        )
+    if (updatedTemplate.id && templates.some((t) => t.id === updatedTemplate.id)) {
+      setTemplates((prevTemplates) =>
+        prevTemplates.map((template) =>
+          template.id === updatedTemplate.id ? updatedTemplate : template,
+        ),
       );
     } else {
       // Otherwise add it to the list
-      setTemplates(prevTemplates => [updatedTemplate, ...prevTemplates]);
+      setTemplates((prevTemplates) => [updatedTemplate, ...prevTemplates]);
     }
-    
+
     setIsCreateDialogOpen(false);
     setSelectedTemplateId(null);
   };
@@ -142,16 +140,16 @@ export default function SiteDiaryTemplatesPage() {
   };
 
   return (
-    <div className="flex flex-col w-full h-full">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+    <div className="flex h-full w-full flex-col">
+      <div className="mb-4 flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
         <h1 className="text-2xl font-bold text-foreground">Site Diary Templates</h1>
-        
+
         <Button onClick={handleCreateClick}>
           <Plus className="mr-2 h-4 w-4" /> Create Template
         </Button>
       </div>
 
-      <div className="flex justify-between gap-2 mb-4">
+      <div className="mb-4 flex justify-between gap-2">
         <div className="relative w-full md:w-72">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -162,32 +160,32 @@ export default function SiteDiaryTemplatesPage() {
           />
           {searchTerm && (
             <X
-              className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground cursor-pointer"
-              onClick={() => setSearchTerm("")}
+              className="absolute right-2 top-2.5 h-4 w-4 cursor-pointer text-muted-foreground"
+              onClick={() => setSearchTerm('')}
             />
           )}
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="mb-4 rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700">
           Error: {error}
         </div>
       )}
 
       {loading ? (
-        <div className="text-center py-4">Loading templates...</div>
+        <div className="py-4 text-center">Loading templates...</div>
       ) : filteredTemplates.length === 0 ? (
-        <div className="text-center py-8 border rounded-lg">
-          <p className="text-muted-foreground mb-4">
-            {searchTerm ? "No templates match your search" : "No templates found"}
+        <div className="rounded-lg border py-8 text-center">
+          <p className="mb-4 text-muted-foreground">
+            {searchTerm ? 'No templates match your search' : 'No templates found'}
           </p>
           <Button onClick={handleCreateClick}>
             <Plus className="mr-2 h-4 w-4" /> Create Template
           </Button>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="overflow-hidden rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -201,10 +199,10 @@ export default function SiteDiaryTemplatesPage() {
               {filteredTemplates.map((template) => (
                 <TableRow key={template.id}>
                   <TableCell className="font-medium">{template.name}</TableCell>
-                  <TableCell>{template.description || "No description"}</TableCell>
+                  <TableCell>{template.description || 'No description'}</TableCell>
                   <TableCell>
-                    {template.created_at 
-                      ? format(new Date(template.created_at), 'MMM d, yyyy h:mm a') 
+                    {template.created_at
+                      ? format(new Date(template.created_at), 'MMM d, yyyy h:mm a')
                       : 'N/A'}
                   </TableCell>
                   <TableCell className="text-right">
@@ -246,4 +244,4 @@ export default function SiteDiaryTemplatesPage() {
       />
     </div>
   );
-} 
+}

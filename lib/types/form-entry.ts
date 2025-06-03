@@ -31,4 +31,4 @@ export interface CreateFormEntryRequest {
 export interface FormEntryResponse {
   entry: FormEntry;
   answers: FormEntryAnswer[];
-} 
+}

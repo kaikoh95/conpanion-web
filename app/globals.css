@@ -70,4 +70,19 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Prevent unexpected margin-right when dialogs are open */
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Alternative: If you prefer to only target specific scenarios */
+  /* 
+  html[data-scroll-locked],
+  html[data-scroll-locked] body {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+  }
+  */
 }

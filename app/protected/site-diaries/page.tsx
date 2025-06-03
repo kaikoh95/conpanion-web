@@ -1,23 +1,23 @@
-"use client";
+'use client';
 
-import { useState, useEffect, Suspense } from "react";
-import { createClient } from "@/utils/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Plus, ArrowLeft, X } from "lucide-react";
+import { useState, useEffect, Suspense } from 'react';
+import { createClient } from '@/utils/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search, Plus, ArrowLeft, X } from 'lucide-react';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -25,30 +25,30 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useRouter, useSearchParams } from "next/navigation";
-import { getSiteDiariesWithStatus, getSiteDiaryTemplates } from "@/lib/api/site-diaries";
-import { SiteDiary, SiteDiaryTemplate } from "@/lib/types/site-diary";
-import { ApprovalStatus } from "@/lib/api/entries";
-import { getSupabaseClient } from "@/lib/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { CreateSiteDiarySheet } from "./create-site-diary-sheet";
-import { ViewSiteDiary } from "./view-site-diary";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { getSiteDiariesWithStatus, getSiteDiaryTemplates } from '@/lib/api/site-diaries';
+import { SiteDiary, SiteDiaryTemplate } from '@/lib/types/site-diary';
+import { ApprovalStatus } from '@/lib/api/entries';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { CreateSiteDiarySheet } from './create-site-diary-sheet';
+import { ViewSiteDiary } from './view-site-diary';
 
 // Default project ID (as per requirement to assume one project for now)
 const DEFAULT_PROJECT_ID = 1;
 
 // Get these from the actual enum or configuration
-const APPROVAL_STATUSES: { value: ApprovalStatus | 'all', label: string }[] = [
-  { value: "all", label: "All Statuses" },
-  { value: "draft", label: "Draft" },
-  { value: "submitted", label: "Submitted" },
-  { value: "approved", label: "Approved" },
-  { value: "declined", label: "Declined" },
-  { value: "revision_requested", label: "Revision Requested" },
+const APPROVAL_STATUSES: { value: ApprovalStatus | 'all'; label: string }[] = [
+  { value: 'all', label: 'All Statuses' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'declined', label: 'Declined' },
+  { value: 'revision_requested', label: 'Revision Requested' },
 ];
 
 // SearchParamsWrapper component to handle the useSearchParams hook
@@ -57,10 +57,10 @@ function SearchParamsWrapper() {
   const diaryId = searchParams.get('diaryId');
   const templateId = searchParams.get('templateId');
   const createMode = searchParams.get('create') === 'true';
-  
+
   return (
-    <SiteDiariesPageContent 
-      diaryId={diaryId ? parseInt(diaryId) : null} 
+    <SiteDiariesPageContent
+      diaryId={diaryId ? parseInt(diaryId) : null}
       templateId={templateId ? parseInt(templateId) : null}
       createMode={createMode}
     />
@@ -68,34 +68,38 @@ function SearchParamsWrapper() {
 }
 
 // Main component content
-function SiteDiariesPageContent({ 
-  diaryId, 
+function SiteDiariesPageContent({
+  diaryId,
   templateId,
-  createMode 
-}: { 
-  diaryId: number | null; 
+  createMode,
+}: {
+  diaryId: number | null;
   templateId: number | null;
   createMode: boolean;
 }) {
   const supabase = createClient();
   const router = useRouter();
   const { user } = useAuth();
-  
+
   // State for site diaries
-  const [diaries, setDiaries] = useState<(SiteDiary & { approval_status: ApprovalStatus | null })[]>([]);
-  const [filteredDiaries, setFilteredDiaries] = useState<(SiteDiary & { approval_status: ApprovalStatus | null })[]>([]);
+  const [diaries, setDiaries] = useState<
+    (SiteDiary & { approval_status: ApprovalStatus | null })[]
+  >([]);
+  const [filteredDiaries, setFilteredDiaries] = useState<
+    (SiteDiary & { approval_status: ApprovalStatus | null })[]
+  >([]);
   const [templates, setTemplates] = useState<SiteDiaryTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<ApprovalStatus | 'all'>("all");
-  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<ApprovalStatus | 'all'>('all');
+
   // State for create/view diary
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [selectedDiaryId, setSelectedDiaryId] = useState<number | null>(null);
-  
+
   // State for user email mappings
   const [userEmails, setUserEmails] = useState<Record<string, string>>({});
 
@@ -105,7 +109,7 @@ function SiteDiariesPageContent({
       setSelectedDiaryId(diaryId);
       setIsViewSheetOpen(true);
     }
-    
+
     if (templateId) {
       setSelectedTemplateId(templateId);
       setIsCreateSheetOpen(createMode);
@@ -117,29 +121,34 @@ function SiteDiariesPageContent({
     const loadData = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         // Fetch site diaries with approval status
         const fetchedDiaries = await getSiteDiariesWithStatus(DEFAULT_PROJECT_ID);
         setDiaries(fetchedDiaries);
-        
+
         // Apply initial filters
         setFilteredDiaries(filterDiaries(fetchedDiaries, searchTerm, selectedStatus));
-        
+
         // Fetch templates
         const fetchedTemplates = await getSiteDiaryTemplates(DEFAULT_PROJECT_ID);
         setTemplates(fetchedTemplates);
-        
+
         // Get unique user IDs from diaries
-        const userIds = Array.from(new Set(fetchedDiaries.map(diary => diary.submitted_by_user_id)));
-        
+        const userIds = Array.from(
+          new Set(fetchedDiaries.map((diary) => diary.submitted_by_user_id)),
+        );
+
         if (userIds.length > 0) {
           try {
             const supabaseClient = getSupabaseClient();
-            const { data: userData, error: userError } = await supabaseClient.rpc('get_user_details', {
-              user_ids: userIds
-            });
-            
+            const { data: userData, error: userError } = await supabaseClient.rpc(
+              'get_user_details',
+              {
+                user_ids: userIds,
+              },
+            );
+
             if (userError) {
               console.error('Error fetching user details:', userError);
             } else if (userData) {
@@ -156,8 +165,8 @@ function SiteDiariesPageContent({
           }
         }
       } catch (err: any) {
-        console.error("Error loading data:", err);
-        setError(err.message || "Failed to load data");
+        console.error('Error loading data:', err);
+        setError(err.message || 'Failed to load data');
       } finally {
         setLoading(false);
       }
@@ -175,15 +184,16 @@ function SiteDiariesPageContent({
   const filterDiaries = (
     diariesToFilter: (SiteDiary & { approval_status: ApprovalStatus | null })[],
     currentSearchTerm: string,
-    currentSelectedStatus: ApprovalStatus | 'all'
+    currentSelectedStatus: ApprovalStatus | 'all',
   ) => {
-    return diariesToFilter.filter(diary => {
+    return diariesToFilter.filter((diary) => {
       // Filter by search term
       const searchMatch = diary.name.toLowerCase().includes(currentSearchTerm.toLowerCase());
-      
+
       // Filter by status
-      const statusMatch = currentSelectedStatus === 'all' || diary.approval_status === currentSelectedStatus;
-      
+      const statusMatch =
+        currentSelectedStatus === 'all' || diary.approval_status === currentSelectedStatus;
+
       return searchMatch && statusMatch;
     });
   };
@@ -234,26 +244,37 @@ function SiteDiariesPageContent({
   // Get status badge color
   const getStatusColor = (status: ApprovalStatus | null): string => {
     switch (status) {
-      case 'approved': return 'bg-green-500';
-      case 'declined': return 'bg-red-500';
-      case 'submitted': return 'bg-blue-500';
-      case 'revision_requested': return 'bg-yellow-500';
+      case 'approved':
+        return 'bg-green-500';
+      case 'declined':
+        return 'bg-red-500';
+      case 'submitted':
+        return 'bg-blue-500';
+      case 'revision_requested':
+        return 'bg-yellow-500';
       case 'draft':
-      default: return 'bg-gray-500';
+      default:
+        return 'bg-gray-500';
     }
   };
 
   // Get status display text
   const getStatusText = (status: ApprovalStatus | null): string => {
     if (!status) return 'Draft';
-    
+
     switch (status) {
-      case 'approved': return 'Approved';
-      case 'declined': return 'Declined';
-      case 'submitted': return 'Submitted';
-      case 'revision_requested': return 'Revision Requested';
-      case 'draft': return 'Draft';
-      default: return status;
+      case 'approved':
+        return 'Approved';
+      case 'declined':
+        return 'Declined';
+      case 'submitted':
+        return 'Submitted';
+      case 'revision_requested':
+        return 'Revision Requested';
+      case 'draft':
+        return 'Draft';
+      default:
+        return status;
     }
   };
 
@@ -265,17 +286,17 @@ function SiteDiariesPageContent({
       setDiaries(fetchedDiaries);
       setFilteredDiaries(filterDiaries(fetchedDiaries, searchTerm, selectedStatus));
     } catch (err: any) {
-      console.error("Error refreshing diaries:", err);
+      console.error('Error refreshing diaries:', err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col w-full h-full">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+    <div className="flex h-full w-full flex-col">
+      <div className="mb-4 flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
         <h1 className="text-2xl font-bold text-foreground">Site Diaries</h1>
-        
+
         {templates.length > 0 ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -288,8 +309,8 @@ function SiteDiariesPageContent({
                 Select Template
               </div>
               {templates.map((template) => (
-                <DropdownMenuItem 
-                  key={template.id} 
+                <DropdownMenuItem
+                  key={template.id}
                   onClick={() => handleCreateDiary(template.id || 0)}
                 >
                   {template.name}
@@ -304,7 +325,7 @@ function SiteDiariesPageContent({
         )}
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between gap-2 mb-4">
+      <div className="mb-4 flex flex-col justify-between gap-2 md:flex-row">
         <div className="relative w-full md:w-72">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -315,12 +336,12 @@ function SiteDiariesPageContent({
           />
           {searchTerm && (
             <X
-              className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground cursor-pointer"
-              onClick={() => setSearchTerm("")}
+              className="absolute right-2 top-2.5 h-4 w-4 cursor-pointer text-muted-foreground"
+              onClick={() => setSearchTerm('')}
             />
           )}
         </div>
-        
+
         <Select defaultValue="all" onValueChange={handleStatusChange}>
           <SelectTrigger className="w-full md:w-48">
             <SelectValue placeholder="Filter by status" />
@@ -336,16 +357,16 @@ function SiteDiariesPageContent({
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="mb-4 rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700">
           Error: {error}
         </div>
       )}
 
       {loading ? (
-        <div className="text-center py-4">Loading site diaries...</div>
+        <div className="py-4 text-center">Loading site diaries...</div>
       ) : filteredDiaries.length === 0 ? (
-        <div className="text-center py-8 border rounded-lg">
-          <p className="text-muted-foreground mb-4">No site diaries found</p>
+        <div className="rounded-lg border py-8 text-center">
+          <p className="mb-4 text-muted-foreground">No site diaries found</p>
           {templates.length > 0 && (
             <Button onClick={() => handleCreateDiary(templates[0].id || 0)}>
               <Plus className="mr-2 h-4 w-4" /> Create Site Diary
@@ -353,7 +374,7 @@ function SiteDiariesPageContent({
           )}
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="overflow-hidden rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -372,7 +393,9 @@ function SiteDiariesPageContent({
                   onClick={() => handleViewDiary(diary.id || 0)}
                 >
                   <TableCell className="font-medium">{diary.name}</TableCell>
-                  <TableCell>{diary.date ? format(new Date(diary.date), 'MMM d, yyyy') : 'N/A'}</TableCell>
+                  <TableCell>
+                    {diary.date ? format(new Date(diary.date), 'MMM d, yyyy') : 'N/A'}
+                  </TableCell>
                   <TableCell>{getUserEmail(diary.submitted_by_user_id)}</TableCell>
                   <TableCell>
                     <Badge className={getStatusColor(diary.approval_status)}>
@@ -380,8 +403,8 @@ function SiteDiariesPageContent({
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {diary.created_at 
-                      ? format(new Date(diary.created_at), 'MMM d, yyyy h:mm a') 
+                    {diary.created_at
+                      ? format(new Date(diary.created_at), 'MMM d, yyyy h:mm a')
                       : 'N/A'}
                   </TableCell>
                 </TableRow>
@@ -414,8 +437,10 @@ function SiteDiariesPageContent({
 
 export default function SiteDiariesPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center p-8">Loading site diaries...</div>}>
+    <Suspense
+      fallback={<div className="flex items-center justify-center p-8">Loading site diaries...</div>}
+    >
       <SearchParamsWrapper />
     </Suspense>
   );
-} 
+}

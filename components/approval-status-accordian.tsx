@@ -1,14 +1,27 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef } from "react";
-import { createClient } from "@/utils/supabase/client";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import { createApproval } from "@/lib/api/approvals";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2, X, Check, User as UserIcon } from "lucide-react";
+import { useState, useEffect, useRef } from 'react';
+import { createClient } from '@/utils/supabase/client';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { createApproval } from '@/lib/api/approvals';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, X, Check, User as UserIcon } from 'lucide-react';
 
 type ApprovalApprover = {
   approver_id: string;
@@ -42,24 +55,24 @@ interface ApprovalStatusAccordianProps {
   onRefreshData?: () => void;
 }
 
-export function ApprovalStatusAccordian({ 
-  entryId, 
-  entityType = 'entries', 
+export function ApprovalStatusAccordian({
+  entryId,
+  entityType = 'entries',
   currentStatus,
-  onRefreshData
+  onRefreshData,
 }: ApprovalStatusAccordianProps) {
   const [approval, setApproval] = useState<Approval | null>(null);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedApprovers, setSelectedApprovers] = useState<string[]>([]);
-  const [requesterName, setRequesterName] = useState("");
+  const [requesterName, setRequesterName] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
-  const [externalEmail, setExternalEmail] = useState("");
+  const [externalEmail, setExternalEmail] = useState('');
   const [externalStakeholders, setExternalStakeholders] = useState<string[]>([]);
-  
+
   // New state for combobox
-  const [approverSearchInput, setApproverSearchInput] = useState("");
+  const [approverSearchInput, setApproverSearchInput] = useState('');
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -69,47 +82,49 @@ export function ApprovalStatusAccordian({
     try {
       setLoading(true);
       const supabase = createClient();
-      
+
       // Check if there's an approval for this entity
       const { data, error } = await supabase
         .from('approvals')
-        .select(`
+        .select(
+          `
           *,
           approval_approvers (
             approver_id
           )
-        `)
+        `,
+        )
         .eq('entity_type', entityType)
         .eq('entity_id', entryId)
         .maybeSingle(); // Use maybeSingle instead of single
 
       if (error) {
-        console.error("Error fetching approval:", error);
+        console.error('Error fetching approval:', error);
         setApproval(null);
         return;
       }
 
       if (data) {
         setApproval(data);
-        
+
         // Fetch approver details if there are any
         if (data.approval_approvers && data.approval_approvers.length > 0) {
           const approverIds = data.approval_approvers.map((aa: ApprovalApprover) => aa.approver_id);
           const { data: userData, error: userError } = await supabase.rpc('get_user_details', {
-            user_ids: approverIds
+            user_ids: approverIds,
           });
 
           if (userData && userData.length > 0) {
             setUsers(userData);
           } else if (userError) {
-            console.error("Error fetching approver details:", userError);
+            console.error('Error fetching approver details:', userError);
           }
         }
       } else {
         setApproval(null);
       }
     } catch (err) {
-      console.error("Failed to fetch approval:", err);
+      console.error('Failed to fetch approval:', err);
       setApproval(null);
     } finally {
       setLoading(false);
@@ -126,7 +141,7 @@ export function ApprovalStatusAccordian({
     async function fetchUsers() {
       try {
         const supabase = createClient();
-        
+
         // We need to get all available users from auth.users using the get_user_details RPC function
         // First we need a way to get all user IDs
         // As a workaround, let's fetch first from a table that references users
@@ -134,34 +149,34 @@ export function ApprovalStatusAccordian({
           .from('projects_users')
           .select('user_id')
           .limit(100); // Limit to a reasonable number
-          
+
         if (projectUsersError) {
-          console.error("Error fetching project users:", projectUsersError);
+          console.error('Error fetching project users:', projectUsersError);
           return;
         }
-        
+
         if (!projectUsers || projectUsers.length === 0) {
-          console.warn("No users found in projects_users table");
+          console.warn('No users found in projects_users table');
           return;
         }
-        
+
         // Extract unique user IDs
-        const userIds = Array.from(new Set(projectUsers.map(pu => pu.user_id)));
-        
+        const userIds = Array.from(new Set(projectUsers.map((pu) => pu.user_id)));
+
         // Now fetch user details using the RPC function
         const { data: userData, error: userError } = await supabase.rpc('get_user_details', {
-          user_ids: userIds
+          user_ids: userIds,
         });
-        
+
         if (userError) {
-          console.error("Error fetching user details:", userError);
+          console.error('Error fetching user details:', userError);
           return;
         }
-        
-        console.log("Fetched users:", userData);
+
+        console.log('Fetched users:', userData);
         setUsers(userData || []);
       } catch (err) {
-        console.error("Failed to fetch users:", err);
+        console.error('Failed to fetch users:', err);
       }
     }
 
@@ -172,19 +187,19 @@ export function ApprovalStatusAccordian({
 
   // Filter users based on search input
   useEffect(() => {
-    if (approverSearchInput.trim() === "") {
+    if (approverSearchInput.trim() === '') {
       // Show all users instead of an empty list when search is empty
       setFilteredUsers(users);
     } else {
       const searchTerm = approverSearchInput.toLowerCase();
-      console.log("Search term:", searchTerm);
-      console.log("Current users array:", users);
-      
-      const matched = users.filter(user => {
+      console.log('Search term:', searchTerm);
+      console.log('Current users array:', users);
+
+      const matched = users.filter((user) => {
         // Extract email from user metadata
         const userMetadata = user.raw_user_meta_data || {};
         let email = '';
-        
+
         // Check different possible locations where email might be stored
         if (typeof userMetadata.email === 'string') {
           email = userMetadata.email;
@@ -193,25 +208,29 @@ export function ApprovalStatusAccordian({
         } else if (typeof userMetadata === 'object') {
           // Try to find any property that looks like an email
           Object.entries(userMetadata).forEach(([key, value]) => {
-            if (typeof value === 'string' && 
-                (key.includes('email') || (typeof value === 'string' && value.includes('@')))) {
+            if (
+              typeof value === 'string' &&
+              (key.includes('email') || (typeof value === 'string' && value.includes('@')))
+            ) {
               email = value;
             }
           });
         }
-        
+
         console.log(`User ID: ${user.id}`);
         console.log(`Raw metadata:`, user.raw_user_meta_data);
         console.log(`Extracted email: "${email}"`);
-        
+
         // Perform the matching
         const matchesEmail = email.toLowerCase().includes(searchTerm);
-        console.log(`Email match: ${matchesEmail} - Search "${searchTerm}" in "${email.toLowerCase()}"`);
-        
+        console.log(
+          `Email match: ${matchesEmail} - Search "${searchTerm}" in "${email.toLowerCase()}"`,
+        );
+
         return matchesEmail;
       });
-      
-      console.log("Filtered users:", matched);
+
+      console.log('Filtered users:', matched);
       setFilteredUsers(matched);
     }
   }, [approverSearchInput, users]);
@@ -219,38 +238,38 @@ export function ApprovalStatusAccordian({
   const handleCreateApproval = async () => {
     try {
       setCreateLoading(true);
-      
+
       // Validate that at least one approver is selected
       if (selectedApprovers.length === 0) {
-        alert("Please select at least one approver");
+        alert('Please select at least one approver');
         setCreateLoading(false);
         return;
       }
-      
+
       await createApproval({
         entity_type: entityType,
         entity_id: entryId,
-        approvers_id: selectedApprovers
+        approvers_id: selectedApprovers,
       });
-      
+
       setDialogOpen(false);
-      
+
       // Trigger a refresh of the approval data
       fetchApproval();
-      
+
       // Dispatch custom event to notify parent components that approval has been updated
       const customEvent = new CustomEvent('approvalUpdated', {
-        detail: { entityId: entryId, entityType }
+        detail: { entityId: entryId, entityType },
       });
       window.dispatchEvent(customEvent);
-      
+
       // Notify parent component if needed
       if (onRefreshData) {
         onRefreshData();
       }
     } catch (err) {
-      console.error("Failed to create approval:", err);
-      alert("Failed to create approval request. Please try again.");
+      console.error('Failed to create approval:', err);
+      alert('Failed to create approval request. Please try again.');
     } finally {
       setCreateLoading(false);
     }
@@ -262,7 +281,7 @@ export function ApprovalStatusAccordian({
       if (isValidEmail(externalEmail)) {
         addExternalStakeholder(externalEmail);
       } else {
-        alert("Please enter a valid email address");
+        alert('Please enter a valid email address');
       }
     }
   };
@@ -276,30 +295,30 @@ export function ApprovalStatusAccordian({
     if (!externalStakeholders.includes(email)) {
       setExternalStakeholders([...externalStakeholders, email]);
     }
-    setExternalEmail("");
+    setExternalEmail('');
   };
 
   const removeExternalStakeholder = (email: string) => {
-    setExternalStakeholders(externalStakeholders.filter(e => e !== email));
+    setExternalStakeholders(externalStakeholders.filter((e) => e !== email));
   };
 
   const handleSelectApprover = (user: User) => {
     if (!selectedApprovers.includes(user.id)) {
       setSelectedApprovers([...selectedApprovers, user.id]);
     }
-    setApproverSearchInput("");
+    setApproverSearchInput('');
     setShowUserDropdown(false);
   };
 
   const getUserById = (id: string): User | undefined => {
-    return users.find(user => user.id === id);
+    return users.find((user) => user.id === id);
   };
 
   const getUserEmail = (user: User | undefined): string => {
     if (!user || !user.raw_user_meta_data) return '';
-    
+
     const metadata = user.raw_user_meta_data;
-    
+
     // Try different possible locations
     if (typeof metadata.email === 'string') {
       return metadata.email;
@@ -308,16 +327,18 @@ export function ApprovalStatusAccordian({
     } else {
       // Try to find any property that looks like an email
       for (const [key, value] of Object.entries(metadata)) {
-        if (typeof value === 'string' && 
-            (key.includes('email') || (typeof value === 'string' && value.includes('@')))) {
+        if (
+          typeof value === 'string' &&
+          (key.includes('email') || (typeof value === 'string' && value.includes('@')))
+        ) {
           return value;
         }
       }
     }
-    
+
     return '';
   };
-  
+
   const getUserName = (user: User | undefined): string => {
     return user?.raw_user_meta_data?.name || user?.raw_user_meta_data?.email || 'Unknown';
   };
@@ -330,9 +351,9 @@ export function ApprovalStatusAccordian({
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
@@ -346,7 +367,7 @@ export function ApprovalStatusAccordian({
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -364,13 +385,19 @@ export function ApprovalStatusAccordian({
             <div className="space-y-4">
               {/* Status Badge */}
               <div className="flex items-center gap-2">
-                <div className={`h-2 w-2 rounded-full ${
-                  approval.status === 'approved' ? 'bg-green-500' :
-                  approval.status === 'declined' ? 'bg-red-500' :
-                  approval.status === 'submitted' ? 'bg-yellow-500' :
-                  approval.status === 'revision_requested' ? 'bg-orange-500' :
-                  'bg-gray-500'
-                }`} />
+                <div
+                  className={`h-2 w-2 rounded-full ${
+                    approval.status === 'approved'
+                      ? 'bg-green-500'
+                      : approval.status === 'declined'
+                        ? 'bg-red-500'
+                        : approval.status === 'submitted'
+                          ? 'bg-yellow-500'
+                          : approval.status === 'revision_requested'
+                            ? 'bg-orange-500'
+                            : 'bg-gray-500'
+                  }`}
+                />
                 <span className="font-medium">{formatStatus(approval.status)}</span>
               </div>
 
@@ -408,7 +435,8 @@ export function ApprovalStatusAccordian({
                   <DialogHeader>
                     <DialogTitle>Create Approval Request</DialogTitle>
                     <DialogDescription>
-                      Select the approvers who will review this entry. You can search by email address.
+                      Select the approvers who will review this entry. You can search by email
+                      address.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -427,7 +455,7 @@ export function ApprovalStatusAccordian({
                           onFocus={() => setShowUserDropdown(true)}
                         />
                         {showUserDropdown && (
-                          <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+                          <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border bg-popover shadow-md">
                             {users.length === 0 ? (
                               <div className="px-3 py-2 text-sm text-muted-foreground">
                                 Loading users...
@@ -440,14 +468,16 @@ export function ApprovalStatusAccordian({
                               filteredUsers.map((user) => (
                                 <div
                                   key={user.id}
-                                  className="flex items-center px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                                  className="flex cursor-pointer items-center px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
                                   onClick={() => handleSelectApprover(user)}
                                 >
-                                  <UserIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                                  <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                                   <span>{getUserName(user)}</span>
-                                  <span className="ml-1 text-muted-foreground">({getUserEmail(user)})</span>
+                                  <span className="ml-1 text-muted-foreground">
+                                    ({getUserEmail(user)})
+                                  </span>
                                   {selectedApprovers.includes(user.id) && (
-                                    <Check className="h-4 w-4 ml-auto text-primary" />
+                                    <Check className="ml-auto h-4 w-4 text-primary" />
                                   )}
                                 </div>
                               ))
@@ -464,12 +494,19 @@ export function ApprovalStatusAccordian({
                           {selectedApprovers.map((approverId) => {
                             const user = getUserById(approverId);
                             return (
-                              <div key={approverId} className="flex items-center gap-1 bg-muted text-sm px-2 py-1 rounded-md">
+                              <div
+                                key={approverId}
+                                className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-sm"
+                              >
                                 <span>{getUserName(user)}</span>
-                                <button 
-                                  type="button" 
+                                <button
+                                  type="button"
                                   className="text-muted-foreground hover:text-foreground"
-                                  onClick={() => setSelectedApprovers(selectedApprovers.filter(id => id !== approverId))}
+                                  onClick={() =>
+                                    setSelectedApprovers(
+                                      selectedApprovers.filter((id) => id !== approverId),
+                                    )
+                                  }
                                 >
                                   <X className="h-3 w-3" />
                                 </button>
@@ -481,17 +518,14 @@ export function ApprovalStatusAccordian({
                     )}
                   </div>
                   <DialogFooter>
-                    <Button 
-                      onClick={handleCreateApproval} 
-                      disabled={createLoading}
-                    >
+                    <Button onClick={handleCreateApproval} disabled={createLoading}>
                       {createLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Submitting...
                         </>
                       ) : (
-                        "Submit"
+                        'Submit'
                       )}
                     </Button>
                   </DialogFooter>
@@ -503,4 +537,4 @@ export function ApprovalStatusAccordian({
       </AccordionItem>
     </Accordion>
   );
-} 
+}

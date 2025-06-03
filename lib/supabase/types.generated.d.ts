@@ -397,6 +397,115 @@ export type Database = {
           },
         ]
       }
+      organization_users: {
+        Row: {
+          current_project_id: number | null
+          default_project_id: number | null
+          email: string | null
+          id: number
+          invited_at: string | null
+          invited_by: string | null
+          joined_at: string
+          last_accessed_at: string | null
+          left_at: string | null
+          notifications_enabled: boolean | null
+          organization_id: number
+          role: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          current_project_id?: number | null
+          default_project_id?: number | null
+          email?: string | null
+          id?: number
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string
+          last_accessed_at?: string | null
+          left_at?: string | null
+          notifications_enabled?: boolean | null
+          organization_id: number
+          role: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          current_project_id?: number | null
+          default_project_id?: number | null
+          email?: string | null
+          id?: number
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string
+          last_accessed_at?: string | null
+          left_at?: string | null
+          notifications_enabled?: boolean | null
+          organization_id?: number
+          role?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_users_current_project_id_fkey"
+            columns: ["current_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_users_default_project_id_fkey"
+            columns: ["default_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_users_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: number
+          is_active: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       priorities: {
         Row: {
           color: string | null
@@ -448,6 +557,7 @@ export type Database = {
           id: number
           is_archived: boolean
           name: string
+          organization_id: number | null
           owner_id: string
           updated_at: string
         }
@@ -460,6 +570,7 @@ export type Database = {
           id?: number
           is_archived?: boolean
           name: string
+          organization_id?: number | null
           owner_id: string
           updated_at?: string
         }
@@ -472,39 +583,247 @@ export type Database = {
           id?: number
           is_archived?: boolean
           name?: string
+          organization_id?: number | null
           owner_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects_users: {
         Row: {
           created_at: string
           created_by: string
+          email: string | null
           id: number
+          invited_at: string | null
+          invited_by: string | null
+          left_at: string | null
           project_id: number
           role: string
+          status: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
           created_by: string
+          email?: string | null
           id?: number
+          invited_at?: string | null
+          invited_by?: string | null
+          left_at?: string | null
           project_id: number
           role: string
+          status?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
           created_by?: string
+          email?: string | null
           id?: number
+          invited_at?: string | null
+          invited_by?: string | null
+          left_at?: string | null
           project_id?: number
           role?: string
+          status?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "projects_users_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_diaries: {
+        Row: {
+          created_at: string
+          date: string
+          deleted_at: string | null
+          id: number
+          metadata: Json | null
+          name: string
+          project_id: number
+          submitted_by_user_id: string
+          template_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          deleted_at?: string | null
+          id?: never
+          metadata?: Json | null
+          name: string
+          project_id: number
+          submitted_by_user_id: string
+          template_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          deleted_at?: string | null
+          id?: never
+          metadata?: Json | null
+          name?: string
+          project_id?: number
+          submitted_by_user_id?: string
+          template_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_diaries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_diaries_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "site_diary_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_diary_answers: {
+        Row: {
+          answer_value: Json | null
+          created_at: string
+          diary_id: number
+          id: number
+          item_id: number
+        }
+        Insert: {
+          answer_value?: Json | null
+          created_at?: string
+          diary_id: number
+          id?: never
+          item_id: number
+        }
+        Update: {
+          answer_value?: Json | null
+          created_at?: string
+          diary_id?: number
+          id?: never
+          item_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_diary_answers_diary_id_fkey"
+            columns: ["diary_id"]
+            isOneToOne: false
+            referencedRelation: "site_diaries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_diary_answers_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "site_diary_template_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_diary_template_items: {
+        Row: {
+          display_order: number
+          id: number
+          is_required: boolean | null
+          item_type: Database["public"]["Enums"]["item_type"]
+          metadata: Json | null
+          options: Json | null
+          question_value: string | null
+          template_id: number
+        }
+        Insert: {
+          display_order: number
+          id?: never
+          is_required?: boolean | null
+          item_type: Database["public"]["Enums"]["item_type"]
+          metadata?: Json | null
+          options?: Json | null
+          question_value?: string | null
+          template_id: number
+        }
+        Update: {
+          display_order?: number
+          id?: never
+          is_required?: boolean | null
+          item_type?: Database["public"]["Enums"]["item_type"]
+          metadata?: Json | null
+          options?: Json | null
+          question_value?: string | null
+          template_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_diary_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "site_diary_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_diary_templates: {
+        Row: {
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          description: string | null
+          id: number
+          metadata: Json | null
+          name: string
+          project_id: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: never
+          metadata?: Json | null
+          name: string
+          project_id: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: never
+          metadata?: Json | null
+          name?: string
+          project_id?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_diary_templates_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -700,11 +1019,179 @@ export type Database = {
           },
         ]
       }
+      user_profiles: {
+        Row: {
+          created_at: string
+          current_organization_id: number | null
+          default_organization_id: number | null
+          email: string | null
+          failed_login_attempts: number | null
+          first_name: string | null
+          global_avatar_url: string | null
+          global_display_name: string | null
+          id: string
+          last_name: string | null
+          last_organization_switch_at: string | null
+          locked_until: string | null
+          preferred_language: string | null
+          preferred_timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_organization_id?: number | null
+          default_organization_id?: number | null
+          email?: string | null
+          failed_login_attempts?: number | null
+          first_name?: string | null
+          global_avatar_url?: string | null
+          global_display_name?: string | null
+          id: string
+          last_name?: string | null
+          last_organization_switch_at?: string | null
+          locked_until?: string | null
+          preferred_language?: string | null
+          preferred_timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_organization_id?: number | null
+          default_organization_id?: number | null
+          email?: string | null
+          failed_login_attempts?: number | null
+          first_name?: string | null
+          global_avatar_url?: string | null
+          global_display_name?: string | null
+          id?: string
+          last_name?: string | null
+          last_organization_switch_at?: string | null
+          locked_until?: string | null
+          preferred_language?: string | null
+          preferred_timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_current_organization_id_fkey"
+            columns: ["current_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_profiles_default_organization_id_fkey"
+            columns: ["default_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      can_change_member_role: {
+        Args: {
+          changer_user_id: string
+          target_member_id: number
+          new_role: string
+          org_id: number
+        }
+        Returns: boolean
+      }
+      check_user_exists_by_email: {
+        Args: {
+          user_email: string
+        }
+        Returns: boolean
+      }
+      convert_slugs_to_hash: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          org_id: number
+          old_slug: string
+          new_slug: string
+          updated: boolean
+        }[]
+      }
+      create_organization: {
+        Args: {
+          org_name: string
+          org_description?: string
+        }
+        Returns: number
+      }
+      create_organization_for_existing_user: {
+        Args: {
+          target_user_id: string
+        }
+        Returns: number
+      }
+      debug_invite_process: {
+        Args: {
+          org_id: number
+          user_email: string
+          user_role?: string
+        }
+        Returns: Json
+      }
+      ensure_user_has_organization: {
+        Args: {
+          target_user_id: string
+        }
+        Returns: number
+      }
+      generate_organization_slug: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_organization_id: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_or_create_default_organization: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_organization_members: {
+        Args: {
+          org_id: number
+        }
+        Returns: {
+          membership_id: number
+          user_id: string
+          role: string
+          status: string
+          joined_at: string
+          invited_by: string
+          display_name: string
+          user_email: string
+        }[]
+      }
+      get_project_members: {
+        Args: {
+          p_project_id: number
+        }
+        Returns: {
+          id: number
+          project_id: number
+          user_id: string
+          role: string
+          status: string
+          created_at: string
+          invited_at: string
+          invited_by: string
+          left_at: string
+          updated_at: string
+          email: string
+          user_email: string
+          user_name: string
+          user_avatar_url: string
+        }[]
+      }
       get_user_details: {
         Args: {
           user_ids: string[]
@@ -712,7 +1199,129 @@ export type Database = {
         Returns: {
           id: string
           raw_user_meta_data: Json
+          global_avatar_url: string
+          global_display_name: string
         }[]
+      }
+      get_user_id_by_email: {
+        Args: {
+          user_email: string
+        }
+        Returns: string
+      }
+      get_user_organization_ids: {
+        Args: {
+          target_user_id: string
+        }
+        Returns: {
+          organization_id: number
+        }[]
+      }
+      get_user_organizations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          organization_id: number
+          organization_name: string
+          organization_slug: string
+          user_role: string
+          user_status: string
+          joined_at: string
+          last_accessed_at: string
+          is_current: boolean
+        }[]
+      }
+      get_user_project_context: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          organization_id: number
+          current_project_id: number
+          default_project_id: number
+          current_project_name: string
+          default_project_name: string
+        }[]
+      }
+      invite_existing_user_to_organization: {
+        Args: {
+          p_organization_id: number
+          p_user_id: string
+          p_role: string
+        }
+        Returns: Json
+      }
+      invite_user_to_organization: {
+        Args: {
+          org_id: number
+          user_email: string
+          user_role?: string
+        }
+        Returns: Json
+      }
+      invite_user_to_project: {
+        Args: {
+          p_project_id: number
+          p_user_id: string
+          p_role?: string
+        }
+        Returns: Json
+      }
+      remove_organization_member: {
+        Args: {
+          membership_id: number
+        }
+        Returns: Json
+      }
+      remove_project_member: {
+        Args: {
+          p_membership_id: number
+        }
+        Returns: Json
+      }
+      rerun_slug_conversion: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      set_user_current_project: {
+        Args: {
+          p_project_id: number
+        }
+        Returns: boolean
+      }
+      set_user_default_project: {
+        Args: {
+          p_project_id: number
+        }
+        Returns: boolean
+      }
+      switch_organization_context: {
+        Args: {
+          new_org_id: number
+        }
+        Returns: boolean
+      }
+      test_user_signup_process: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      update_organization_member_role: {
+        Args: {
+          member_id: number
+          new_role: string
+        }
+        Returns: boolean
+      }
+      update_project_member_role: {
+        Args: {
+          p_membership_id: number
+          p_new_role: string
+        }
+        Returns: Json
+      }
+      user_has_org_permission: {
+        Args: {
+          org_id: number
+          required_roles?: string[]
+        }
+        Returns: boolean
       }
     }
     Enums: {

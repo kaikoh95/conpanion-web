@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, X, ArrowLeft, Check, Pencil, Trash2 } from "lucide-react";
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus, Search, X, ArrowLeft, Check, Pencil, Trash2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -19,16 +19,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { CreateFormDialog } from "@/components/forms/create-form-dialog";
-import { getForms, getFormById, updateForm } from "@/lib/api/forms";
-import { FormResponse, FormItem, ItemType, Form } from "@/lib/types/form";
-import { format } from "date-fns";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { CreateFormDialog } from '@/components/forms/create-form-dialog';
+import { getForms, getFormById, updateForm } from '@/lib/api/forms';
+import { FormResponse, FormItem, ItemType, Form } from '@/lib/types/form';
+import { format } from 'date-fns';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import TextareaAutosize from 'react-textarea-autosize';
-import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
+import { toast } from 'sonner';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   DndContext,
   closestCenter,
@@ -37,7 +37,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
@@ -49,16 +49,16 @@ import { FormBuilderQuestion } from '@/lib/types/form-builder';
 import { AssigneeSelector } from '@/components/AssigneeSelector';
 import { useAuth } from '@/hooks/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { createFormEntry } from "@/lib/api/form-entries";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { createFormEntry } from '@/lib/api/form-entries';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const questionTypes = [
-  { value: "question", label: "Short answer" },
-  { value: "radio_box", label: "Multiple choice" },
-  { value: "checklist", label: "Checkboxes" },
-  { value: "photo", label: "Photo" },
+  { value: 'question', label: 'Short answer' },
+  { value: 'radio_box', label: 'Multiple choice' },
+  { value: 'checklist', label: 'Checkboxes' },
+  { value: 'photo', label: 'Photo' },
 ] as const;
 
 // Adapter functions to convert between FormItem and FormBuilderQuestion
@@ -70,7 +70,10 @@ const toFormBuilderQuestion = (item: FormItem): FormBuilderQuestion => ({
   required: item.is_required,
 });
 
-const fromFormBuilderQuestion = (question: FormBuilderQuestion, displayOrder: number): Omit<FormItem, 'id' | 'form_id'> => ({
+const fromFormBuilderQuestion = (
+  question: FormBuilderQuestion,
+  displayOrder: number,
+): Omit<FormItem, 'id' | 'form_id'> => ({
   item_type: question.type,
   question_value: question.title,
   options: question.options,
@@ -83,22 +86,26 @@ function SearchParamsWrapper() {
   const searchParams = useSearchParams();
   const formId = searchParams.get('formId');
   const entryMode = searchParams.get('entryMode');
-  
-  return (
-    <FormsPageContent formId={formId} entryMode={entryMode} />
-  );
+
+  return <FormsPageContent formId={formId} entryMode={entryMode} />;
 }
 
 // Main component content without direct useSearchParams usage
-function FormsPageContent({ formId, entryMode }: { formId: string | null; entryMode: string | null }) {
+function FormsPageContent({
+  formId,
+  entryMode,
+}: {
+  formId: string | null;
+  entryMode: string | null;
+}) {
   const router = useRouter();
   const { user } = useAuth();
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  
+
   // State for form detail view
   const [selectedFormId, setSelectedFormId] = useState<number | null>(null);
   const [formDetail, setFormDetail] = useState<FormResponse | null>(null);
@@ -107,17 +114,19 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
 
   // State for edit mode
   const [isEditing, setIsEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState("");
+  const [editedTitle, setEditedTitle] = useState('');
   const [editedItems, setEditedItems] = useState<FormItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // State for assignees
-  const [assignees, setAssignees] = useState<{ id: string; name: string; avatar_url?: string }[]>([]);
+  const [assignees, setAssignees] = useState<{ id: string; name: string; avatar_url?: string }[]>(
+    [],
+  );
   const [assigneeError, setAssigneeError] = useState<string | null>(null);
 
   // New state for entry creation
   const [isCreatingEntry, setIsCreatingEntry] = useState(false);
-  const [entryName, setEntryName] = useState<string>("");
+  const [entryName, setEntryName] = useState<string>('');
   const [answers, setAnswers] = useState<Record<number, any>>({});
   const [formErrors, setFormErrors] = useState<Record<number, string>>({});
   const [isSubmittingEntry, setIsSubmittingEntry] = useState(false);
@@ -127,14 +136,14 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Format current date for the entry name placeholder
   const currentDate = new Intl.DateTimeFormat('en-US', {
-    month: 'short', 
+    month: 'short',
     day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
   }).format(new Date());
 
   // Effect to handle initial formId from URL
@@ -143,7 +152,7 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
       const id = parseInt(formId);
       if (!isNaN(id)) {
         setSelectedFormId(id);
-        
+
         // Set entry creation mode if requested
         if (entryMode === 'new') {
           setIsCreatingEntry(true);
@@ -161,8 +170,8 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
         const fetchedForms = await getForms();
         setForms(fetchedForms);
       } catch (err: any) {
-        console.error("Error loading forms:", err);
-        setError(err.message || "Failed to load forms");
+        console.error('Error loading forms:', err);
+        setError(err.message || 'Failed to load forms');
         setForms([]);
       } finally {
         setLoading(false);
@@ -176,7 +185,7 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
   useEffect(() => {
     if (selectedFormId === null) {
       setFormDetail(null);
-      setEditedTitle("");
+      setEditedTitle('');
       setEditedItems([]);
       setIsEditing(false);
       setIsCreatingEntry(false);
@@ -188,7 +197,7 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
       try {
         const data = await getFormById(selectedFormId);
         setFormDetail(data);
-        setEditedTitle(data?.form.name || "");
+        setEditedTitle(data?.form.name || '');
         setEditedItems(data?.items || []);
 
         // Set default entry name with form name and date when form is loaded
@@ -198,26 +207,26 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
 
         // Determine who assigned the form
         if (data?.form.owner_id === user?.id) {
-          setAssignedBy("Me");
+          setAssignedBy('Me');
         } else if (data?.form.assignees && data.form.assignees.length > 0) {
           // Use the first assignee's name if available
           const assignee = data.form.assignees[0];
-          setAssignedBy(assignee.raw_user_meta_data.name || "Unknown");
+          setAssignedBy(assignee.raw_user_meta_data.name || 'Unknown');
         } else if (data?.form.owner_id) {
           // Fetch owner details from Supabase
           const supabase = getSupabaseClient();
           const { data: userData, error } = await supabase.rpc('get_user_details', {
-            user_ids: [data.form.owner_id]
+            user_ids: [data.form.owner_id],
           });
-          
+
           if (error) {
             console.error('Error fetching owner details:', error);
-            setAssignedBy("Unknown");
+            setAssignedBy('Unknown');
           } else if (userData && userData.length > 0) {
             const ownerData = userData[0].raw_user_meta_data as { name?: string };
-            setAssignedBy(ownerData.name || "Unknown User");
+            setAssignedBy(ownerData.name || 'Unknown User');
           } else {
-            setAssignedBy("Unknown");
+            setAssignedBy('Unknown');
           }
         }
 
@@ -236,10 +245,9 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
 
         if (assigneeData && assigneeData.length > 0) {
           // Get user details using the helper function
-          const { data: userData, error: userError } = await supabase
-            .rpc('get_user_details', {
-              user_ids: assigneeData.map(a => a.user_id)
-            });
+          const { data: userData, error: userError } = await supabase.rpc('get_user_details', {
+            user_ids: assigneeData.map((a) => a.user_id),
+          });
 
           if (userError) {
             console.error('Error fetching users:', userError);
@@ -247,21 +255,23 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
           }
 
           if (userData) {
-            setAssignees(userData.map(user => {
-              const metadata = user.raw_user_meta_data as { name?: string; avatar_url?: string };
-              return {
-                id: user.id,
-                name: metadata?.name || '',
-                avatar_url: metadata?.avatar_url
-              };
-            }));
+            setAssignees(
+              userData.map((user: any) => {
+                const metadata = user.raw_user_meta_data as { name?: string; avatar_url?: string };
+                return {
+                  id: user.id,
+                  name: user.global_display_name || metadata?.name || '',
+                  avatar_url: user.global_avatar_url || metadata?.avatar_url,
+                };
+              }),
+            );
           }
         } else {
           setAssignees([]);
         }
       } catch (error) {
-        console.error("Error fetching form:", error);
-        toast.error("Failed to load form");
+        console.error('Error fetching form:', error);
+        toast.error('Failed to load form');
       } finally {
         setLoadingDetail(false);
       }
@@ -270,8 +280,8 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
     fetchFormAndAssignees();
   }, [selectedFormId, user?.id, currentDate]);
 
-  const filteredForms = forms.filter(
-    (form) => form.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredForms = forms.filter((form) =>
+    form.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -325,18 +335,18 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
 
   const hasChanges = () => {
     if (!formDetail) return false;
-    
+
     // Check if title has changed
     if (editedTitle.trim() !== formDetail.form.name) return true;
-    
+
     // Check if number of items has changed
     if (editedItems.length !== formDetail.items.length) return true;
-    
+
     // Check if any items have changed
     return editedItems.some((editedItem, index) => {
       const originalItem = formDetail.items[index];
       if (!originalItem) return true;
-      
+
       return (
         editedItem.question_value !== originalItem.question_value ||
         editedItem.item_type !== originalItem.item_type ||
@@ -350,28 +360,28 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
 
   const handleSave = async () => {
     if (!formDetail || selectedFormId === null) return;
-    
+
     // Check if there are any changes
     if (!hasChanges()) {
       setIsEditing(false);
-      toast.info("No changes to save");
+      toast.info('No changes to save');
       return;
     }
-    
+
     try {
       setIsSaving(true);
-      
+
       // Prepare items by excluding id and form_id
       const itemsToUpdate = editedItems.map(({ id, form_id, ...item }) => ({
         ...item,
         display_order: item.display_order || 0, // Ensure display_order is set
       }));
-      
+
       await updateForm(selectedFormId, {
         name: editedTitle.trim(),
         items: itemsToUpdate,
       });
-      
+
       // Update local state
       setFormDetail({
         ...formDetail,
@@ -381,45 +391,45 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
         },
         items: editedItems,
       });
-      
+
       setIsEditing(false);
-      toast.success("Form updated successfully");
+      toast.success('Form updated successfully');
     } catch (error) {
-      console.error("Error updating form:", error);
-      toast.error("Failed to update form");
+      console.error('Error updating form:', error);
+      toast.error('Failed to update form');
     } finally {
       setIsSaving(false);
     }
   };
 
   const updateQuestion = (id: string, updates: Partial<FormBuilderQuestion>) => {
-    const index = editedItems.findIndex(item => 
-      item.id?.toString() === id || item.display_order.toString() === id
+    const index = editedItems.findIndex(
+      (item) => item.id?.toString() === id || item.display_order.toString() === id,
     );
-    
+
     if (index === -1) return;
 
-    setEditedItems(items => 
-      items.map((item, i) => 
-        i === index 
-          ? { 
-              ...item, 
+    setEditedItems((items) =>
+      items.map((item, i) =>
+        i === index
+          ? {
+              ...item,
               item_type: updates.type || item.item_type,
               question_value: updates.title || item.question_value,
               options: updates.options || item.options,
               is_required: updates.required ?? item.is_required,
-            } 
-          : item
-      )
+            }
+          : item,
+      ),
     );
   };
 
   const deleteQuestion = (id: string) => {
-    const index = editedItems.findIndex(item => 
-      item.id?.toString() === id || item.display_order.toString() === id
+    const index = editedItems.findIndex(
+      (item) => item.id?.toString() === id || item.display_order.toString() === id,
     );
     if (index === -1) return;
-    setEditedItems(items => items.filter((_, i) => i !== index));
+    setEditedItems((items) => items.filter((_, i) => i !== index));
   };
 
   const getStatusColor = () => {
@@ -446,14 +456,14 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (over && active.id !== over.id) {
       setEditedItems((items) => {
-        const oldIndex = items.findIndex((item) => 
-          (item.id?.toString() || item.display_order.toString()) === active.id
+        const oldIndex = items.findIndex(
+          (item) => (item.id?.toString() || item.display_order.toString()) === active.id,
         );
-        const newIndex = items.findIndex((item) => 
-          (item.id?.toString() || item.display_order.toString()) === over.id
+        const newIndex = items.findIndex(
+          (item) => (item.id?.toString() || item.display_order.toString()) === over.id,
         );
         return arrayMove(items, oldIndex, newIndex).map((item, index) => ({
           ...item,
@@ -465,8 +475,8 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
 
   const addQuestion = () => {
     const newQuestion: FormItem = {
-      item_type: "question",
-      question_value: "",
+      item_type: 'question',
+      question_value: '',
       options: [],
       is_required: false,
       display_order: editedItems.length,
@@ -477,23 +487,21 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
   const handleAssigneeAdd = async (member: any) => {
     if (!user?.id || selectedFormId === null) return;
     setAssigneeError(null);
-    
+
     try {
       const supabase = getSupabaseClient();
 
       // Check if already assigned
-      if (assignees.some(a => a.id === member.id)) {
+      if (assignees.some((a) => a.id === member.id)) {
         return;
       }
 
-      const { error } = await supabase
-        .from('entity_assignees')
-        .insert({
-          assigned_by: user.id,
-          entity_id: selectedFormId,
-          entity_type: 'form',
-          user_id: member.id
-        });
+      const { error } = await supabase.from('entity_assignees').insert({
+        assigned_by: user.id,
+        entity_id: selectedFormId,
+        entity_type: 'form',
+        user_id: member.id,
+      });
 
       if (error) {
         console.error('Error adding assignee:', error);
@@ -502,11 +510,14 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
       }
 
       // Add the new assignee to the state
-      setAssignees([...assignees, {
-        id: member.id,
-        name: member.name,
-        avatar_url: member.avatar_url,
-      }]);
+      setAssignees([
+        ...assignees,
+        {
+          id: member.id,
+          name: member.name,
+          avatar_url: member.avatar_url,
+        },
+      ]);
     } catch (err) {
       console.error('Exception adding assignee:', err);
       setAssigneeError('An unexpected error occurred');
@@ -516,7 +527,7 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
   const handleAssigneeRemove = async (memberId: string) => {
     if (selectedFormId === null) return;
     setAssigneeError(null);
-    
+
     try {
       const supabase = getSupabaseClient();
 
@@ -534,7 +545,7 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
       }
 
       // Remove the assignee from the state
-      setAssignees(assignees.filter(a => a.id !== memberId));
+      setAssignees(assignees.filter((a) => a.id !== memberId));
     } catch (err) {
       console.error('Exception removing assignee:', err);
       setAssigneeError('An unexpected error occurred');
@@ -559,57 +570,57 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
 
   const validateForm = () => {
     const newErrors: Record<number, string> = {};
-    
+
     // Check for entry name
     if (!entryName.trim()) {
-      toast.error("Please provide an entry name");
+      toast.error('Please provide an entry name');
       return false;
     }
-    
+
     // Check for required fields
     if (formDetail) {
       formDetail.items.forEach((item) => {
-        if (item.is_required && (!answers[item.id!] || answers[item.id!] === "")) {
-          newErrors[item.id!] = "This field is required";
+        if (item.is_required && (!answers[item.id!] || answers[item.id!] === '')) {
+          newErrors[item.id!] = 'This field is required';
         }
       });
     }
-    
+
     setFormErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmitEntry = async () => {
     if (!user?.id || !formDetail || !selectedFormId) return;
-    
+
     if (!validateForm()) {
-      toast.error("Please fill all required fields");
+      toast.error('Please fill all required fields');
       return;
     }
-    
+
     try {
       setIsSubmittingEntry(true);
-      
+
       // Prepare data for submission
       const entryAnswers = Object.entries(answers).map(([itemId, value]) => ({
         itemId: parseInt(itemId),
-        value: value
+        value: value,
       }));
-      
+
       const response = await createFormEntry({
         formId: selectedFormId,
         userId: user.id,
         name: entryName || formDetail.form.name,
-        answers: entryAnswers
+        answers: entryAnswers,
       });
-      
-      toast.success("Form entry submitted successfully");
-      
+
+      toast.success('Form entry submitted successfully');
+
       // Navigate to entries page and open the detail panel
       router.push(`/protected/entries?entryId=${response.entry.id}`);
     } catch (error) {
-      console.error("Error submitting form entry:", error);
-      toast.error("Failed to submit form entry");
+      console.error('Error submitting form entry:', error);
+      toast.error('Failed to submit form entry');
     } finally {
       setIsSubmittingEntry(false);
     }
@@ -618,9 +629,9 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
   const renderFormItem = (item: FormItem) => {
     const itemId = item.id!;
     const hasError = !!formErrors[itemId];
-    
+
     switch (item.item_type) {
-      case "question":
+      case 'question':
         return (
           <div className="space-y-2">
             <Label htmlFor={`question-${itemId}`} className="font-medium">
@@ -628,40 +639,42 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
             </Label>
             <Input
               id={`question-${itemId}`}
-              value={answers[itemId] || ""}
+              value={answers[itemId] || ''}
               onChange={(e) => handleAnswerChange(itemId, e.target.value)}
-              className={hasError ? "border-red-500" : ""}
+              className={hasError ? 'border-red-500' : ''}
             />
             {hasError && <p className="text-sm text-red-500">{formErrors[itemId]}</p>}
           </div>
         );
-      
-      case "radio_box":
+
+      case 'radio_box':
         return (
           <div className="space-y-2">
             <Label className="font-medium">
               {item.question_value} {item.is_required && <span className="text-red-500">*</span>}
             </Label>
             <Select
-              value={answers[itemId] || ""}
+              value={answers[itemId] || ''}
               onValueChange={(value) => handleAnswerChange(itemId, value)}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select option" />
               </SelectTrigger>
               <SelectContent>
-                {item.options?.filter(option => option.trim() !== "").map((option, index) => (
-                  <SelectItem key={index} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
+                {item.options
+                  ?.filter((option) => option.trim() !== '')
+                  .map((option, index) => (
+                    <SelectItem key={index} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             {hasError && <p className="text-sm text-red-500">{formErrors[itemId]}</p>}
           </div>
         );
-      
-      case "checklist":
+
+      case 'checklist':
         return (
           <div className="space-y-2">
             <Label className="font-medium">
@@ -688,8 +701,8 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
             {hasError && <p className="text-sm text-red-500">{formErrors[itemId]}</p>}
           </div>
         );
-      
-      case "photo":
+
+      case 'photo':
         // Placeholder for photo upload (would need additional components)
         return (
           <div className="space-y-2">
@@ -698,28 +711,26 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
             </Label>
             <Card className="bg-muted/40">
               <CardContent className="flex flex-col items-center justify-center p-6">
-                <p className="text-muted-foreground text-sm">Photo upload not yet implemented</p>
+                <p className="text-sm text-muted-foreground">Photo upload not yet implemented</p>
               </CardContent>
             </Card>
             {hasError && <p className="text-sm text-red-500">{formErrors[itemId]}</p>}
           </div>
         );
-      
+
       default:
         return null;
     }
   };
 
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="container space-y-6 py-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Forms</h1>
-          <p className="text-muted-foreground">
-            Create and manage forms
-          </p>
+          <p className="text-muted-foreground">Create and manage forms</p>
         </div>
-        <div className="flex flex-col md:flex-row gap-2">
+        <div className="flex flex-col gap-2 md:flex-row">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -730,13 +741,13 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
             />
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             New Form
           </Button>
         </div>
       </div>
 
-      <div className="border shadow-sm rounded-lg">
+      <div className="rounded-lg border shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -750,27 +761,28 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">Loading...</TableCell>
+                <TableCell colSpan={5} className="text-center">
+                  Loading...
+                </TableCell>
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-destructive">{error}</TableCell>
+                <TableCell colSpan={5} className="text-center text-destructive">
+                  {error}
+                </TableCell>
               </TableRow>
             ) : filteredForms.length > 0 ? (
               filteredForms.map((form) => (
                 <TableRow key={form.id} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell 
-                    className="font-medium"
-                    onClick={() => handleViewForm(form.id)}
-                  >
+                  <TableCell className="font-medium" onClick={() => handleViewForm(form.id)}>
                     {form.name}
                   </TableCell>
                   <TableCell onClick={() => handleViewForm(form.id)}>
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className={
-                        form.is_synced 
-                          ? 'bg-green-500/10 text-green-700 dark:text-green-400' 
+                        form.is_synced
+                          ? 'bg-green-500/10 text-green-700 dark:text-green-400'
                           : 'bg-muted text-muted-foreground'
                       }
                     >
@@ -784,11 +796,7 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
                     {form.updated_at && format(new Date(form.updated_at), 'PP')}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleCreateEntry(form.id)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => handleCreateEntry(form.id)}>
                       Create entry
                     </Button>
                   </TableCell>
@@ -798,8 +806,8 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
               <TableRow>
                 <TableCell colSpan={5} className="text-center">
                   {searchTerm
-                    ? "No forms match your search"
-                    : "No forms found. Create a new form to get started."}
+                    ? 'No forms match your search'
+                    : 'No forms found. Create a new form to get started.'}
                 </TableCell>
               </TableRow>
             )}
@@ -817,42 +825,38 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
           }
         }}
       />
-      
+
       <Sheet open={selectedFormId !== null} onOpenChange={handleSheetOpenChange}>
         <SheetTitle />
         <SheetContent
-          className={`h-full w-full md:w-[40vw] md:max-w-[40vw] border-l p-0 transition-transform duration-300 focus:outline-none focus-visible:outline-none [&>button]:hidden ${
+          className={`h-full w-full border-l p-0 transition-transform duration-300 focus:outline-none focus-visible:outline-none md:w-[40vw] md:max-w-[40vw] [&>button]:hidden ${
             isClosing ? 'translate-x-full' : 'translate-x-0'
           }`}
           side="right"
         >
           {loadingDetail ? (
-            <div className="flex flex-col h-full">
-              <div className="flex items-start justify-between p-6 border-b">
+            <div className="flex h-full flex-col">
+              <div className="flex items-start justify-between border-b p-6">
                 <div className="space-y-1">
-                  <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+                  <div className="h-8 w-48 animate-pulse rounded bg-muted" />
                   <div className="flex items-center gap-2">
-                    <div className="h-5 w-20 bg-muted animate-pulse rounded" />
-                    <div className="h-5 w-32 bg-muted animate-pulse rounded" />
+                    <div className="h-5 w-20 animate-pulse rounded bg-muted" />
+                    <div className="h-5 w-32 animate-pulse rounded bg-muted" />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleCloseDetail}
-                  >
+                  <Button variant="ghost" size="icon" onClick={handleCloseDetail}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
               <div className="flex-1 overflow-auto">
-                <div className="p-6 space-y-6">
+                <div className="space-y-6 p-6">
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Questions</h3>
+                    <h3 className="mb-4 text-lg font-semibold">Questions</h3>
                     <div className="space-y-4">
                       {[1, 2, 3].map((i) => (
-                        <div key={i} className="h-24 bg-muted animate-pulse rounded" />
+                        <div key={i} className="h-24 animate-pulse rounded bg-muted" />
                       ))}
                     </div>
                   </div>
@@ -860,23 +864,19 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
               </div>
             </div>
           ) : !formDetail ? (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex h-full items-center justify-center">
               <p>Form not found</p>
             </div>
           ) : isCreatingEntry ? (
             // Form Entry Creation UI
-            <div className="h-full flex flex-col">
-              <div className="p-6 border-b">
+            <div className="flex h-full flex-col">
+              <div className="border-b p-6">
                 <div className="flex items-start gap-4">
-                  <Button 
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleCloseEntryForm}
-                  >
+                  <Button variant="ghost" size="icon" onClick={handleCloseEntryForm}>
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                   <div className="flex-1">
-                    <h2 className="text-2xl font-semibold mb-2">{formDetail.form.name}</h2>
+                    <h2 className="mb-2 text-2xl font-semibold">{formDetail.form.name}</h2>
                     {assignedBy && (
                       <p className="text-sm text-muted-foreground">Assigned by {assignedBy}</p>
                     )}
@@ -884,7 +884,7 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
                 </div>
               </div>
               <div className="flex-1 overflow-auto">
-                <div className="p-6 space-y-6">
+                <div className="space-y-6 p-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="entry-name" className="font-medium">
@@ -897,36 +897,33 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
                         placeholder="Give this entry a name"
                       />
                     </div>
-                    
+
                     {formDetail.items.map((item) => (
-                      <div key={item.id} className="border rounded-lg p-4">
+                      <div key={item.id} className="rounded-lg border p-4">
                         {renderFormItem(item)}
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
-              <div className="p-6 border-t">
+              <div className="border-t p-6">
                 <div className="flex justify-end gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={handleCloseEntryForm}
                     disabled={isSubmittingEntry}
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    onClick={handleSubmitEntry}
-                    disabled={isSubmittingEntry}
-                  >
-                    {isSubmittingEntry ? "Submitting..." : "Submit"}
+                  <Button onClick={handleSubmitEntry} disabled={isSubmittingEntry}>
+                    {isSubmittingEntry ? 'Submitting...' : 'Submit'}
                   </Button>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col">
-              <div className="p-6 border-b">
+            <div className="flex h-full flex-col">
+              <div className="border-b p-6">
                 <div className="flex items-start gap-4">
                   <div className="flex-1">
                     {isEditing ? (
@@ -934,28 +931,31 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
                         <TextareaAutosize
                           value={editedTitle}
                           onChange={(e) => setEditedTitle(e.target.value)}
-                          className="w-full text-2xl font-semibold bg-background border border-muted px-3 py-2 pr-8 hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background min-h-[auto] resize-none overflow-hidden rounded-md"
+                          className="min-h-[auto] w-full resize-none overflow-hidden rounded-md border border-muted bg-background px-3 py-2 pr-8 text-2xl font-semibold hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                           aria-label="Form title"
                           placeholder="Enter form title"
                           maxRows={3}
                         />
-                        <Pencil className="h-4 w-4 absolute right-2 top-2 text-muted-foreground pointer-events-none" />
+                        <Pencil className="pointer-events-none absolute right-2 top-2 h-4 w-4 text-muted-foreground" />
                       </div>
                     ) : (
-                      <h2 className="text-2xl font-semibold mb-2">{formDetail.form.name}</h2>
+                      <h2 className="mb-2 text-2xl font-semibold">{formDetail.form.name}</h2>
                     )}
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className={getStatusColor()}>
                         {getStatusText()}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        Last updated {formDetail.form.updated_at ? format(new Date(formDetail.form.updated_at), 'MMM d, yyyy') : 'Never'}
+                        Last updated{' '}
+                        {formDetail.form.updated_at
+                          ? format(new Date(formDetail.form.updated_at), 'MMM d, yyyy')
+                          : 'Never'}
                       </span>
                     </div>
                     {!isEditing && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="mt-4"
                         onClick={() => handleCreateEntry(selectedFormId || undefined)}
                       >
@@ -963,7 +963,7 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
                       </Button>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 ml-auto">
+                  <div className="ml-auto flex items-center gap-2">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -976,11 +976,7 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
                       }}
                       disabled={isSaving}
                     >
-                      {isEditing ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Pencil className="h-4 w-4" />
-                      )}
+                      {isEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                     </Button>
                     <Button
                       variant="ghost"
@@ -988,14 +984,18 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
                       onClick={() => {
                         if (isEditing) {
                           if (hasChanges()) {
-                            if (confirm('You have unsaved changes. Are you sure you want to discard them?')) {
+                            if (
+                              confirm(
+                                'You have unsaved changes. Are you sure you want to discard them?',
+                              )
+                            ) {
                               setIsEditing(false);
-                              setEditedTitle(formDetail?.form.name || "");
+                              setEditedTitle(formDetail?.form.name || '');
                               setEditedItems(formDetail?.items || []);
                             }
                           } else {
                             setIsEditing(false);
-                            setEditedTitle(formDetail?.form.name || "");
+                            setEditedTitle(formDetail?.form.name || '');
                             setEditedItems(formDetail?.items || []);
                           }
                         } else {
@@ -1009,7 +1009,7 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="flex-1 space-y-6 overflow-y-auto p-6">
                 <div>
                   <AssigneeSelector
                     assignees={assignees}
@@ -1030,7 +1030,9 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
                         onDragEnd={handleDragEnd}
                       >
                         <SortableContext
-                          items={editedItems.map(item => item.id?.toString() || item.display_order.toString())}
+                          items={editedItems.map(
+                            (item) => item.id?.toString() || item.display_order.toString(),
+                          )}
                           strategy={verticalListSortingStrategy}
                         >
                           <div className="space-y-4">
@@ -1061,14 +1063,10 @@ function FormsPageContent({ formId, entryMode }: { formId: string | null; entryM
                         ))}
                       </div>
                     )}
-                    
+
                     {isEditing && (
-                      <Button
-                        variant="outline"
-                        className="w-full mt-4"
-                        onClick={addQuestion}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
+                      <Button variant="outline" className="mt-4 w-full" onClick={addQuestion}>
+                        <Plus className="mr-2 h-4 w-4" />
                         Add question
                       </Button>
                     )}
@@ -1090,4 +1088,4 @@ export default function FormsPage() {
       <SearchParamsWrapper />
     </Suspense>
   );
-} 
+}

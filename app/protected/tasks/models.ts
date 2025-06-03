@@ -1,10 +1,10 @@
-import { Database } from "@/lib/supabase/types.generated"
+import { Database } from '@/lib/supabase/types.generated';
 
 export type TaskWithRelations = Database['public']['Tables']['tasks']['Row'] & {
   // Relations
   priorities: Database['public']['Tables']['priorities']['Row'] | null;
   statuses: Database['public']['Tables']['statuses']['Row'] | null;
-  
+
   // Arrays of related entities
   entity_assignees: {
     entity_id: number;
@@ -15,25 +15,29 @@ export type TaskWithRelations = Database['public']['Tables']['tasks']['Row'] & {
         name: string;
         avatar_url?: string;
       };
+      user_profiles?: {
+        global_avatar_url: string | null;
+        global_display_name: string | null;
+      } | null;
     };
   }[];
-  
+
   entity_labels: {
     entity_id: number;
     label_id: number;
     labels: Database['public']['Tables']['labels']['Row'];
   }[];
-  
+
   // Convenience arrays
   assignees: string[];
   labels: Database['public']['Tables']['labels']['Row'][];
-  
+
   // Metadata
   metadata: Database['public']['Tables']['task_metadata']['Row'][];
   metadataObj: Record<string, string | null>;
   estimated_hours: number | null;
   actual_hours: number | null;
-  
+
   // Position for ordering
   position: number | null;
 };

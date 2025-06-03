@@ -81,7 +81,7 @@ export async function createFormEntry(request: CreateFormEntryRequest): Promise<
     const entryAnswers = request.answers.map((answer: { itemId: number; value: any }) => ({
       entry_id: entryData.id,
       item_id: answer.itemId,
-      answer_value: answer.value
+      answer_value: answer.value,
     }));
 
     const { data: answersData, error: answersError } = await supabase
@@ -137,4 +137,4 @@ export async function deleteFormEntry(id: number): Promise<void> {
     console.error('Error deleting form entry:', error);
     throw error;
   }
-} 
+}

@@ -1,4 +1,4 @@
-import { Form } from "@/lib/types/form";
+import { Form } from '@/lib/types/form';
 
 export type QuestionType = 'question' | 'checklist' | 'radio_box' | 'photo';
 
@@ -22,4 +22,4 @@ export interface SortableQuestionCardProps {
   onDelete: (id: string) => void;
   isFirst: boolean;
   isEditing: boolean;
-} 
+}

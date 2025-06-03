@@ -1,30 +1,43 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { useAuth } from "@/hooks/useAuth";
-import { SiteDiaryTemplate, SiteDiaryTemplateItem, SiteDiaryMetadataConfig } from "@/lib/types/site-diary";
-import { 
-  getSiteDiaryTemplateById, 
-  createSiteDiaryTemplate, 
-  updateSiteDiaryTemplate 
-} from "@/lib/api/site-diaries";
-import { X, GripVertical, Plus } from "lucide-react";
+import { useState, useEffect, useRef } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  SiteDiaryTemplate,
+  SiteDiaryTemplateItem,
+  SiteDiaryMetadataConfig,
+} from '@/lib/types/site-diary';
+import {
+  getSiteDiaryTemplateById,
+  createSiteDiaryTemplate,
+  updateSiteDiaryTemplate,
+} from '@/lib/api/site-diaries';
+import { X, GripVertical, Plus } from 'lucide-react';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 import {
   DndContext,
   closestCenter,
@@ -34,7 +47,7 @@ import {
   useSensors,
   DragEndEvent,
   DragStartEvent,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
@@ -43,7 +56,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface CreateTemplateDialogProps {
   open: boolean;
@@ -55,20 +68,35 @@ interface CreateTemplateDialogProps {
 
 // Question type options
 const questionTypes = [
-  { value: "question", label: "Short answer" },
-  { value: "radio_box", label: "Multiple choice" },
-  { value: "checklist", label: "Checkboxes" },
-  { value: "photo", label: "Photo" },
+  { value: 'question', label: 'Short answer' },
+  { value: 'radio_box', label: 'Multiple choice' },
+  { value: 'checklist', label: 'Checkboxes' },
+  { value: 'photo', label: 'Photo' },
 ] as const;
 
 // Default options
 const DEFAULT_WEATHER_OPTIONS = [
-  "Sunny", "Partly Cloudy", "Cloudy", "Rainy", "Stormy", "Snowy", "Foggy", "Windy"
+  'Sunny',
+  'Partly Cloudy',
+  'Cloudy',
+  'Rainy',
+  'Stormy',
+  'Snowy',
+  'Foggy',
+  'Windy',
 ];
 
 const DEFAULT_EQUIPMENT_OPTIONS = [
-  "Excavator", "Bulldozer", "Crane", "Loader", "Dump Truck", "Forklift", 
-  "Concrete Mixer", "Generator", "Compressor", "Scaffolding"
+  'Excavator',
+  'Bulldozer',
+  'Crane',
+  'Loader',
+  'Dump Truck',
+  'Forklift',
+  'Concrete Mixer',
+  'Generator',
+  'Compressor',
+  'Scaffolding',
 ];
 
 // Default metadata configuration with all fields disabled
@@ -100,40 +128,37 @@ interface SortableQuestionCardProps {
 }
 
 function SortableQuestionCard({ id, question, onUpdate, onDelete }: SortableQuestionCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
 
-  const style = transform ? {
-    transform: CSS.Transform.toString(transform),
-    transition: transition || 'transform 200ms ease',
-    zIndex: isDragging ? 10 : 1,
-    position: 'relative' as const,
-    opacity: isDragging ? 0.8 : 1,
-  } : undefined;
+  const style = transform
+    ? {
+        transform: CSS.Transform.toString(transform),
+        transition: transition || 'transform 200ms ease',
+        zIndex: isDragging ? 10 : 1,
+        position: 'relative' as const,
+        opacity: isDragging ? 0.8 : 1,
+      }
+    : undefined;
 
   const [showOptions, setShowOptions] = useState<boolean>(
-    question.item_type === "radio_box" || question.item_type === "checklist"
+    question.item_type === 'radio_box' || question.item_type === 'checklist',
   );
-  const [optionInput, setOptionInput] = useState<string>("");
+  const [optionInput, setOptionInput] = useState<string>('');
 
   // Effect to show/hide options based on question type
   useEffect(() => {
-    setShowOptions(question.item_type === "radio_box" || question.item_type === "checklist");
+    setShowOptions(question.item_type === 'radio_box' || question.item_type === 'checklist');
   }, [question.item_type]);
 
   // Handle adding an option
   const handleAddOption = () => {
     if (!optionInput.trim()) return;
-    
+
     const updatedOptions = [...(question.options || []), optionInput.trim()];
     onUpdate(id, { options: updatedOptions });
-    setOptionInput("");
+    setOptionInput('');
   };
 
   // Handle removing an option
@@ -143,25 +168,22 @@ function SortableQuestionCard({ id, question, onUpdate, onDelete }: SortableQues
   };
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      className={cn(
-        "border rounded-md p-4 mb-4 bg-card",
-        isDragging ? "shadow-lg" : ""
-      )}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn('mb-4 rounded-md border bg-card p-4', isDragging ? 'shadow-lg' : '')}
     >
-      <div className="flex items-center gap-4 mb-4">
-        <div 
-          {...attributes} 
+      <div className="mb-4 flex items-center gap-4">
+        <div
+          {...attributes}
           {...listeners}
-          className="cursor-grab p-1 hover:bg-muted rounded touch-none"
+          className="cursor-grab touch-none rounded p-1 hover:bg-muted"
         >
           <GripVertical className="h-5 w-5 text-muted-foreground" />
         </div>
-        
-        <Select 
-          value={question.item_type} 
+
+        <Select
+          value={question.item_type}
           onValueChange={(value) => onUpdate(id, { item_type: value as any })}
         >
           <SelectTrigger className="w-[180px]">
@@ -175,33 +197,33 @@ function SortableQuestionCard({ id, question, onUpdate, onDelete }: SortableQues
             ))}
           </SelectContent>
         </Select>
-        
+
         <div className="ml-auto">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onDelete(id)}
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
-      
+
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor={`question-${id}`}>Question</Label>
           <Textarea
             id={`question-${id}`}
             placeholder="Enter your question"
-            value={question.question_value || ""}
+            value={question.question_value || ''}
             onChange={(e) => onUpdate(id, { question_value: e.target.value })}
             className="resize-none"
           />
         </div>
-        
+
         <div className="flex items-center space-x-2">
-          <Checkbox 
+          <Checkbox
             id={`required-${id}`}
             checked={question.is_required}
             onCheckedChange={(checked) => onUpdate(id, { is_required: !!checked })}
@@ -210,7 +232,7 @@ function SortableQuestionCard({ id, question, onUpdate, onDelete }: SortableQues
             Required
           </Label>
         </div>
-        
+
         {showOptions && (
           <div className="space-y-2">
             <Label>Options</Label>
@@ -230,13 +252,13 @@ function SortableQuestionCard({ id, question, onUpdate, onDelete }: SortableQues
                     variant="ghost"
                     size="icon"
                     onClick={() => handleRemoveOption(index)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
-              
+
               <div className="flex items-center gap-2">
                 <Input
                   placeholder="Add an option"
@@ -275,24 +297,26 @@ export function CreateTemplateDialog({
   onTemplateChange,
 }: CreateTemplateDialogProps) {
   const { user } = useAuth();
-  
+
   // State for form fields
-  const [templateName, setTemplateName] = useState("");
-  const [templateDescription, setTemplateDescription] = useState("");
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
   const [questions, setQuestions] = useState<SiteDiaryTemplateItem[]>([]);
-  
+
   // Metadata configuration state
-  const [metadataConfig, setMetadataConfig] = useState<SiteDiaryMetadataConfig>({...DEFAULT_METADATA_CONFIG});
+  const [metadataConfig, setMetadataConfig] = useState<SiteDiaryMetadataConfig>({
+    ...DEFAULT_METADATA_CONFIG,
+  });
 
   // State for custom options
-  const [customWeatherOption, setCustomWeatherOption] = useState("");
-  const [customEquipmentOption, setCustomEquipmentOption] = useState("");
-  
+  const [customWeatherOption, setCustomWeatherOption] = useState('');
+  const [customEquipmentOption, setCustomEquipmentOption] = useState('');
+
   // Loading states
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Form validation
   const [formErrors, setFormErrors] = useState<{
     name?: string;
@@ -302,13 +326,13 @@ export function CreateTemplateDialog({
   // Unsaved changes state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedChangesAlert, setShowUnsavedChangesAlert] = useState(false);
-  
+
   // Keep original data for comparison
   const initialDataRef = useRef({
-    name: "",
-    description: "",
+    name: '',
+    description: '',
     questions: [] as SiteDiaryTemplateItem[],
-    metadata: {} as SiteDiaryMetadataConfig
+    metadata: {} as SiteDiaryMetadataConfig,
   });
 
   // Drag state
@@ -319,11 +343,11 @@ export function CreateTemplateDialog({
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 5, // Start dragging after moving 5px
-      }
+      },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Track changes to detect unsaved content
@@ -336,7 +360,7 @@ export function CreateTemplateDialog({
         name: templateName,
         description: templateDescription,
         questions: [...questions],
-        metadata: {...metadataConfig}
+        metadata: { ...metadataConfig },
       };
       return;
     }
@@ -344,35 +368,36 @@ export function CreateTemplateDialog({
     // Compare primitive values directly
     const hasNameChanged = initialDataRef.current.name !== templateName;
     const hasDescriptionChanged = initialDataRef.current.description !== templateDescription;
-    
+
     // Perform deep comparison for questions array
     let hasQuestionsChanged = initialDataRef.current.questions.length !== questions.length;
-    
+
     if (!hasQuestionsChanged) {
       // Only do detailed comparison if lengths match
       for (let i = 0; i < questions.length; i++) {
         const origQuestion = initialDataRef.current.questions[i];
         const currQuestion = questions[i];
-        
+
         // Compare important fields individually
         if (
           origQuestion.question_value !== currQuestion.question_value ||
           origQuestion.item_type !== currQuestion.item_type ||
           origQuestion.is_required !== currQuestion.is_required ||
           // Compare arrays
-          JSON.stringify(origQuestion.options?.sort()) !== JSON.stringify(currQuestion.options?.sort())
+          JSON.stringify(origQuestion.options?.sort()) !==
+            JSON.stringify(currQuestion.options?.sort())
         ) {
           hasQuestionsChanged = true;
           break;
         }
       }
     }
-    
+
     // Perform deep comparison for metadata
     const initialMeta = initialDataRef.current.metadata;
     const currentMeta = metadataConfig;
-    
-    const hasMetadataChanged = 
+
+    const hasMetadataChanged =
       initialMeta.enableWeather !== currentMeta.enableWeather ||
       initialMeta.enableTemperature !== currentMeta.enableTemperature ||
       initialMeta.enableManpower !== currentMeta.enableManpower ||
@@ -388,10 +413,14 @@ export function CreateTemplateDialog({
       initialMeta.requireSafety !== currentMeta.requireSafety ||
       initialMeta.requireConditions !== currentMeta.requireConditions ||
       // Compare arrays with sorting to handle order differences
-      JSON.stringify(initialMeta.weatherOptions?.sort()) !== JSON.stringify(currentMeta.weatherOptions?.sort()) ||
-      JSON.stringify(initialMeta.equipmentOptions?.sort()) !== JSON.stringify(currentMeta.equipmentOptions?.sort());
-    
-    setHasUnsavedChanges(hasNameChanged || hasDescriptionChanged || hasQuestionsChanged || hasMetadataChanged);
+      JSON.stringify(initialMeta.weatherOptions?.sort()) !==
+        JSON.stringify(currentMeta.weatherOptions?.sort()) ||
+      JSON.stringify(initialMeta.equipmentOptions?.sort()) !==
+        JSON.stringify(currentMeta.equipmentOptions?.sort());
+
+    setHasUnsavedChanges(
+      hasNameChanged || hasDescriptionChanged || hasQuestionsChanged || hasMetadataChanged,
+    );
   }, [templateName, templateDescription, questions, loading, submitting, metadataConfig]);
 
   // Reset form when dialog is closed
@@ -404,16 +433,16 @@ export function CreateTemplateDialog({
     } else {
       // When opening a new template
       if (!templateId) {
-        setTemplateName("");
-        setTemplateDescription("");
+        setTemplateName('');
+        setTemplateDescription('');
         setQuestions([]);
         // Force setting metadata config with all fields disabled
-        setMetadataConfig({...DEFAULT_METADATA_CONFIG});
+        setMetadataConfig({ ...DEFAULT_METADATA_CONFIG });
         initialDataRef.current = {
-          name: "",
-          description: "",
+          name: '',
+          description: '',
           questions: [],
-          metadata: {...DEFAULT_METADATA_CONFIG}
+          metadata: { ...DEFAULT_METADATA_CONFIG },
         };
         setHasUnsavedChanges(false);
       }
@@ -423,22 +452,22 @@ export function CreateTemplateDialog({
   // Load template data when templateId changes
   useEffect(() => {
     if (!templateId || !open) return;
-    
+
     const loadTemplate = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         const templateData = await getSiteDiaryTemplateById(templateId);
         if (templateData) {
           setTemplateName(templateData.template.name);
-          setTemplateDescription(templateData.template.description || "");
+          setTemplateDescription(templateData.template.description || '');
           setQuestions(templateData.items);
-          
+
           // Load metadata configuration if it exists
           if (templateData.template.metadata) {
             const config = templateData.template.metadata as SiteDiaryMetadataConfig;
-            
+
             // Apply defaults for any missing values
             const fullConfig = {
               enableWeather: config.enableWeather ?? false,
@@ -458,56 +487,62 @@ export function CreateTemplateDialog({
               requireSafety: config.requireSafety ?? false,
               requireConditions: config.requireConditions ?? false,
             };
-            
+
             setMetadataConfig(fullConfig);
           } else {
             // If no metadata exists, use defaults
-            setMetadataConfig({...DEFAULT_METADATA_CONFIG});
+            setMetadataConfig({ ...DEFAULT_METADATA_CONFIG });
           }
-          
+
           // Store initial data for change detection
           initialDataRef.current = {
             name: templateData.template.name,
-            description: templateData.template.description || "",
-            questions: templateData.items.map(item => ({
+            description: templateData.template.description || '',
+            questions: templateData.items.map((item) => ({
               ...item,
-              options: item.options ? [...item.options] : []
+              options: item.options ? [...item.options] : [],
             })),
-            metadata: templateData.template.metadata 
+            metadata: templateData.template.metadata
               ? {
-                  ...templateData.template.metadata as SiteDiaryMetadataConfig,
-                  weatherOptions: [...((templateData.template.metadata as SiteDiaryMetadataConfig).weatherOptions || [])],
-                  equipmentOptions: [...((templateData.template.metadata as SiteDiaryMetadataConfig).equipmentOptions || [])]
+                  ...(templateData.template.metadata as SiteDiaryMetadataConfig),
+                  weatherOptions: [
+                    ...((templateData.template.metadata as SiteDiaryMetadataConfig)
+                      .weatherOptions || []),
+                  ],
+                  equipmentOptions: [
+                    ...((templateData.template.metadata as SiteDiaryMetadataConfig)
+                      .equipmentOptions || []),
+                  ],
                 }
-              : {...DEFAULT_METADATA_CONFIG}
+              : { ...DEFAULT_METADATA_CONFIG },
           };
           setHasUnsavedChanges(false);
         }
       } catch (err: any) {
-        console.error("Error loading template:", err);
-        setError(err.message || "Failed to load template");
+        console.error('Error loading template:', err);
+        setError(err.message || 'Failed to load template');
       } finally {
         setLoading(false);
       }
     };
-    
+
     loadTemplate();
   }, [templateId, open]);
 
   // Reset form to initial state
   const resetForm = () => {
-    setTemplateName("");
-    setTemplateDescription("");
+    setTemplateName('');
+    setTemplateDescription('');
     setQuestions([]);
     setFormErrors({});
     setError(null);
     setHasUnsavedChanges(false);
-    setMetadataConfig({...DEFAULT_METADATA_CONFIG});
+    setMetadataConfig({ ...DEFAULT_METADATA_CONFIG });
     initialDataRef.current = {
-      name: "",
-      description: "",
+      name: '',
+      description: '',
       questions: [],
-      metadata: {...DEFAULT_METADATA_CONFIG}
+      metadata: { ...DEFAULT_METADATA_CONFIG },
     };
   };
 
@@ -529,15 +564,15 @@ export function CreateTemplateDialog({
   // Validate form before submission
   const validateForm = (): boolean => {
     const errors: { name?: string; questions?: string } = {};
-    
+
     if (!templateName.trim()) {
-      errors.name = "Template name is required";
+      errors.name = 'Template name is required';
     }
-    
+
     if (questions.length === 0) {
-      errors.questions = "At least one question is required";
+      errors.questions = 'At least one question is required';
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -545,15 +580,15 @@ export function CreateTemplateDialog({
   // Add a new question
   const addQuestion = () => {
     const newQuestion: SiteDiaryTemplateItem = {
-      item_type: "question",
-      question_value: "",
+      item_type: 'question',
+      question_value: '',
       options: [],
       is_required: false,
       display_order: questions.length,
     };
-    
+
     setQuestions([...questions, newQuestion]);
-    
+
     // Clear questions error if it exists
     if (formErrors.questions) {
       setFormErrors({ ...formErrors, questions: undefined });
@@ -562,18 +597,16 @@ export function CreateTemplateDialog({
 
   // Update a question
   const updateQuestion = (id: string, updates: Partial<SiteDiaryTemplateItem>) => {
-    setQuestions(prevQuestions => 
-      prevQuestions.map((question, index) => 
-        index.toString() === id ? { ...question, ...updates } : question
-      )
+    setQuestions((prevQuestions) =>
+      prevQuestions.map((question, index) =>
+        index.toString() === id ? { ...question, ...updates } : question,
+      ),
     );
   };
 
   // Delete a question
   const deleteQuestion = (id: string) => {
-    setQuestions(prevQuestions => 
-      prevQuestions.filter((_, index) => index.toString() !== id)
-    );
+    setQuestions((prevQuestions) => prevQuestions.filter((_, index) => index.toString() !== id));
   };
 
   // Handle drag start
@@ -585,15 +618,15 @@ export function CreateTemplateDialog({
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
     const { active, over } = event;
-    
+
     if (over && active.id !== over.id) {
-      setQuestions(items => {
+      setQuestions((items) => {
         const oldIndex = parseInt(active.id.toString());
         const newIndex = parseInt(over.id.toString());
-        
+
         return arrayMove(items, oldIndex, newIndex).map((item, index) => ({
           ...item,
-          display_order: index
+          display_order: index,
         }));
       });
     }
@@ -602,47 +635,47 @@ export function CreateTemplateDialog({
   // Handle adding custom weather option
   const handleAddWeatherOption = () => {
     if (!customWeatherOption.trim()) return;
-    
-    setMetadataConfig(prev => ({
+
+    setMetadataConfig((prev) => ({
       ...prev,
-      weatherOptions: [...(prev.weatherOptions || []), customWeatherOption.trim()]
+      weatherOptions: [...(prev.weatherOptions || []), customWeatherOption.trim()],
     }));
-    setCustomWeatherOption("");
+    setCustomWeatherOption('');
   };
 
   // Handle removing weather option
   const handleRemoveWeatherOption = (optionToRemove: string) => {
-    setMetadataConfig(prev => ({
+    setMetadataConfig((prev) => ({
       ...prev,
-      weatherOptions: (prev.weatherOptions || []).filter(option => option !== optionToRemove)
+      weatherOptions: (prev.weatherOptions || []).filter((option) => option !== optionToRemove),
     }));
   };
 
   // Handle adding custom equipment option
   const handleAddEquipmentOption = () => {
     if (!customEquipmentOption.trim()) return;
-    
-    setMetadataConfig(prev => ({
+
+    setMetadataConfig((prev) => ({
       ...prev,
-      equipmentOptions: [...(prev.equipmentOptions || []), customEquipmentOption.trim()]
+      equipmentOptions: [...(prev.equipmentOptions || []), customEquipmentOption.trim()],
     }));
-    setCustomEquipmentOption("");
+    setCustomEquipmentOption('');
   };
 
   // Handle removing equipment option
   const handleRemoveEquipmentOption = (optionToRemove: string) => {
-    setMetadataConfig(prev => ({
+    setMetadataConfig((prev) => ({
       ...prev,
-      equipmentOptions: (prev.equipmentOptions || []).filter(option => option !== optionToRemove)
+      equipmentOptions: (prev.equipmentOptions || []).filter((option) => option !== optionToRemove),
     }));
   };
 
   // Toggle metadata field function
   const toggleMetadataField = (field: keyof SiteDiaryMetadataConfig, value: boolean) => {
-    setMetadataConfig(prev => {
-      const newConfig = { 
+    setMetadataConfig((prev) => {
+      const newConfig = {
         ...prev,
-        [field]: value 
+        [field]: value,
       };
       return newConfig;
     });
@@ -651,14 +684,14 @@ export function CreateTemplateDialog({
   // Handle form submission
   const handleSubmit = async () => {
     if (!user) return;
-    
+
     if (!validateForm()) {
-      toast.error("Please fix the errors before submitting");
+      toast.error('Please fix the errors before submitting');
       return;
     }
-    
+
     setSubmitting(true);
-    
+
     try {
       if (templateId) {
         // Update existing template
@@ -668,11 +701,11 @@ export function CreateTemplateDialog({
           metadata: metadataConfig,
           items: questions.map((q, index) => ({
             ...q,
-            display_order: index
-          }))
+            display_order: index,
+          })),
         });
-        
-        toast.success("Template updated successfully");
+
+        toast.success('Template updated successfully');
         onTemplateChange(response.template);
       } else {
         // Create new template
@@ -684,19 +717,19 @@ export function CreateTemplateDialog({
           metadata: metadataConfig,
           items: questions.map((q, index) => ({
             ...q,
-            display_order: index
-          }))
+            display_order: index,
+          })),
         });
-        
-        toast.success("Template created successfully");
+
+        toast.success('Template created successfully');
         onTemplateChange(response.template);
       }
-      
+
       // Close the dialog after successful submission
       onOpenChange(false);
     } catch (err: any) {
-      console.error("Error saving template:", err);
-      toast.error(err.message || "Failed to save template");
+      console.error('Error saving template:', err);
+      toast.error(err.message || 'Failed to save template');
     } finally {
       setSubmitting(false);
     }
@@ -709,35 +742,31 @@ export function CreateTemplateDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
             <AlertDialogDescription>
-              You have unsaved changes that will be lost if you close this dialog. 
-              Are you sure you want to continue?
+              You have unsaved changes that will be lost if you close this dialog. Are you sure you
+              want to continue?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmedClose}>
-              Discard Changes
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirmedClose}>Discard Changes</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Dialog open={open} onOpenChange={handleCloseAttempt}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {templateId ? "Edit Template" : "Create Site Diary Template"}
-            </DialogTitle>
+            <DialogTitle>{templateId ? 'Edit Template' : 'Create Site Diary Template'}</DialogTitle>
           </DialogHeader>
-          
+
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="mb-4 rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700">
               Error: {error}
             </div>
           )}
-          
+
           {loading ? (
-            <div className="flex justify-center items-center h-32">
+            <div className="flex h-32 items-center justify-center">
               <p>Loading template...</p>
             </div>
           ) : (
@@ -746,13 +775,13 @@ export function CreateTemplateDialog({
                 <TabsTrigger value="general">General</TabsTrigger>
                 <TabsTrigger value="metadata">Metadata Fields</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="general" className="space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label 
-                      htmlFor="template-name" 
-                      className={cn("font-medium", formErrors.name && "text-destructive")}
+                    <Label
+                      htmlFor="template-name"
+                      className={cn('font-medium', formErrors.name && 'text-destructive')}
                     >
                       Template Name<span className="text-destructive">*</span>
                     </Label>
@@ -766,13 +795,13 @@ export function CreateTemplateDialog({
                           setFormErrors({ ...formErrors, name: undefined });
                         }
                       }}
-                      className={formErrors.name ? "border-destructive" : ""}
+                      className={formErrors.name ? 'border-destructive' : ''}
                     />
                     {formErrors.name && (
-                      <p className="text-destructive text-sm">{formErrors.name}</p>
+                      <p className="text-sm text-destructive">{formErrors.name}</p>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="template-description" className="font-medium">
                       Description
@@ -785,20 +814,23 @@ export function CreateTemplateDialog({
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <Label 
-                      className={cn("font-medium text-lg", formErrors.questions && "text-destructive")}
+                  <div className="flex items-center justify-between">
+                    <Label
+                      className={cn(
+                        'text-lg font-medium',
+                        formErrors.questions && 'text-destructive',
+                      )}
                     >
                       Questions
                     </Label>
                   </div>
-                  
+
                   {formErrors.questions && (
-                    <p className="text-destructive text-sm">{formErrors.questions}</p>
+                    <p className="text-sm text-destructive">{formErrors.questions}</p>
                   )}
-                  
+
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -810,8 +842,8 @@ export function CreateTemplateDialog({
                       strategy={verticalListSortingStrategy}
                     >
                       {questions.length === 0 ? (
-                        <div className="text-center py-8 border rounded-md">
-                          <p className="text-muted-foreground mb-4">No questions added</p>
+                        <div className="rounded-md border py-8 text-center">
+                          <p className="mb-4 text-muted-foreground">No questions added</p>
                           <Button variant="outline" onClick={addQuestion}>
                             <Plus className="mr-2 h-4 w-4" /> Add Question
                           </Button>
@@ -829,7 +861,7 @@ export function CreateTemplateDialog({
                       )}
                     </SortableContext>
                   </DndContext>
-                  
+
                   {questions.length > 0 && (
                     <Button variant="outline" className="w-full" onClick={addQuestion}>
                       <Plus className="mr-2 h-4 w-4" /> Add Question
@@ -837,54 +869,63 @@ export function CreateTemplateDialog({
                   )}
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="metadata" className="space-y-6">
-                <div className="bg-muted/50 p-4 rounded-md mb-4">
-                  <h3 className="text-sm font-medium mb-2">Metadata Configuration</h3>
+                <div className="mb-4 rounded-md bg-muted/50 p-4">
+                  <h3 className="mb-2 text-sm font-medium">Metadata Configuration</h3>
                   <p className="text-sm text-muted-foreground">
-                    Configure which metadata fields should be available in site diaries created with this template.
-                    Enable or disable sections and specify whether they are required.
+                    Configure which metadata fields should be available in site diaries created with
+                    this template. Enable or disable sections and specify whether they are required.
                   </p>
                 </div>
-                
+
                 <div className="space-y-4">
                   {/* Weather Section */}
-                  <div className="border rounded-md p-4 space-y-4">
+                  <div className="space-y-4 rounded-md border p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="enable-weather" 
+                        <Checkbox
+                          id="enable-weather"
                           checked={metadataConfig.enableWeather}
                           onCheckedChange={(checked) => {
                             toggleMetadataField('enableWeather', !!checked);
                           }}
                         />
-                        <Label htmlFor="enable-weather" className="font-medium">Weather</Label>
+                        <Label htmlFor="enable-weather" className="font-medium">
+                          Weather
+                        </Label>
                       </div>
-                      
+
                       {metadataConfig.enableWeather && (
                         <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="require-weather" 
+                          <Checkbox
+                            id="require-weather"
                             checked={metadataConfig.requireWeather}
-                            onCheckedChange={(checked) => toggleMetadataField('requireWeather', !!checked)}
+                            onCheckedChange={(checked) =>
+                              toggleMetadataField('requireWeather', !!checked)
+                            }
                           />
-                          <Label htmlFor="require-weather" className="text-sm">Required</Label>
+                          <Label htmlFor="require-weather" className="text-sm">
+                            Required
+                          </Label>
                         </div>
                       )}
                     </div>
-                    
+
                     {metadataConfig.enableWeather && (
                       <div className="space-y-3 pt-2">
                         <Label className="text-sm">Weather Options</Label>
                         <div className="flex flex-wrap gap-2">
                           {(metadataConfig.weatherOptions || []).map((option) => (
-                            <div key={option} className="flex items-center bg-muted rounded-md px-2 py-1">
-                              <span className="text-sm mr-1">{option}</span>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-5 w-5" 
+                            <div
+                              key={option}
+                              className="flex items-center rounded-md bg-muted px-2 py-1"
+                            >
+                              <span className="mr-1 text-sm">{option}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5"
                                 onClick={() => handleRemoveWeatherOption(option)}
                               >
                                 <X className="h-3 w-3" />
@@ -892,17 +933,17 @@ export function CreateTemplateDialog({
                             </div>
                           ))}
                         </div>
-                        
+
                         <div className="flex space-x-2">
-                          <Input 
-                            placeholder="Add weather option" 
+                          <Input
+                            placeholder="Add weather option"
                             value={customWeatherOption}
                             onChange={(e) => setCustomWeatherOption(e.target.value)}
                             className="flex-1"
                           />
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={handleAddWeatherOption}
                             disabled={!customWeatherOption.trim()}
                           >
@@ -912,98 +953,119 @@ export function CreateTemplateDialog({
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Temperature Section */}
-                  <div className="border rounded-md p-4">
+                  <div className="rounded-md border p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="enable-temperature" 
+                        <Checkbox
+                          id="enable-temperature"
                           checked={metadataConfig.enableTemperature}
                           onCheckedChange={(checked) => {
                             toggleMetadataField('enableTemperature', !!checked);
                           }}
                         />
-                        <Label htmlFor="enable-temperature" className="font-medium">Temperature</Label>
+                        <Label htmlFor="enable-temperature" className="font-medium">
+                          Temperature
+                        </Label>
                       </div>
-                      
+
                       {metadataConfig.enableTemperature && (
                         <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="require-temperature" 
+                          <Checkbox
+                            id="require-temperature"
                             checked={metadataConfig.requireTemperature}
-                            onCheckedChange={(checked) => toggleMetadataField('requireTemperature', !!checked)}
+                            onCheckedChange={(checked) =>
+                              toggleMetadataField('requireTemperature', !!checked)
+                            }
                           />
-                          <Label htmlFor="require-temperature" className="text-sm">Required</Label>
+                          <Label htmlFor="require-temperature" className="text-sm">
+                            Required
+                          </Label>
                         </div>
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Manpower Section */}
-                  <div className="border rounded-md p-4">
+                  <div className="rounded-md border p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="enable-manpower" 
+                        <Checkbox
+                          id="enable-manpower"
                           checked={metadataConfig.enableManpower}
                           onCheckedChange={(checked) => {
                             toggleMetadataField('enableManpower', !!checked);
                           }}
                         />
-                        <Label htmlFor="enable-manpower" className="font-medium">Manpower</Label>
+                        <Label htmlFor="enable-manpower" className="font-medium">
+                          Manpower
+                        </Label>
                       </div>
-                      
+
                       {metadataConfig.enableManpower && (
                         <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="require-manpower" 
+                          <Checkbox
+                            id="require-manpower"
                             checked={metadataConfig.requireManpower}
-                            onCheckedChange={(checked) => toggleMetadataField('requireManpower', !!checked)}
+                            onCheckedChange={(checked) =>
+                              toggleMetadataField('requireManpower', !!checked)
+                            }
                           />
-                          <Label htmlFor="require-manpower" className="text-sm">Required</Label>
+                          <Label htmlFor="require-manpower" className="text-sm">
+                            Required
+                          </Label>
                         </div>
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Equipment Section */}
-                  <div className="border rounded-md p-4 space-y-4">
+                  <div className="space-y-4 rounded-md border p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="enable-equipment" 
+                        <Checkbox
+                          id="enable-equipment"
                           checked={metadataConfig.enableEquipment}
                           onCheckedChange={(checked) => {
                             toggleMetadataField('enableEquipment', !!checked);
                           }}
                         />
-                        <Label htmlFor="enable-equipment" className="font-medium">Equipment</Label>
+                        <Label htmlFor="enable-equipment" className="font-medium">
+                          Equipment
+                        </Label>
                       </div>
-                      
+
                       {metadataConfig.enableEquipment && (
                         <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="require-equipment" 
+                          <Checkbox
+                            id="require-equipment"
                             checked={metadataConfig.requireEquipment}
-                            onCheckedChange={(checked) => toggleMetadataField('requireEquipment', !!checked)}
+                            onCheckedChange={(checked) =>
+                              toggleMetadataField('requireEquipment', !!checked)
+                            }
                           />
-                          <Label htmlFor="require-equipment" className="text-sm">Required</Label>
+                          <Label htmlFor="require-equipment" className="text-sm">
+                            Required
+                          </Label>
                         </div>
                       )}
                     </div>
-                    
+
                     {metadataConfig.enableEquipment && (
                       <div className="space-y-3 pt-2">
                         <Label className="text-sm">Equipment Options</Label>
                         <div className="flex flex-wrap gap-2">
                           {(metadataConfig.equipmentOptions || []).map((option) => (
-                            <div key={option} className="flex items-center bg-muted rounded-md px-2 py-1">
-                              <span className="text-sm mr-1">{option}</span>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-5 w-5" 
+                            <div
+                              key={option}
+                              className="flex items-center rounded-md bg-muted px-2 py-1"
+                            >
+                              <span className="mr-1 text-sm">{option}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5"
                                 onClick={() => handleRemoveEquipmentOption(option)}
                               >
                                 <X className="h-3 w-3" />
@@ -1011,17 +1073,17 @@ export function CreateTemplateDialog({
                             </div>
                           ))}
                         </div>
-                        
+
                         <div className="flex space-x-2">
-                          <Input 
-                            placeholder="Add equipment option" 
+                          <Input
+                            placeholder="Add equipment option"
                             value={customEquipmentOption}
                             onChange={(e) => setCustomEquipmentOption(e.target.value)}
                             className="flex-1"
                           />
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={handleAddEquipmentOption}
                             disabled={!customEquipmentOption.trim()}
                           >
@@ -1031,83 +1093,101 @@ export function CreateTemplateDialog({
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Materials Section */}
-                  <div className="border rounded-md p-4">
+                  <div className="rounded-md border p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="enable-materials" 
+                        <Checkbox
+                          id="enable-materials"
                           checked={metadataConfig.enableMaterials}
                           onCheckedChange={(checked) => {
                             toggleMetadataField('enableMaterials', !!checked);
                           }}
                         />
-                        <Label htmlFor="enable-materials" className="font-medium">Materials</Label>
+                        <Label htmlFor="enable-materials" className="font-medium">
+                          Materials
+                        </Label>
                       </div>
-                      
+
                       {metadataConfig.enableMaterials && (
                         <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="require-materials" 
+                          <Checkbox
+                            id="require-materials"
                             checked={metadataConfig.requireMaterials}
-                            onCheckedChange={(checked) => toggleMetadataField('requireMaterials', !!checked)}
+                            onCheckedChange={(checked) =>
+                              toggleMetadataField('requireMaterials', !!checked)
+                            }
                           />
-                          <Label htmlFor="require-materials" className="text-sm">Required</Label>
+                          <Label htmlFor="require-materials" className="text-sm">
+                            Required
+                          </Label>
                         </div>
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Safety Section */}
-                  <div className="border rounded-md p-4">
+                  <div className="rounded-md border p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="enable-safety" 
+                        <Checkbox
+                          id="enable-safety"
                           checked={metadataConfig.enableSafety}
                           onCheckedChange={(checked) => {
                             toggleMetadataField('enableSafety', !!checked);
                           }}
                         />
-                        <Label htmlFor="enable-safety" className="font-medium">Safety Observations</Label>
+                        <Label htmlFor="enable-safety" className="font-medium">
+                          Safety Observations
+                        </Label>
                       </div>
-                      
+
                       {metadataConfig.enableSafety && (
                         <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="require-safety" 
+                          <Checkbox
+                            id="require-safety"
                             checked={metadataConfig.requireSafety}
-                            onCheckedChange={(checked) => toggleMetadataField('requireSafety', !!checked)}
+                            onCheckedChange={(checked) =>
+                              toggleMetadataField('requireSafety', !!checked)
+                            }
                           />
-                          <Label htmlFor="require-safety" className="text-sm">Required</Label>
+                          <Label htmlFor="require-safety" className="text-sm">
+                            Required
+                          </Label>
                         </div>
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Site Conditions Section */}
-                  <div className="border rounded-md p-4">
+                  <div className="rounded-md border p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="enable-conditions" 
+                        <Checkbox
+                          id="enable-conditions"
                           checked={metadataConfig.enableConditions}
                           onCheckedChange={(checked) => {
                             toggleMetadataField('enableConditions', !!checked);
                           }}
                         />
-                        <Label htmlFor="enable-conditions" className="font-medium">Site Conditions</Label>
+                        <Label htmlFor="enable-conditions" className="font-medium">
+                          Site Conditions
+                        </Label>
                       </div>
-                      
+
                       {metadataConfig.enableConditions && (
                         <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="require-conditions" 
+                          <Checkbox
+                            id="require-conditions"
                             checked={metadataConfig.requireConditions}
-                            onCheckedChange={(checked) => toggleMetadataField('requireConditions', !!checked)}
+                            onCheckedChange={(checked) =>
+                              toggleMetadataField('requireConditions', !!checked)
+                            }
                           />
-                          <Label htmlFor="require-conditions" className="text-sm">Required</Label>
+                          <Label htmlFor="require-conditions" className="text-sm">
+                            Required
+                          </Label>
                         </div>
                       )}
                     </div>
@@ -1116,20 +1196,19 @@ export function CreateTemplateDialog({
               </TabsContent>
             </Tabs>
           )}
-          
+
           <div className="flex justify-end space-x-2 pt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)} 
-              disabled={submitting}
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting 
-                ? templateId ? "Updating..." : "Creating..." 
-                : templateId ? "Update Template" : "Create Template"
-              }
+              {submitting
+                ? templateId
+                  ? 'Updating...'
+                  : 'Creating...'
+                : templateId
+                  ? 'Update Template'
+                  : 'Create Template'}
             </Button>
           </div>
         </DialogContent>
