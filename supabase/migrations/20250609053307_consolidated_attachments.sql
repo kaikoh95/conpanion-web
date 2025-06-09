@@ -1,21 +1,8 @@
 -- CONSOLIDATED ATTACHMENTS MIGRATION
 -- This migration combines all attachment-related functionality into a single file
 
--- 1. Add project_id to form_entries table
-ALTER TABLE public.form_entries
-ADD COLUMN IF NOT EXISTS project_id INTEGER NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE;
-
--- Create an index on project_id for better query performance
-CREATE INDEX IF NOT EXISTS idx_form_entries_project_id ON public.form_entries(project_id);
-
--- Add a comment on the column
-COMMENT ON COLUMN public.form_entries.project_id IS 'The ID of the project this form entry belongs to';
-
--- Backfill existing form_entries with project_id from forms table
-UPDATE public.form_entries fe
-SET project_id = f.project_id
-FROM public.forms f
-WHERE fe.form_id = f.id;
+-- Note: project_id column is handled in a separate migration (20250609100538_fix_form_entries_project_id.sql)
+-- to ensure proper handling of existing records
 
 -- Create a trigger to automatically populate project_id on new inserts
 CREATE OR REPLACE FUNCTION set_form_entry_project_id()
