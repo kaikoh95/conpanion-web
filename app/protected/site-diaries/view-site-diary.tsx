@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Pencil } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ArrowLeft, Calendar, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { getSiteDiaryById } from '@/lib/api/site-diaries';
@@ -14,9 +15,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { DiaryApprovalStatus } from './approval-status';
 import { DebugWrapper } from '@/utils/debug';
 import { getAttachments } from '@/lib/api/attachments';
-import { ImageViewer } from '@/components/image-viewer';
+import { FileViewer } from '@/components/file-viewer';
 import Image from 'next/image';
-import { ZoomIn } from 'lucide-react';
+import { ZoomIn, FileText } from 'lucide-react';
 
 interface ViewSiteDiaryProps {
   open: boolean;
@@ -154,7 +155,7 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
         return <span>{answerValue}</span>;
 
       case 'photo':
-        return <PhotoAnswerViewer diaryId={diaryId} itemId={item.id} />;
+        return <FileAnswerViewer diaryId={diaryId} itemId={item.id} />;
 
       default:
         return <span>{answerValue}</span>;
@@ -391,15 +392,15 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
   );
 }
 
-// Photo Answer Viewer Component
-interface PhotoAnswerViewerProps {
+// File Answer Viewer Component
+interface FileAnswerViewerProps {
   diaryId: number | null;
   itemId: number | undefined;
 }
 
-function PhotoAnswerViewer({ diaryId, itemId }: PhotoAnswerViewerProps) {
+function FileAnswerViewer({ diaryId, itemId }: FileAnswerViewerProps) {
   const [attachmentIds, setAttachmentIds] = useState<string[]>([]);
-  const [directImageUrls, setDirectImageUrls] = useState<string[]>([]);
+  const [directFileUrls, setDirectFileUrls] = useState<Array<{ url: string, isImage: boolean, isPdf?: boolean, name?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('');
@@ -433,7 +434,7 @@ function PhotoAnswerViewer({ diaryId, itemId }: PhotoAnswerViewerProps) {
   }, [diaryId]);
 
   useEffect(() => {
-    const fetchPhotoAttachments = async () => {
+    const fetchFileAttachments = async () => {
       if (!diaryId || !itemId) {
         setLoading(false);
         return;
@@ -441,7 +442,7 @@ function PhotoAnswerViewer({ diaryId, itemId }: PhotoAnswerViewerProps) {
 
       setLoading(true);
       setError(null);
-      setDirectImageUrls([]); // Reset direct URLs
+      setDirectFileUrls([]); // Reset direct URLs
       
       try {
         // Convert diary ID to string for API call
@@ -453,7 +454,7 @@ function PhotoAnswerViewer({ diaryId, itemId }: PhotoAnswerViewerProps) {
         
         if (fetchError) {
           console.error('Error fetching attachments:', fetchError);
-          setError('Failed to load photos');
+          setError('Failed to load files');
           return;
         }
         
@@ -486,19 +487,16 @@ function PhotoAnswerViewer({ diaryId, itemId }: PhotoAnswerViewerProps) {
           console.log(`Found ${itemAttachments.length} attachments for item ${itemId}`);
           setDebugInfo(prev => `${prev}, Item attachments: ${itemAttachments.length}`);
           
-          // If we still don't find any attachments, look for any images for this diary
+          // If we still don't find any attachments, look for any files for this diary
           if (itemAttachments.length === 0) {
-            console.log('No specific attachments found, using all images as fallback');
+            console.log('No specific attachments found, using all files as fallback');
             
-            // First try to use all images attached to this diary
-            const anyImages = attachments.filter(att => 
-              att.file_type === 'image' || 
-              att.storage_path.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/)
-            );
+            // Use all files attached to this diary (not just images)
+            const anyFiles = attachments;
             
-            if (anyImages.length > 0) {
-              setAttachmentIds(anyImages.map(att => att.id));
-              setDebugInfo(prev => `${prev}, Using all ${anyImages.length} images as fallback`);
+            if (anyFiles.length > 0) {
+              setAttachmentIds(anyFiles.map(att => att.id));
+              setDebugInfo(prev => `${prev}, Using all ${anyFiles.length} files as fallback`);
             } else {
               // If still no attachments, try to directly check storage
               await checkStorageDirectly();
@@ -512,8 +510,8 @@ function PhotoAnswerViewer({ diaryId, itemId }: PhotoAnswerViewerProps) {
           await checkStorageDirectly();
         }
       } catch (err) {
-        console.error('Error in fetchPhotoAttachments:', err);
-        setError('An error occurred while loading photos');
+        console.error('Error in fetchFileAttachments:', err);
+        setError('An error occurred while loading files');
       } finally {
         setLoading(false);
       }
@@ -539,38 +537,42 @@ function PhotoAnswerViewer({ diaryId, itemId }: PhotoAnswerViewerProps) {
             console.log(`Found ${storageFiles.length} files in storage:`, storageFiles);
             setDebugInfo(prev => `${prev}, Files directly in storage: ${storageFiles.length}`);
             
-            // Filter for image files only
-            const imageFiles = storageFiles.filter(file => {
-              const fileName = file.name.toLowerCase();
-              return fileName.endsWith('.jpg') || 
-                     fileName.endsWith('.jpeg') || 
-                     fileName.endsWith('.png') || 
-                     fileName.endsWith('.gif') || 
-                     fileName.endsWith('.webp');
-            });
+            // Get signed URLs for all files
+            const urlResults = await Promise.all(
+              storageFiles.map(async (file) => {
+                const filePath = `${pathPrefix}/${file.name}`;
+                const { data: urlData } = await supabase.storage
+                  .from('attachments')
+                  .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
+                
+                if (!urlData?.signedUrl) return null;
+                
+                // Determine file type for rendering purposes
+                const fileName = file.name.toLowerCase();
+                const isImage = fileName.endsWith('.jpg') || 
+                              fileName.endsWith('.jpeg') || 
+                              fileName.endsWith('.png') || 
+                              fileName.endsWith('.gif') || 
+                              fileName.endsWith('.webp');
+                
+                // Check if this is a PDF
+                const isPdf = fileName.endsWith('.pdf');
+                
+                return { 
+                  url: urlData.signedUrl, 
+                  isImage,
+                  isPdf,
+                  name: file.name // Include the actual file name
+                };
+              })
+            );
             
-            if (imageFiles.length > 0) {
-              console.log(`Found ${imageFiles.length} image files in storage`);
-              
-              // Create signed URLs for each image
-              const urls = await Promise.all(
-                imageFiles.map(async (file) => {
-                  const filePath = `${pathPrefix}/${file.name}`;
-                  const { data: urlData } = await supabase.storage
-                    .from('attachments')
-                    .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
-                  
-                  return urlData?.signedUrl || null;
-                })
-              );
-              
-              // Filter out any null URLs
-              const validUrls = urls.filter(url => url !== null) as string[];
-              console.log(`Created ${validUrls.length} signed URLs for images`);
-              
-              if (validUrls.length > 0) {
-                setDirectImageUrls(validUrls);
-              }
+            // Filter out any null URLs
+            const validUrls = urlResults.filter(Boolean) as Array<{ url: string, isImage: boolean, isPdf?: boolean, name?: string }>;
+            console.log(`Created ${validUrls.length} signed URLs for files`);
+            
+            if (validUrls.length > 0) {
+              setDirectFileUrls(validUrls);
             }
           }
         } else {
@@ -581,11 +583,11 @@ function PhotoAnswerViewer({ diaryId, itemId }: PhotoAnswerViewerProps) {
       }
     };
     
-    fetchPhotoAttachments();
+    fetchFileAttachments();
   }, [diaryId, itemId, projectId]);
   
   if (loading) {
-    return <span className="text-muted-foreground">Loading photos...</span>;
+    return <span className="text-muted-foreground">Loading files...</span>;
   }
   
   if (error) {
@@ -594,40 +596,18 @@ function PhotoAnswerViewer({ diaryId, itemId }: PhotoAnswerViewerProps) {
   
   // First check if we have attachment IDs (preferred method)
   if (attachmentIds.length > 0) {
-    return <ImageViewer attachmentIds={attachmentIds} />;
+    return <FileViewer attachmentIds={attachmentIds} />;
   }
   
-  // If we have direct image URLs instead
-  if (directImageUrls.length > 0) {
-    return (
-      <div className="grid gap-2 grid-cols-2 md:grid-cols-3">
-        {directImageUrls.map((url, index) => (
-          <div 
-            key={index} 
-            className="relative cursor-pointer overflow-hidden rounded-md border bg-muted aspect-square"
-            onClick={() => window.open(url, '_blank')}
-          >
-            <Image 
-              src={url} 
-              alt={`Image ${index + 1}`}
-              fill
-              style={{ objectFit: 'cover' }}
-              sizes="(max-width: 768px) 50vw, 33vw"
-              className="transition-all hover:scale-105"
-            />
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity hover:bg-black/30 hover:opacity-100">
-              <ZoomIn className="h-8 w-8 text-white" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+  // If we have direct file URLs instead
+  if (directFileUrls.length > 0) {
+    return <FileViewer directFileUrls={directFileUrls} />;
   }
   
-  // No images found through either method
+  // No files found through either method
   return (
     <div>
-      <span className="text-muted-foreground">No photos available</span>
+      <span className="text-muted-foreground">No files available</span>
       <span className="ml-2 text-xs text-muted-foreground">({debugInfo})</span>
     </div>
   );

@@ -13,6 +13,8 @@ import { useTaskMetadata } from '../../protected/tasks/hooks';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { AssigneeSelector } from '@/components/AssigneeSelector';
+import TaskFileUploader from '@/components/task-file-uploader';
+import { uploadTaskAttachment } from '@/lib/api/task-attachments';
 
 type Status = Database['public']['Tables']['statuses']['Row'];
 type Priority = Database['public']['Tables']['priorities']['Row'];
@@ -91,6 +93,15 @@ export function AddTaskDrawer({
   const [assignees, setAssignees] = useState<{ id: string; name: string; avatar_url?: string }[]>(
     [],
   );
+  
+  // State for task files
+  const [taskFiles, setTaskFiles] = useState<File[] | null>(null);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  
+  // Handle task file uploads
+  const handleFileChange = (files: File[] | null) => {
+    setTaskFiles(files);
+  };
 
   const handleCreateTask = async () => {
     if (!title.trim()) {
@@ -205,6 +216,25 @@ export function AddTaskDrawer({
           console.error('Error adding metadata:', metadataError);
         }
       }
+      
+      // 5. Upload files if any are attached
+      if (taskFiles && taskFiles.length > 0) {
+        setUploadingFiles(true);
+        try {
+          // Upload each file sequentially
+          for (const file of taskFiles) {
+            await uploadTaskAttachment({
+              taskId,
+              file
+            });
+          }
+        } catch (fileError) {
+          console.error('Error uploading task files:', fileError);
+          // Continue despite file upload errors
+        } finally {
+          setUploadingFiles(false);
+        }
+      }
 
       // Refresh tasks and close the drawer
       refreshTasks();
@@ -229,6 +259,7 @@ export function AddTaskDrawer({
     setEstimatedHours('');
     setManpower('');
     setAssignees([]);
+    setTaskFiles(null);
     setError(null);
   };
 
@@ -627,6 +658,24 @@ export function AddTaskDrawer({
                       );
                     })}
                 </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Task Files */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-muted-foreground">Task Files</label>
+            <div className="mb-2 text-xs text-muted-foreground">
+              Add files related to this task (maximum 10 files)
+            </div>
+            <TaskFileUploader
+              taskId={0} // Temporary ID, will be replaced after task creation
+              onUploadChange={handleFileChange}
+              isDisabled={saving || uploadingFiles}
+            />
+            {uploadingFiles && (
+              <div className="mt-2 text-sm text-blue-500">
+                Uploading files, please wait...
               </div>
             )}
           </div>

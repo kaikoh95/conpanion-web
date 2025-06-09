@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, X, ArrowLeft, Check, Pencil, Image } from 'lucide-react';
 import { ImageViewer } from '@/components/image-viewer';
+import { FileViewer } from '@/components/file-viewer';
 import {
   Select,
   SelectContent,
@@ -654,8 +655,8 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
 
       case 'photo':
         if (Array.isArray(answer) && answer.length > 0) {
-          // If the answer contains attachment IDs, render the ImageViewer component
-          return <ImageViewer attachmentIds={answer} />;
+          // If the answer contains attachment IDs, render the FileViewer component
+          return <FileViewer attachmentIds={answer} />;
         }
         return <p className="text-muted-foreground">No photos available</p>;
 

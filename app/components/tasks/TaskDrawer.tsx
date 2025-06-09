@@ -27,6 +27,7 @@ import { TaskWithRelations } from '@/app/protected/tasks/models';
 import { AssigneeSelector } from '@/components/AssigneeSelector';
 import { ProjectMember } from '@/hooks/useProjectMembers';
 import Link from 'next/link';
+import { TaskAttachmentsViewer } from '@/components/task-attachments-viewer';
 
 type Task = Database['public']['Tables']['tasks']['Row'];
 type Status = Database['public']['Tables']['statuses']['Row'];
@@ -855,6 +856,14 @@ export function TaskDrawer({
                   <Plus size={16} />
                 </button>
               </div>
+            </div>
+
+            {/* Task Attachments */}
+            <div className="border-t border-border pt-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-medium text-muted-foreground">Attachments</h3>
+              </div>
+              <TaskAttachmentsViewer taskId={task.id} className="mb-4" />
             </div>
 
             {/* Custom Metadata Section - replaces the previous "Time estimates" section */}

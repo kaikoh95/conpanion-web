@@ -1,21 +1,19 @@
 import { useState, useRef, ChangeEvent, DragEvent } from 'react';
-import { Label } from '@/components/ui/label';
-import { FormItem } from '@/lib/types/form';
 import { Button } from './ui/button';
-import { Plus, X, FileIcon, ImageIcon, Upload, FileVideo, FileAudio, FilePenLine, FileSpreadsheet, FileText, File as FileGeneric } from 'lucide-react';
+import { X, FileIcon, ImageIcon, Upload } from 'lucide-react';
 import { formatFileSize } from '@/lib/types/attachment';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { useProject } from '@/contexts/ProjectContext';
 
-interface FormFileUploaderProps {
-  item: FormItem;
-  tempEntityId: string;
-  onUploadChange: (itemId: number, value: File[] | null) => void;
-  value: File[] | null;
-  hasError: boolean;
+interface TaskFileUploaderProps {
+  taskId: number;
+  onUploadChange: (files: File[] | null) => void;
+  value?: File[] | null;
+  hasError?: boolean;
   errorMessage?: string;
   isDisabled?: boolean;
+  maxFiles?: number;
   acceptedFileTypes?: string; // MIME types string for the file input accept attribute
 }
 
@@ -24,17 +22,16 @@ interface FileState {
   previewUrl?: string;
 }
 
-export default function FormFileUploader({
-  item,
-  tempEntityId,
+export default function TaskFileUploader({
+  taskId,
   onUploadChange,
-  value,
-  hasError,
+  value = null,
+  hasError = false,
   errorMessage = 'This field is required',
   isDisabled = false,
+  maxFiles = 10,
   acceptedFileTypes = '*',
-}: FormFileUploaderProps) {
-  const itemId = item.id!;
+}: TaskFileUploaderProps) {
   const maxSize = 31457280; // 30MB default
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,9 +68,18 @@ export default function FormFileUploader({
     
     // Make sure we have a current project
     if (!currentProject?.id) {
+      console.error('No project selected for file upload');
       toast.error('No project selected. Please select a project to upload files.');
       return;
     }
+    
+    // Check if we've reached the maximum number of files
+    if (files.length >= maxFiles) {
+      toast.error(`Maximum ${maxFiles} files allowed.`);
+      return;
+    }
+    
+    console.log('Adding file to task:', taskId, 'in project:', currentProject.id);
     
     // Add file to local state with preview if it's an image
     const newFile: FileState = {
@@ -86,10 +92,7 @@ export default function FormFileUploader({
     setFiles(updatedFiles);
     
     // Pass the raw files up to the parent component
-    onUploadChange(
-      itemId, 
-      updatedFiles.map(f => f.file)
-    );
+    onUploadChange(updatedFiles.map(f => f.file));
   };
 
   const handleFileRemove = (index: number) => {
@@ -103,16 +106,22 @@ export default function FormFileUploader({
     setFiles(updatedFiles);
     
     // Update parent component
-    onUploadChange(
-      itemId, 
-      updatedFiles.length > 0 ? updatedFiles.map(f => f.file) : null
-    );
+    onUploadChange(updatedFiles.length > 0 ? updatedFiles.map(f => f.file) : null);
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
-    handleFileAdd(selectedFiles[0]);
+    
+    // Handle multiple files
+    const availableSlots = maxFiles - files.length;
+    const filesToAdd = Array.from(selectedFiles).slice(0, availableSlots);
+    
+    if (filesToAdd.length < selectedFiles.length) {
+      toast.warning(`Only ${availableSlots} more files can be added. Some files were skipped.`);
+    }
+    
+    filesToAdd.forEach(file => handleFileAdd(file));
     e.target.value = ''; // Reset input to allow selecting same file again
   };
 
@@ -138,7 +147,17 @@ export default function FormFileUploader({
     if (isDisabled) return;
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileAdd(e.dataTransfer.files[0]);
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      const availableSlots = maxFiles - files.length;
+      
+      // Only process up to the max allowed number of files
+      const filesToAdd = droppedFiles.slice(0, availableSlots);
+      
+      if (filesToAdd.length < droppedFiles.length) {
+        toast.warning(`Only ${availableSlots} more files can be added. Some files were skipped.`);
+      }
+      
+      filesToAdd.forEach(file => handleFileAdd(file));
     }
   };
 
@@ -149,20 +168,20 @@ export default function FormFileUploader({
     if (type.startsWith('image/')) {
       return <ImageIcon className="h-5 w-5 text-primary" />;
     } else if (type.startsWith('video/')) {
-      return <FileVideo className="h-5 w-5 text-purple-500" />;
+      return <FileIcon className="h-5 w-5 text-purple-500" />;
     } else if (type.startsWith('audio/')) {
-      return <FileAudio className="h-5 w-5 text-yellow-500" />;
+      return <FileIcon className="h-5 w-5 text-yellow-500" />;
     } else if (type === 'application/pdf') {
-      return <FileText className="h-5 w-5 text-red-500" />;
+      return <FileIcon className="h-5 w-5 text-red-500" />;
     } else if (type.includes('spreadsheet') || type.includes('excel') || file.name.endsWith('.csv')) {
-      return <FileSpreadsheet className="h-5 w-5 text-green-500" />;
+      return <FileIcon className="h-5 w-5 text-green-500" />;
     } else if (type.includes('document') || type.includes('word')) {
-      return <FileText className="h-5 w-5 text-blue-500" />;
+      return <FileIcon className="h-5 w-5 text-blue-500" />;
     } else if (type.includes('presentation') || type.includes('powerpoint')) {
-      return <FilePenLine className="h-5 w-5 text-orange-500" />;
+      return <FileIcon className="h-5 w-5 text-orange-500" />;
     }
     
-    return <FileGeneric className="h-5 w-5 text-primary" />;
+    return <FileIcon className="h-5 w-5 text-primary" />;
   };
 
   const renderFilePreview = (fileState: FileState, index: number) => {
@@ -208,10 +227,6 @@ export default function FormFileUploader({
 
   return (
     <div className="space-y-2">
-      <Label className="font-medium">
-        {item.question_value} {item.is_required && <span className="text-red-500">*</span>}
-      </Label>
-      
       {/* Display existing files */}
       {files.length > 0 && (
         <div className="mb-3 space-y-2">
@@ -242,16 +257,17 @@ export default function FormFileUploader({
           className="hidden"
           onChange={handleInputChange}
           disabled={isDisabled}
+          multiple
         />
         
         <div className="flex flex-col items-center justify-center space-y-2 p-4 text-center">
           <Upload className="h-8 w-8 text-muted-foreground" />
           <div className="mt-2 text-center">
             <p className="text-sm font-medium">
-              Drag & drop or click to upload {item.is_required && <span className="text-red-500">*</span>}
+              Drag & drop or click to upload files
             </p>
             <p className="text-xs text-muted-foreground">
-              Max size: {formatFileSize(maxSize)}
+              Max size: {formatFileSize(maxSize)} (up to {maxFiles} files)
             </p>
           </div>
         </div>

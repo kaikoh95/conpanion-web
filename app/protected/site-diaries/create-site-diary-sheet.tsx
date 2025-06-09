@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/select';
 import { createApproval } from '@/lib/api/approvals';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { uploadAttachment } from '@/lib/api/attachments';
 import { useRouter } from 'next/navigation';
 import { useProject } from '@/contexts/ProjectContext';
 import SiteDiaryPhotoUploader from '@/components/site-diary-photo-uploader';
@@ -399,23 +400,18 @@ export function CreateSiteDiarySheet({
 
       // If we have file uploads, handle those separately
       if (Object.keys(fileUploads).length > 0 && response.diary.id) {
-        const supabase = getSupabaseClient();
         
         // Upload each file
         for (const [itemId, files] of Object.entries(fileUploads)) {
           for (const file of files) {
             try {
-              // Create a unique path for each file - format must be: projectId/entityType/entityId/filename
-              // This matches the RLS policy which checks that the first folder segment is a valid project ID
-              const fileName = `item_${itemId}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}_${file.name}`;
-              const filePath = `${projectId}/site_diary/${response.diary.id}/${fileName}`;
-              
-              console.log('Uploading file to:', filePath);
-              
-              // Upload the file to storage
-              const { data: storageData, error: uploadError } = await supabase.storage
-                .from('attachments')
-                .upload(filePath, file);
+              // Use the standardized uploadAttachment function to create proper attachment records
+              const { data: attachment, error: uploadError } = await uploadAttachment({
+                projectId: projectId.toString(),
+                entityType: 'site_diary',
+                entityId: response.diary.id.toString(),
+                file: file
+              });
                 
               if (uploadError) {
                 console.error('Error uploading file:', uploadError);
@@ -424,6 +420,7 @@ export function CreateSiteDiarySheet({
               } 
               
               console.log('File uploaded successfully:', file.name);
+              console.log('Attachment record created with ID:', attachment?.id);
             } catch (err) {
               console.error('Error in file upload process:', err);
               toast.error(`An error occurred while uploading ${file.name}`);
