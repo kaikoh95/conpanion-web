@@ -97,3 +97,84 @@ export async function fetchFormEntriesWithStatus(supabase: SupabaseClient): Prom
 
   return processedEntries;
 }
+
+/**
+ * Fetches form entries for a specific project along with their associated form name and latest approval status.
+ * 
+ * @param supabase The Supabase client instance.
+ * @param projectId The ID of the project to filter entries by.
+ * @returns A promise that resolves to an array of FormEntry objects for the specified project.
+ */
+export async function fetchFormEntriesByProject(
+  supabase: SupabaseClient,
+  projectId: number
+): Promise<FormEntry[]> {
+  // 1. Fetch form entries filtered by project_id
+  const { data: entriesData, error: entriesError } = await supabase
+    .from('form_entries')
+    .select(
+      `
+      *,
+      forms ( name )
+    `,
+    )
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  if (entriesError) {
+    console.error('Error fetching form entries by project:', entriesError);
+    throw entriesError;
+  }
+  if (!entriesData) {
+    return []; // No entries found
+  }
+
+  // 2. Get Entry IDs
+  const entryIds = entriesData.map((entry) => entry.id);
+  if (entryIds.length === 0) {
+    // No entries, so no need to fetch approvals
+    return entriesData.map((entry) => ({
+      ...entry,
+      forms: entry.forms,
+      approval_status: null, // No approvals fetched
+      form_name: entry.forms?.name ?? 'Unknown Form',
+    }));
+  }
+
+  // 3. Fetch Relevant Approvals
+  const { data: approvalsData, error: approvalsError } = await supabase
+    .from('approvals')
+    .select<string, ApprovalInfo>('entity_id, status') // Select specific columns
+    .eq('entity_type', 'entries')
+    .in('entity_id', entryIds)
+    .order('created_at', { ascending: false }); // Order by date to find the latest
+
+  if (approvalsError) {
+    console.error('Error fetching approvals:', approvalsError);
+    // Return entries without status for now, logging the error
+  }
+
+  // 4. Map Statuses (finding the latest for each entry_id)
+  const latestStatusMap = new Map<number, ApprovalStatus>();
+  if (approvalsData) {
+    for (const approval of approvalsData) {
+      // Since ordered by created_at desc, the first one we see for an entity_id is the latest
+      if (!latestStatusMap.has(approval.entity_id)) {
+        latestStatusMap.set(approval.entity_id, approval.status);
+      }
+    }
+  }
+
+  // 5. Combine Data
+  const processedEntries: FormEntry[] = entriesData.map((entry): FormEntry => {
+    const status = latestStatusMap.get(entry.id) || null;
+    return {
+      ...entry,
+      forms: entry.forms,
+      approval_status: status,
+      form_name: entry.forms?.name ?? 'Unknown Form',
+    };
+  });
+
+  return processedEntries;
+}

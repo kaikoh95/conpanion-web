@@ -17,15 +17,16 @@ import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { getSiteDiaryTemplates, deleteSiteDiaryTemplate } from '@/lib/api/site-diaries';
 import { SiteDiaryTemplate } from '@/lib/types/site-diary';
+import { useProject } from '@/contexts/ProjectContext';
 import { CreateTemplateDialog } from './create-template-dialog';
 import { toast } from 'sonner';
 
-// Default project ID (as per requirement to assume one project for now)
-const DEFAULT_PROJECT_ID = 1;
+// We no longer use a default project ID, instead we use the current project from context
 
 export default function SiteDiaryTemplatesPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { current: currentProject } = useProject();
 
   // State for templates
   const [templates, setTemplates] = useState<SiteDiaryTemplate[]>([]);
@@ -46,8 +47,18 @@ export default function SiteDiaryTemplatesPage() {
       setError(null);
 
       try {
+        if (!currentProject?.id) {
+          console.log("No current project selected");
+          setTemplates([]);
+          setFilteredTemplates([]);
+          return;
+        }
+        
+        console.log("Loading site diary templates for project ID:", currentProject.id);
+        
         // Fetch templates
-        const fetchedTemplates = await getSiteDiaryTemplates(DEFAULT_PROJECT_ID);
+        const fetchedTemplates = await getSiteDiaryTemplates(currentProject.id);
+        console.log("Fetched templates:", fetchedTemplates);
         setTemplates(fetchedTemplates);
         setFilteredTemplates(filterTemplates(fetchedTemplates, searchTerm));
       } catch (err: any) {
@@ -59,7 +70,7 @@ export default function SiteDiaryTemplatesPage() {
     };
 
     loadTemplates();
-  }, []);
+  }, [currentProject?.id]);
 
   // Effect to filter templates when search term changes
   useEffect(() => {
@@ -235,13 +246,13 @@ export default function SiteDiaryTemplatesPage() {
       )}
 
       {/* Create/Edit Template Dialog */}
-      <CreateTemplateDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        templateId={selectedTemplateId}
-        projectId={DEFAULT_PROJECT_ID}
-        onTemplateChange={handleTemplateChange}
-      />
+        <CreateTemplateDialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+            templateId={selectedTemplateId}
+            projectId={currentProject?.id || 0}
+            onTemplateChange={handleTemplateChange}
+          />
     </div>
   );
 }

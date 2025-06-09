@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useProject } from '@/contexts/ProjectContext';
 import {
   SiteDiaryTemplate,
   SiteDiaryTemplateItem,
@@ -28,7 +29,7 @@ import {
   createSiteDiaryTemplate,
   updateSiteDiaryTemplate,
 } from '@/lib/api/site-diaries';
-import { X, GripVertical, Plus } from 'lucide-react';
+import { X, GripVertical, Plus, Image as ImageIcon } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -284,6 +285,24 @@ function SortableQuestionCard({ id, question, onUpdate, onDelete }: SortableQues
             </div>
           </div>
         )}
+        
+        {question.item_type === 'photo' && (
+          <div className="space-y-2">
+            <Label>Photo Upload Preview</Label>
+            <div className="flex flex-col items-center justify-center rounded-md border-2 border-dashed border-muted p-6 text-center">
+              <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium">Photo Upload Field</p>
+              <p className="text-xs text-muted-foreground">
+                Users will be able to upload photos here
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Note: This is just a preview. Actual photos will be uploaded when the site diary is created.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -297,6 +316,15 @@ export function CreateTemplateDialog({
   onTemplateChange,
 }: CreateTemplateDialogProps) {
   const { user } = useAuth();
+  const { current: currentProject } = useProject();
+  
+  // Log project information for debugging
+  useEffect(() => {
+    if (open) {
+      console.log("CreateTemplateDialog opened with projectId:", projectId);
+      console.log("Current project from context:", currentProject);
+    }
+  }, [open, projectId, currentProject]);
 
   // State for form fields
   const [templateName, setTemplateName] = useState('');
@@ -708,11 +736,14 @@ export function CreateTemplateDialog({
         toast.success('Template updated successfully');
         onTemplateChange(response.template);
       } else {
-        // Create new template
+        // Create new template - use current project ID from context if available
+        const effectiveProjectId = currentProject?.id || projectId;
+        console.log("Creating template with project ID:", effectiveProjectId);
+        
         const response = await createSiteDiaryTemplate({
           name: templateName,
           description: templateDescription,
-          project_id: projectId,
+          project_id: effectiveProjectId,
           created_by: user.id,
           metadata: metadataConfig,
           items: questions.map((q, index) => ({

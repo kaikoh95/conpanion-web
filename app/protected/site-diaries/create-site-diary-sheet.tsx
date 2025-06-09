@@ -11,7 +11,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, X } from 'lucide-react';
+import { CalendarIcon, X, Image } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -35,6 +35,8 @@ import {
 import { createApproval } from '@/lib/api/approvals';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { useProject } from '@/contexts/ProjectContext';
+import SiteDiaryPhotoUploader from '@/components/site-diary-photo-uploader';
 
 interface CreateSiteDiarySheetProps {
   open: boolean;
@@ -67,8 +69,9 @@ export function CreateSiteDiarySheet({
   onDiaryCreated,
   onClose,
 }: CreateSiteDiarySheetProps) {
-  const { user } = useAuth();
   const router = useRouter();
+  const { user } = useAuth();
+  const { current: currentProject } = useProject();
 
   // State for form fields
   const [diaryName, setDiaryName] = useState<string>('');
@@ -93,11 +96,15 @@ export function CreateSiteDiarySheet({
   const [templateItems, setTemplateItems] = useState<SiteDiaryTemplateItem[]>([]);
   const [answers, setAnswers] = useState<Record<number, any>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [fileUploads, setFileUploads] = useState<Record<number, File[]>>({});
 
   // Loading states
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // A unique ID for this form submission to use with file uploaders
+  const [tempEntityId] = useState<string>(`temp-diary-${Date.now()}`);
 
   // Load template data when templateId changes
   useEffect(() => {
@@ -242,7 +249,44 @@ export function CreateSiteDiarySheet({
       [itemId]: value,
     }));
 
-    // Clear error for this field if it exists
+    // Clear error for this item if exists
+    if (formErrors[`item_${itemId}`]) {
+      setFormErrors((prev) => {
+        const updated = { ...prev };
+        delete updated[`item_${itemId}`];
+        return updated;
+      });
+    }
+  };
+
+  const handlePhotoUploadChange = (itemId: number, files: File[] | null) => {
+    if (files && files.length > 0) {
+      setFileUploads((prev) => ({
+        ...prev,
+        [itemId]: files,
+      }));
+      
+      // Also update answers to track that this field has a value
+      setAnswers((prev) => ({
+        ...prev,
+        [itemId]: 'photo_uploaded',
+      }));
+    } else {
+      // Remove the upload if it was cleared
+      setFileUploads((prev) => {
+        const updated = { ...prev };
+        delete updated[itemId];
+        return updated;
+      });
+      
+      // Clear the answer
+      setAnswers((prev) => ({
+        ...prev,
+        [itemId]: '',
+      }));
+    }
+    
+    // Clear error for this item if exists
     if (formErrors[`item_${itemId}`]) {
       setFormErrors((prev) => {
         const updated = { ...prev };
@@ -325,73 +369,95 @@ export function CreateSiteDiarySheet({
     return Object.keys(errors).length === 0;
   };
 
-  // Handle form submission
+  // Handle submission
   const handleSubmit = async () => {
-    if (!user || !templateId) return;
-
-    if (!validateForm()) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
+    if (!validateForm()) return;
 
     setSubmitting(true);
+    setError(null);
 
     try {
-      // Transform answers to the format expected by the API
-      const answersArray = Object.entries(answers).map(([itemId, value]) => ({
-        item_id: parseInt(itemId),
+      if (!user) throw new Error('User not authenticated');
+      if (!template) throw new Error('Template not found');
+
+      // Format answers for submission
+      const formattedAnswers = Object.entries(answers).map(([key, value]) => ({
+        item_id: Number(key),
         value: value,
       }));
 
       // Create the site diary
-      const createdDiary = await createSiteDiary({
-        template_id: templateId,
-        project_id: projectId,
+      const response = await createSiteDiary({
         name: diaryName,
         date: diaryDate.toISOString(),
+        project_id: projectId,
+        template_id: template.id || 0,
         submitted_by_user_id: user.id,
         metadata: metadata,
-        answers: answersArray,
+        answers: formattedAnswers,
       });
 
-      // Create approval if approvers are selected
-      if (selectedApprovers.length > 0 && createdDiary) {
-        try {
-          // Get the diary ID
-          let diaryId: number;
-
-          if (typeof createdDiary === 'number') {
-            diaryId = createdDiary;
-          } else if (
-            typeof createdDiary === 'object' &&
-            createdDiary !== null &&
-            'id' in createdDiary
-          ) {
-            diaryId = createdDiary.id as number;
-          } else {
-            throw new Error('Invalid diary ID from response');
+      // If we have file uploads, handle those separately
+      if (Object.keys(fileUploads).length > 0 && response.diary.id) {
+        const supabase = getSupabaseClient();
+        
+        // Upload each file
+        for (const [itemId, files] of Object.entries(fileUploads)) {
+          for (const file of files) {
+            try {
+              // Create a unique path for each file - format must be: projectId/entityType/entityId/filename
+              // This matches the RLS policy which checks that the first folder segment is a valid project ID
+              const fileName = `item_${itemId}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}_${file.name}`;
+              const filePath = `${projectId}/site_diary/${response.diary.id}/${fileName}`;
+              
+              console.log('Uploading file to:', filePath);
+              
+              // Upload the file to storage
+              const { data: storageData, error: uploadError } = await supabase.storage
+                .from('attachments')
+                .upload(filePath, file);
+                
+              if (uploadError) {
+                console.error('Error uploading file:', uploadError);
+                toast.error(`Failed to upload ${file.name}`);
+                continue;
+              } 
+              
+              console.log('File uploaded successfully:', file.name);
+            } catch (err) {
+              console.error('Error in file upload process:', err);
+              toast.error(`An error occurred while uploading ${file.name}`);
+            }
           }
-
-          await createApproval({
-            entity_type: 'site_diary',
-            entity_id: diaryId,
-            approvers_id: selectedApprovers,
-          });
-        } catch (approvalErr: any) {
-          console.error('Error creating approval:', approvalErr);
-          toast.error('Site diary created but failed to set up approval workflow');
         }
       }
 
+      // If approvers are selected, create approval requests
+      if (selectedApprovers.length > 0 && response.diary.id) {
+        try {
+          await createApproval({
+            entity_type: 'site_diary',
+            entity_id: response.diary.id,
+            approvers_id: selectedApprovers,
+          });
+        } catch (err) {
+          console.error('Error creating approvals:', err);
+          // Don't fail the whole operation if approvals fail
+          toast.error('Failed to create approval requests');
+        }
+      }
+
+      // Success
       toast.success('Site diary created successfully');
       onDiaryCreated();
+      
       // Close the sheet after successful creation
       onOpenChange(false);
-      // Clear URL parameters
-      router.push('/protected/site-diaries');
+      onClose(); // Call onClose to clean up any state
     } catch (err: any) {
       console.error('Error creating site diary:', err);
-      toast.error(err.message || 'Failed to create site diary');
+      setError(err.message || 'Failed to create site diary');
+      toast.error('Failed to create site diary');
     } finally {
       setSubmitting(false);
     }
@@ -504,12 +570,15 @@ export function CreateSiteDiarySheet({
             >
               {item.question_value}
             </Label>
-            <div className="rounded-md border-2 border-dashed p-4 text-center">
-              <p className="text-muted-foreground">
-                Photo upload will be implemented in a future update
-              </p>
-            </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            <SiteDiaryPhotoUploader
+              item={item}
+              tempEntityId={tempEntityId}
+              onUploadChange={handlePhotoUploadChange}
+              value={fileUploads[itemId] || null}
+              hasError={!!error}
+              errorMessage={error || ''}
+              isDisabled={submitting}
+            />
           </div>
         );
 

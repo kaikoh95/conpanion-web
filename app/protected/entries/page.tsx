@@ -4,7 +4,8 @@ import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, X, ArrowLeft, Check, Pencil } from 'lucide-react';
+import { Search, X, ArrowLeft, Check, Pencil, Image } from 'lucide-react';
+import { ImageViewer } from '@/components/image-viewer';
 import {
   Select,
   SelectContent,
@@ -49,6 +50,8 @@ import {
 import { ApprovalStatusAccordian } from '@/components/approval-status-accordian';
 import { submitApproval } from '@/lib/api/approvals';
 import { EntryResponsesAccordion } from '@/components/entry-responses-accordion';
+import { fetchFormEntriesByProject } from '@/lib/api/entries';
+import { useProject } from '@/contexts/ProjectContext';
 
 // Get these from the actual enum or configuration (or potentially move to a shared constants file)
 const APPROVAL_STATUSES: { value: ApprovalStatus | 'all'; label: string }[] = [
@@ -75,6 +78,7 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
   const supabase = createClient();
   const router = useRouter();
   const { user } = useAuth();
+  const { current: currentProject } = useProject();
   const [allEntries, setAllEntries] = useState<FormEntry[]>([]); // Store all fetched entries
   const [filteredEntries, setFilteredEntries] = useState<FormEntry[]>([]); // Entries displayed after filtering
   const [loading, setLoading] = useState(true);
@@ -125,8 +129,17 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
       setLoading(true);
       setError(null);
       try {
-        const fetchedEntries = await fetchFormEntriesWithStatus(supabase);
-        console.log('Fetched Entries:', fetchedEntries); // Log fetched data before filtering
+        if (!currentProject?.id) {
+          // If no current project is selected, show empty state
+          setAllEntries([]);
+          setFilteredEntries([]);
+          return;
+        }
+        
+        // Use the project-specific API function to fetch entries for the current project
+        const fetchedEntries = await fetchFormEntriesByProject(supabase, currentProject.id);
+        console.log('Fetched Entries for project:', currentProject.id, fetchedEntries);
+        
         setAllEntries(fetchedEntries);
         // Apply initial filters immediately after fetching
         setFilteredEntries(filterEntries(fetchedEntries, searchTerm, selectedStatus));
@@ -146,26 +159,30 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
     const handleApprovalCreated = async (event: Event) => {
       const customEvent = event as CustomEvent<{ entryId: number }>;
 
-      // Fetch fresh data
-      const fetchedEntries = await fetchFormEntriesWithStatus(supabase);
-      setAllEntries(fetchedEntries);
-      setFilteredEntries(filterEntries(fetchedEntries, searchTerm, selectedStatus));
+      // Fetch fresh data for the current project
+      if (currentProject?.id) {
+        const fetchedEntries = await fetchFormEntriesByProject(supabase, currentProject.id);
+        setAllEntries(fetchedEntries);
+        setFilteredEntries(filterEntries(fetchedEntries, searchTerm, selectedStatus));
+      }
     };
 
     // Add event listener for approval updates
     const handleApprovalUpdated = async (event: Event) => {
       const customEvent = event as CustomEvent<{ entityId: number; entityType: string }>;
 
-      // Fetch fresh data
-      const fetchedEntries = await fetchFormEntriesWithStatus(supabase);
-      setAllEntries(fetchedEntries);
-      setFilteredEntries(filterEntries(fetchedEntries, searchTerm, selectedStatus));
+      // Fetch fresh data for the current project
+      if (currentProject?.id) {
+        const fetchedEntries = await fetchFormEntriesByProject(supabase, currentProject.id);
+        setAllEntries(fetchedEntries);
+        setFilteredEntries(filterEntries(fetchedEntries, searchTerm, selectedStatus));
 
-      // If the updated entry is the one we're currently viewing, also refresh the detail view
-      if (selectedEntryId === customEvent.detail.entityId) {
-        const entryWithStatus = fetchedEntries.find((entry) => entry.id === selectedEntryId);
-        if (entryWithStatus) {
-          setApprovalStatus(entryWithStatus.approval_status);
+        // If the updated entry is the one we're currently viewing, also refresh the detail view
+        if (selectedEntryId === customEvent.detail.entityId) {
+          const entryWithStatus = fetchedEntries.find((entry) => entry.id === selectedEntryId);
+          if (entryWithStatus) {
+            setApprovalStatus(entryWithStatus.approval_status);
+          }
         }
       }
     };
@@ -179,7 +196,7 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
       window.removeEventListener('approvalCreated', handleApprovalCreated);
       window.removeEventListener('approvalUpdated', handleApprovalUpdated);
     };
-  }, [supabase, searchTerm, selectedStatus, selectedEntryId]); // Add selectedEntryId to dependencies
+  }, [supabase, searchTerm, selectedStatus, selectedEntryId, currentProject?.id]); // Add currentProject?.id to dependencies
 
   // Effect to apply filters whenever search term or status changes
   useEffect(() => {
@@ -248,6 +265,9 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
         const entryData = await getFormEntryById(selectedEntryId);
         setEntryDetail(entryData);
 
+        // Log entry data for debugging
+        console.log('Loaded form entry data:', entryData);
+
         if (entryData) {
           // Initialize edit data when entry is loaded
           setEditedEntryName(entryData.entry.name || '');
@@ -256,6 +276,8 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
           const answersMap: Record<number, any> = {};
           entryData.answers.forEach((answer: FormEntryAnswer) => {
             answersMap[answer.item_id] = answer.answer_value;
+            // Log each answer for debugging
+            console.log(`Answer for item ${answer.item_id}:`, answer.answer_value);
           });
           setEditedAnswers(answersMap);
 
@@ -270,6 +292,13 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
           if (formData) {
             setFormItems(formData.items);
             setFormName(formData.form.name);
+            
+            // Log form items for debugging
+            console.log('Form items:', formData.items);
+            
+            // Check for photo-type items
+            const photoItems = formData.items.filter(item => item.item_type === 'photo');
+            console.log('Photo items:', photoItems);
           }
 
           // Fetch user name who submitted the entry
@@ -624,7 +653,11 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
         return <span className="text-foreground">{getDisplayValue(answer)}</span>;
 
       case 'photo':
-        return <p>Photo preview not available</p>;
+        if (Array.isArray(answer) && answer.length > 0) {
+          // If the answer contains attachment IDs, render the ImageViewer component
+          return <ImageViewer attachmentIds={answer} />;
+        }
+        return <p className="text-muted-foreground">No photos available</p>;
 
       default:
         return <span className="text-foreground">{getDisplayValue(answer)}</span>;
@@ -736,7 +769,8 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
               {item.question_value}
               {item.is_required && <span className="text-red-500">*</span>}
             </h3>
-            <div className="rounded-md border-2 border-dashed border-muted p-6 text-center">
+            <div className="flex flex-col items-center justify-center rounded-md border-2 border-dashed border-muted p-6 text-center">
+              <Image className="mb-2 h-10 w-10 text-muted-foreground" />
               <p className="text-muted-foreground">Photo upload (coming soon)</p>
             </div>
             {hasError && <p className="text-sm text-red-500">{formErrors[itemId]}</p>}

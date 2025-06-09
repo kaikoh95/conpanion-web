@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, X, ArrowLeft, Check, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, X, ArrowLeft, Check, Pencil, Trash2, Image } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { CreateFormDialog } from '@/components/forms/create-form-dialog';
-import { getForms, getFormById, updateForm } from '@/lib/api/forms';
+import { getForms, getFormById, updateForm, getFormsByProject } from '@/lib/api/forms';
 import { FormResponse, FormItem, ItemType, Form } from '@/lib/types/form';
 import { format } from 'date-fns';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -49,10 +49,14 @@ import { FormBuilderQuestion } from '@/lib/types/form-builder';
 import { AssigneeSelector } from '@/components/AssigneeSelector';
 import { useAuth } from '@/hooks/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { createFormEntry } from '@/lib/api/form-entries';
+import { createFormEntry, updateFormEntryAnswers } from '@/lib/api/form-entries';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import FormPhotoUploader from '@/components/form-photo-uploader';
+import { useAttachmentStore } from '@/lib/store/attachment-store';
+import { useProject } from '@/contexts/ProjectContext';
+import { uploadAttachment } from '@/lib/api/attachments';
 
 const questionTypes = [
   { value: 'question', label: 'Short answer' },
@@ -100,6 +104,7 @@ function FormsPageContent({
 }) {
   const router = useRouter();
   const { user } = useAuth();
+  const { current: currentProject } = useProject();
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -146,7 +151,7 @@ function FormsPageContent({
     year: 'numeric',
   }).format(new Date());
 
-  // Effect to handle initial formId from URL
+  // Update the effect to handle initial formId from URL
   useEffect(() => {
     if (formId) {
       const id = parseInt(formId);
@@ -156,6 +161,9 @@ function FormsPageContent({
         // Set entry creation mode if requested
         if (entryMode === 'new') {
           setIsCreatingEntry(true);
+          // Make sure answers is initialized
+          setAnswers({});
+          setFormErrors({});
         }
       }
     }
@@ -167,7 +175,14 @@ function FormsPageContent({
       setLoading(true);
       setError(null);
       try {
-        const fetchedForms = await getForms();
+        if (!currentProject?.id) {
+          // If no current project is selected, show empty state
+          setForms([]);
+          return;
+        }
+        
+        // Use the project-specific API function
+        const fetchedForms = await getFormsByProject(currentProject.id);
         setForms(fetchedForms);
       } catch (err: any) {
         console.error('Error loading forms:', err);
@@ -179,7 +194,7 @@ function FormsPageContent({
     };
 
     loadForms();
-  }, []);
+  }, [currentProject?.id]); // Re-fetch when current project changes
 
   // Effect to load form details when a form is selected
   useEffect(() => {
@@ -280,6 +295,11 @@ function FormsPageContent({
     fetchFormAndAssignees();
   }, [selectedFormId, user?.id, currentDate]);
 
+  // Add debugging for isCreatingEntry
+  useEffect(() => {
+    console.log('isCreatingEntry changed:', isCreatingEntry, 'selectedFormId:', selectedFormId, 'formDetail:', !!formDetail);
+  }, [isCreatingEntry, selectedFormId, formDetail]);
+
   const filteredForms = forms.filter((form) =>
     form.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
@@ -297,38 +317,67 @@ function FormsPageContent({
 
   const handleCreateEntry = (formId: number | undefined) => {
     if (formId === undefined) return;
-    setIsCreatingEntry(true);
+    console.log('handleCreateEntry called with formId:', formId);
+    
+    // Reset relevant state
+    setIsClosing(false);
     setAnswers({});
     setFormErrors({});
-    // Update URL to reflect entry creation mode
+    
+    // Update state to show entry form
+    setSelectedFormId(formId);
+    setIsCreatingEntry(true);
+    
+    // Update URL
     router.push(`/protected/forms?formId=${formId}&entryMode=new`);
   };
 
-  const handleCloseDetail = () => {
+  // Clean up closing logic to work with Radix UI's animations
+  const closeSheet = () => {
+    // Start the closing animation
     setIsClosing(true);
+    
+    // Wait for animation to complete before resetting state
     setTimeout(() => {
+      // Reset URL first
       router.push('/protected/forms');
+      
+      // Then reset all state
       setSelectedFormId(null);
       setIsCreatingEntry(false);
-    }, 300);
+      setAnswers({});
+      setFormErrors({});
+      setIsClosing(false);
+    }, 300); // Match animation duration
   };
 
+  // Keep handleCloseDetail for complete sheet closing
+  const handleCloseDetail = closeSheet;
+
+  // Modify handleCloseEntryForm to return to form detail view
   const handleCloseEntryForm = () => {
+    // Just disable entry creation mode without closing the sheet
     setIsCreatingEntry(false);
+    
+    // Reset form state
+    setAnswers({});
+    setFormErrors({});
+    
     // Update URL to remove entry mode parameter but keep the form ID
     if (selectedFormId) {
       router.push(`/protected/forms?formId=${selectedFormId}`);
     }
   };
 
+  // Revise Sheet handling to work with Radix UI
   const handleSheetOpenChange = (isOpen: boolean) => {
-    if (!isOpen) {
+    if (!isOpen) { // When sheet is closing
       if (isEditing && hasChanges()) {
         if (confirm('You have unsaved changes. Are you sure you want to discard them?')) {
-          handleCloseDetail();
+          closeSheet();
         }
       } else {
-        handleCloseDetail();
+        closeSheet();
       }
     }
   };
@@ -591,7 +640,7 @@ function FormsPageContent({
   };
 
   const handleSubmitEntry = async () => {
-    if (!user?.id || !formDetail || !selectedFormId) return;
+    if (!user?.id || !formDetail || !selectedFormId || !currentProject?.id) return;
 
     if (!validateForm()) {
       toast.error('Please fill all required fields');
@@ -600,12 +649,16 @@ function FormsPageContent({
 
     try {
       setIsSubmittingEntry(true);
-
-      // Prepare data for submission
-      const entryAnswers = Object.entries(answers).map(([itemId, value]) => ({
-        itemId: parseInt(itemId),
-        value: value,
-      }));
+      
+      // Create the form entry first to get its ID
+      const entryAnswers = Object.entries(answers)
+        .filter(([_, value]) => value !== null && 
+                                !Array.isArray(value) || 
+                                (Array.isArray(value) && !(value[0] instanceof File)))
+        .map(([itemId, value]) => ({
+          itemId: parseInt(itemId),
+          value: value,
+        }));
 
       const response = await createFormEntry({
         formId: selectedFormId,
@@ -613,6 +666,60 @@ function FormsPageContent({
         name: entryName || formDetail.form.name,
         answers: entryAnswers,
       });
+
+      // Once we have the entry ID, upload any attachments and associate them
+      const entryId = response.entry.id;
+      
+      // Process file uploads - we now have the files directly in the answers
+      if (entryId) {
+        // Find all photo answers with files
+        const fileUploads = Object.entries(answers)
+          .filter(([_, value]) => Array.isArray(value) && value[0] instanceof File)
+          .map(async ([itemId, files]) => {
+            // Upload each file and get its attachment ID
+            const uploadedFileIds = await Promise.all(
+              (files as File[]).map(async (file) => {
+                try {
+                  const { data, error } = await uploadAttachment({
+                    projectId: currentProject.id.toString(),
+                    entityType: 'form_entry',
+                    entityId: entryId.toString(),
+                    file,
+                  });
+                  
+                  if (error) {
+                    console.error('Error uploading file:', error);
+                    throw error;
+                  }
+                  
+                  return data?.id;
+                } catch (err) {
+                  console.error('Failed to upload file:', err);
+                  return null;
+                }
+              })
+            );
+            
+            // Filter out any failed uploads
+            const successfulUploads = uploadedFileIds.filter(Boolean);
+            
+            // Create an answer with the attachment IDs
+            return {
+              itemId: parseInt(itemId),
+              value: successfulUploads,
+            };
+          });
+        
+        // Wait for all file uploads to complete
+        const fileAnswers = await Promise.all(fileUploads);
+        
+        // Update the form entry with file attachment IDs
+        if (fileAnswers.length > 0) {
+          await updateFormEntryAnswers(entryId, {
+            answers: fileAnswers,
+          });
+        }
+      }
 
       toast.success('Form entry submitted successfully');
 
@@ -703,19 +810,16 @@ function FormsPageContent({
         );
 
       case 'photo':
-        // Placeholder for photo upload (would need additional components)
         return (
-          <div className="space-y-2">
-            <Label className="font-medium">
-              {item.question_value} {item.is_required && <span className="text-red-500">*</span>}
-            </Label>
-            <Card className="bg-muted/40">
-              <CardContent className="flex flex-col items-center justify-center p-6">
-                <p className="text-sm text-muted-foreground">Photo upload not yet implemented</p>
-              </CardContent>
-            </Card>
-            {hasError && <p className="text-sm text-red-500">{formErrors[itemId]}</p>}
-          </div>
+          <FormPhotoUploader
+            item={item}
+            tempEntityId={`form_entry_${selectedFormId}`}
+            onUploadChange={(itemId, value) => handleAnswerChange(itemId, value)}
+            value={answers[itemId] || null}
+            hasError={hasError}
+            errorMessage={formErrors[itemId]}
+            isDisabled={isSubmittingEntry}
+          />
         );
 
       default:
@@ -826,257 +930,258 @@ function FormsPageContent({
         }}
       />
 
-      <Sheet open={selectedFormId !== null} onOpenChange={handleSheetOpenChange}>
-        <SheetTitle />
-        <SheetContent
-          className={`h-full w-full border-l p-0 transition-transform duration-300 focus:outline-none focus-visible:outline-none md:w-[40vw] md:max-w-[40vw] [&>button]:hidden ${
-            isClosing ? 'translate-x-full' : 'translate-x-0'
-          }`}
-          side="right"
-        >
-          {loadingDetail ? (
-            <div className="flex h-full flex-col">
-              <div className="flex items-start justify-between border-b p-6">
-                <div className="space-y-1">
-                  <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+      {/* Disable sheet showing when closing */}
+      {selectedFormId !== null && (
+  <Sheet open={!isClosing} onOpenChange={handleSheetOpenChange}>
+          <SheetTitle />
+          <SheetContent
+            className={`h-full w-full border-l p-0 focus:outline-none focus-visible:outline-none md:w-[40vw] md:max-w-[40vw] [&>button]:hidden`}
+            side="right"
+          >
+            {loadingDetail ? (
+              <div className="flex h-full flex-col">
+                <div className="flex items-start justify-between border-b p-6">
+                  <div className="space-y-1">
+                    <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+                    <div className="flex items-center gap-2">
+                      <div className="h-5 w-20 animate-pulse rounded bg-muted" />
+                      <div className="h-5 w-32 animate-pulse rounded bg-muted" />
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2">
-                    <div className="h-5 w-20 animate-pulse rounded bg-muted" />
-                    <div className="h-5 w-32 animate-pulse rounded bg-muted" />
+                    <Button variant="ghost" size="icon" onClick={handleCloseDetail}>
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" onClick={handleCloseDetail}>
-                    <X className="h-4 w-4" />
-                  </Button>
+                <div className="flex-1 overflow-auto">
+                  <div className="space-y-6 p-6">
+                    <div>
+                      <h3 className="mb-4 text-lg font-semibold">Questions</h3>
+                      <div className="space-y-4">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="h-24 animate-pulse rounded bg-muted" />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="flex-1 overflow-auto">
-                <div className="space-y-6 p-6">
-                  <div>
-                    <h3 className="mb-4 text-lg font-semibold">Questions</h3>
+            ) : !formDetail ? (
+              <div className="flex h-full items-center justify-center">
+                <p>Form not found</p>
+              </div>
+            ) : isCreatingEntry ? (
+              // Form Entry Creation UI
+              <div className="flex h-full flex-col">
+                <div className="border-b p-6">
+                  <div className="flex items-start gap-4">
+                    <Button variant="ghost" size="icon" onClick={handleCloseEntryForm}>
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex-1">
+                      <h2 className="mb-2 text-2xl font-semibold">{formDetail.form.name}</h2>
+                      {assignedBy && (
+                        <p className="text-sm text-muted-foreground">Assigned by {assignedBy}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto">
+                  <div className="space-y-6 p-6">
                     <div className="space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="h-24 animate-pulse rounded bg-muted" />
+                      <div className="space-y-2">
+                        <Label htmlFor="entry-name" className="font-medium">
+                          Entry Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="entry-name"
+                          value={entryName}
+                          onChange={(e) => setEntryName(e.target.value)}
+                          placeholder="Give this entry a name"
+                        />
+                      </div>
+
+                      {formDetail.items.map((item) => (
+                        <div key={item.id} className="rounded-lg border p-4">
+                          {renderFormItem(item)}
+                        </div>
                       ))}
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ) : !formDetail ? (
-            <div className="flex h-full items-center justify-center">
-              <p>Form not found</p>
-            </div>
-          ) : isCreatingEntry ? (
-            // Form Entry Creation UI
-            <div className="flex h-full flex-col">
-              <div className="border-b p-6">
-                <div className="flex items-start gap-4">
-                  <Button variant="ghost" size="icon" onClick={handleCloseEntryForm}>
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="flex-1">
-                    <h2 className="mb-2 text-2xl font-semibold">{formDetail.form.name}</h2>
-                    {assignedBy && (
-                      <p className="text-sm text-muted-foreground">Assigned by {assignedBy}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 overflow-auto">
-                <div className="space-y-6 p-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="entry-name" className="font-medium">
-                        Entry Name <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="entry-name"
-                        value={entryName}
-                        onChange={(e) => setEntryName(e.target.value)}
-                        placeholder="Give this entry a name"
-                      />
-                    </div>
-
-                    {formDetail.items.map((item) => (
-                      <div key={item.id} className="rounded-lg border p-4">
-                        {renderFormItem(item)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="border-t p-6">
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleCloseEntryForm}
-                    disabled={isSubmittingEntry}
-                  >
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSubmitEntry} disabled={isSubmittingEntry}>
-                    {isSubmittingEntry ? 'Submitting...' : 'Submit'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-full flex-col">
-              <div className="border-b p-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex-1">
-                    {isEditing ? (
-                      <div className="relative mb-2">
-                        <TextareaAutosize
-                          value={editedTitle}
-                          onChange={(e) => setEditedTitle(e.target.value)}
-                          className="min-h-[auto] w-full resize-none overflow-hidden rounded-md border border-muted bg-background px-3 py-2 pr-8 text-2xl font-semibold hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                          aria-label="Form title"
-                          placeholder="Enter form title"
-                          maxRows={3}
-                        />
-                        <Pencil className="pointer-events-none absolute right-2 top-2 h-4 w-4 text-muted-foreground" />
-                      </div>
-                    ) : (
-                      <h2 className="mb-2 text-2xl font-semibold">{formDetail.form.name}</h2>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className={getStatusColor()}>
-                        {getStatusText()}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        Last updated{' '}
-                        {formDetail.form.updated_at
-                          ? format(new Date(formDetail.form.updated_at), 'MMM d, yyyy')
-                          : 'Never'}
-                      </span>
-                    </div>
-                    {!isEditing && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-4"
-                        onClick={() => handleCreateEntry(selectedFormId || undefined)}
-                      >
-                        Create entry
-                      </Button>
-                    )}
-                  </div>
-                  <div className="ml-auto flex items-center gap-2">
+                <div className="border-t p-6">
+                  <div className="flex justify-end gap-2">
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        if (isEditing) {
-                          handleSave();
-                        } else {
-                          setIsEditing(true);
-                        }
-                      }}
-                      disabled={isSaving}
+                      variant="outline"
+                      onClick={handleCloseEntryForm}
+                      disabled={isSubmittingEntry}
                     >
-                      {isEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                      Cancel
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        if (isEditing) {
-                          if (hasChanges()) {
-                            if (
-                              confirm(
-                                'You have unsaved changes. Are you sure you want to discard them?',
-                              )
-                            ) {
+                    <Button onClick={handleSubmitEntry} disabled={isSubmittingEntry}>
+                      {isSubmittingEntry ? 'Submitting...' : 'Submit'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full flex-col">
+                <div className="border-b p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1">
+                      {isEditing ? (
+                        <div className="relative mb-2">
+                          <TextareaAutosize
+                            value={editedTitle}
+                            onChange={(e) => setEditedTitle(e.target.value)}
+                            className="min-h-[auto] w-full resize-none overflow-hidden rounded-md border border-muted bg-background px-3 py-2 pr-8 text-2xl font-semibold hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            aria-label="Form title"
+                            placeholder="Enter form title"
+                            maxRows={3}
+                          />
+                          <Pencil className="pointer-events-none absolute right-2 top-2 h-4 w-4 text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <h2 className="mb-2 text-2xl font-semibold">{formDetail.form.name}</h2>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className={getStatusColor()}>
+                          {getStatusText()}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Last updated{' '}
+                          {formDetail.form.updated_at
+                            ? format(new Date(formDetail.form.updated_at), 'MMM d, yyyy')
+                            : 'Never'}
+                        </span>
+                      </div>
+                      {!isEditing && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-4"
+                          onClick={() => handleCreateEntry(selectedFormId || undefined)}
+                        >
+                          Create entry
+                        </Button>
+                      )}
+                    </div>
+                    <div className="ml-auto flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (isEditing) {
+                            handleSave();
+                          } else {
+                            setIsEditing(true);
+                          }
+                        }}
+                        disabled={isSaving}
+                      >
+                        {isEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (isEditing) {
+                            if (hasChanges()) {
+                              if (
+                                confirm(
+                                  'You have unsaved changes. Are you sure you want to discard them?',
+                                )
+                              ) {
+                                setIsEditing(false);
+                                setEditedTitle(formDetail?.form.name || '');
+                                setEditedItems(formDetail?.items || []);
+                              }
+                            } else {
                               setIsEditing(false);
                               setEditedTitle(formDetail?.form.name || '');
                               setEditedItems(formDetail?.items || []);
                             }
                           } else {
-                            setIsEditing(false);
-                            setEditedTitle(formDetail?.form.name || '');
-                            setEditedItems(formDetail?.items || []);
+                            handleCloseDetail();
                           }
-                        } else {
-                          handleCloseDetail();
-                        }
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-1 space-y-6 overflow-y-auto p-6">
-                <div>
-                  <AssigneeSelector
-                    assignees={assignees}
-                    onAssign={handleAssigneeAdd}
-                    onUnassign={handleAssigneeRemove}
-                    error={assigneeError}
-                    disabled={!user?.id}
-                  />
-                </div>
-
-                <div>
-                  <h3 className="mb-4 text-lg font-semibold">Questions</h3>
-                  <div className="space-y-4">
-                    {isEditing ? (
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
+                        }}
                       >
-                        <SortableContext
-                          items={editedItems.map(
-                            (item) => item.id?.toString() || item.display_order.toString(),
-                          )}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <div className="space-y-4">
-                            {editedItems.map((item, index) => (
-                              <SortableQuestionCard
-                                key={item.id || index}
-                                question={toFormBuilderQuestion(item)}
-                                onUpdate={updateQuestion}
-                                onDelete={deleteQuestion}
-                                isFirst={index === 0}
-                                isEditing={isEditing}
-                              />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
-                    ) : (
-                      <div className="space-y-4">
-                        {editedItems.map((item, index) => (
-                          <SortableQuestionCard
-                            key={item.id || index}
-                            question={toFormBuilderQuestion(item)}
-                            onUpdate={updateQuestion}
-                            onDelete={deleteQuestion}
-                            isFirst={index === 0}
-                            isEditing={isEditing}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    {isEditing && (
-                      <Button variant="outline" className="mt-4 w-full" onClick={addQuestion}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add question
+                        <X className="h-4 w-4" />
                       </Button>
-                    )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-6 overflow-y-auto p-6">
+                  <div>
+                    <AssigneeSelector
+                      assignees={assignees}
+                      onAssign={handleAssigneeAdd}
+                      onUnassign={handleAssigneeRemove}
+                      error={assigneeError}
+                      disabled={!user?.id}
+                    />
+                  </div>
+
+                  <div>
+                    <h3 className="mb-4 text-lg font-semibold">Questions</h3>
+                    <div className="space-y-4">
+                      {isEditing ? (
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleDragEnd}
+                        >
+                          <SortableContext
+                            items={editedItems.map(
+                              (item) => item.id?.toString() || item.display_order.toString(),
+                            )}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className="space-y-4">
+                              {editedItems.map((item, index) => (
+                                <SortableQuestionCard
+                                  key={item.id || index}
+                                  question={toFormBuilderQuestion(item)}
+                                  onUpdate={updateQuestion}
+                                  onDelete={deleteQuestion}
+                                  isFirst={index === 0}
+                                  isEditing={isEditing}
+                                />
+                              ))}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
+                      ) : (
+                        <div className="space-y-4">
+                          {editedItems.map((item, index) => (
+                            <SortableQuestionCard
+                              key={item.id || index}
+                              question={toFormBuilderQuestion(item)}
+                              onUpdate={updateQuestion}
+                              onDelete={deleteQuestion}
+                              isFirst={index === 0}
+                              isEditing={isEditing}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {isEditing && (
+                        <Button variant="outline" className="mt-4 w-full" onClick={addQuestion}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add question
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+            )}
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

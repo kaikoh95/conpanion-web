@@ -37,9 +37,9 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { CreateSiteDiarySheet } from './create-site-diary-sheet';
 import { ViewSiteDiary } from './view-site-diary';
+import { useProject } from '@/contexts/ProjectContext';
 
-// Default project ID (as per requirement to assume one project for now)
-const DEFAULT_PROJECT_ID = 1;
+// We no longer use a default project ID, instead we use the current project from context
 
 // Get these from the actual enum or configuration
 const APPROVAL_STATUSES: { value: ApprovalStatus | 'all'; label: string }[] = [
@@ -80,6 +80,7 @@ function SiteDiariesPageContent({
   const supabase = createClient();
   const router = useRouter();
   const { user } = useAuth();
+  const { current: currentProject } = useProject();
 
   // State for site diaries
   const [diaries, setDiaries] = useState<
@@ -123,15 +124,27 @@ function SiteDiariesPageContent({
       setError(null);
 
       try {
-        // Fetch site diaries with approval status
-        const fetchedDiaries = await getSiteDiariesWithStatus(DEFAULT_PROJECT_ID);
+        // Use the current project ID instead of a default value
+        if (!currentProject?.id) {
+          setDiaries([]);
+          setFilteredDiaries([]);
+          setTemplates([]);
+          return;
+        }
+        
+        console.log("Loading site diary data for project ID:", currentProject.id);
+
+        // Fetch site diaries with approval status for the current project
+        const fetchedDiaries = await getSiteDiariesWithStatus(currentProject.id);
+        console.log("Fetched diaries:", fetchedDiaries);
         setDiaries(fetchedDiaries);
 
         // Apply initial filters
         setFilteredDiaries(filterDiaries(fetchedDiaries, searchTerm, selectedStatus));
 
-        // Fetch templates
-        const fetchedTemplates = await getSiteDiaryTemplates(DEFAULT_PROJECT_ID);
+        // Fetch templates for the current project
+        const fetchedTemplates = await getSiteDiaryTemplates(currentProject.id);
+        console.log("Fetched templates:", fetchedTemplates);
         setTemplates(fetchedTemplates);
 
         // Get unique user IDs from diaries
@@ -173,7 +186,7 @@ function SiteDiariesPageContent({
     };
 
     loadData();
-  }, []);
+  }, [currentProject?.id, searchTerm, selectedStatus]); // Add dependencies to re-fetch when project changes
 
   // Effect to apply filters when search term or status changes
   useEffect(() => {
@@ -282,7 +295,7 @@ function SiteDiariesPageContent({
   const handleDiaryUpdated = async () => {
     try {
       setLoading(true);
-      const fetchedDiaries = await getSiteDiariesWithStatus(DEFAULT_PROJECT_ID);
+      const fetchedDiaries = await getSiteDiariesWithStatus(currentProject?.id || 0);
       setDiaries(fetchedDiaries);
       setFilteredDiaries(filterDiaries(fetchedDiaries, searchTerm, selectedStatus));
     } catch (err: any) {
@@ -419,7 +432,7 @@ function SiteDiariesPageContent({
         open={isCreateSheetOpen}
         onOpenChange={setIsCreateSheetOpen}
         templateId={selectedTemplateId}
-        projectId={DEFAULT_PROJECT_ID}
+        projectId={currentProject?.id || 0}
         onDiaryCreated={handleDiaryUpdated}
         onClose={handleCloseCreateSheet}
       />

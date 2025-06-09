@@ -9,6 +9,7 @@ import {
 import { FormItem } from '@/lib/types/form';
 import { FormEntryAnswer } from '@/lib/types/form-entry';
 import { Check } from 'lucide-react';
+import { ImageViewer } from '@/components/image-viewer';
 
 interface EntryResponsesAccordionProps {
   entryId: number;
@@ -71,7 +72,11 @@ export function EntryResponsesAccordion({
         return <span className="text-foreground">{getDisplayValue(answer)}</span>;
 
       case 'photo':
-        return <p>Photo preview not available</p>;
+        if (Array.isArray(answer) && answer.length > 0) {
+          // If the answer contains attachment IDs, render the ImageViewer component
+          return <ImageViewer attachmentIds={answer} />;
+        }
+        return <p className="text-muted-foreground">No photos available</p>;
 
       default:
         return <span className="text-foreground">{getDisplayValue(answer)}</span>;

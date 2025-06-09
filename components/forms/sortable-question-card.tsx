@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { GripVertical, Trash2, CircleDot, CheckSquare, Plus } from 'lucide-react';
+import { GripVertical, Trash2, CircleDot, CheckSquare, Plus, Image } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SortableQuestionCardProps } from '@/lib/types/form-builder';
@@ -69,7 +69,10 @@ export function SortableQuestionCard({
       case 'photo':
         return (
           <div className="rounded-md border bg-muted/30 px-3 py-2">
-            <p className="text-sm text-muted-foreground">Photo upload</p>
+            <div className="flex flex-col items-center justify-center py-2">
+              <Image className="mb-1 h-5 w-5 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Photo upload</p>
+            </div>
           </div>
         );
       case 'radio_box':
@@ -218,7 +221,10 @@ export function SortableQuestionCard({
                 {question.type === 'photo' && (
                   <div className="space-y-2">
                     <div className="rounded-md border bg-muted/30 px-3 py-2">
-                      <p className="text-sm text-muted-foreground">Photo upload</p>
+                      <div className="flex flex-col items-center justify-center py-2">
+                        <Image className="mb-1 h-5 w-5 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Photo upload</p>
+                      </div>
                     </div>
                   </div>
                 )}
