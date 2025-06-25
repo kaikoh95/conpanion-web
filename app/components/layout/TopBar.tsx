@@ -10,8 +10,9 @@ import { ProjectSwitcher } from '@/components/ProjectSwitcher';
 import { Avatar, AvatarImage, AvatarFallback } from '@/app/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { getSupabaseClient, createFreshSupabaseClient } from '@/lib/supabase/client';
 import { RefObject } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface TopBarProps {
   isSidebarOpen: boolean;
@@ -21,6 +22,7 @@ interface TopBarProps {
 
 export default function TopBar({ isSidebarOpen, onSidebarToggle, toggleButtonRef }: TopBarProps) {
   const { user } = useAuth();
+  const router = useRouter();
   const [userProfile, setUserProfile] = useState<{
     global_avatar_url: string | null;
     global_display_name: string | null;
@@ -53,6 +55,38 @@ export default function TopBar({ isSidebarOpen, onSidebarToggle, toggleButtonRef
   // Use database as source of truth for avatar and display name
   const avatarUrl = userProfile?.global_avatar_url;
   const displayName = userProfile?.global_display_name || user?.email;
+
+  // Handle logout with proper client-side cleanup and redirect
+  const handleLogout = async () => {
+    try {
+      console.log('🔄 TopBar: Starting logout process...');
+      
+      // 1. Sign out from client-side Supabase (this clears browser storage and triggers auth state change)
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      if (error) {
+        console.error('❌ TopBar: Client-side signout error:', error);
+      } else {
+        console.log('✅ TopBar: Client-side logout successful');
+      }
+      
+             // 2. Create a fresh client to ensure clean state
+       const freshClient = createFreshSupabaseClient();
+       await freshClient.auth.signOut({ scope: 'global' });
+       
+       // 3. Give the auth state change a moment to propagate
+       await new Promise(resolve => setTimeout(resolve, 100));
+       
+       // 4. Force redirect to sign-in page with full page refresh
+       console.log('🔄 TopBar: Redirecting to sign-in page');
+       window.location.href = '/sign-in';
+      
+      console.log('✅ TopBar: Logout process completed');
+    } catch (error) {
+      console.error('❌ TopBar: Error during logout:', error);
+      // Even if there's an error, try to redirect to sign-in
+      window.location.href = '/sign-in';
+    }
+  };
 
   return (
     <header className="fixed left-0 right-0 top-0 z-20 flex h-14 w-max items-center justify-between border-b bg-background/80 px-4 dark:bg-background/95 lg:left-[var(--sidebar-width)] lg:w-[calc(100%-var(--sidebar-width))]">
@@ -112,14 +146,12 @@ export default function TopBar({ isSidebarOpen, onSidebarToggle, toggleButtonRef
               >
                 Profile Settings
               </Link>
-              <form action={signOutAction}>
-                <button
-                  type="submit"
-                  className="w-full rounded px-3 py-2 text-left text-sm text-foreground hover:bg-muted/50"
-                >
-                  Sign Out
-                </button>
-              </form>
+              <button
+                onClick={handleLogout}
+                className="w-full rounded px-3 py-2 text-left text-sm text-foreground hover:bg-muted/50"
+              >
+                Sign Out
+              </button>
             </div>
           </div>
         </div>

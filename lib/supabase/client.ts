@@ -1,7 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { Database } from './types.generated';
-import { useState } from 'react';
-import { useEffect } from 'react';
 
 let supabase: ReturnType<typeof createBrowserClient<Database>> | null = null;
 
@@ -18,4 +16,9 @@ export const getSupabaseClient = () => {
   }
 
   return supabase;
+};
+
+// Force create a new client instance (useful for clearing stale sessions)
+export const createFreshSupabaseClient = () => {
+  return createClient();
 };

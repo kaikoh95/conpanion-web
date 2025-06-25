@@ -9,6 +9,14 @@ import {
   UserOrganizationsResult,
   OrganizationWithMembership,
 } from '@/lib/types/organization';
+import {
+  InvitationResult,
+  InvitationDetails,
+  InvitationListResponse,
+  InvitationActionResponse,
+  UserExistsResponse,
+  InvitationRole,
+} from '@/lib/types/invitation';
 
 export class OrganizationAPI {
   private supabase = createClient();
@@ -613,6 +621,465 @@ export class OrganizationAPI {
     } catch (error: any) {
       console.error('Fix membership error:', error);
       return { error: error.message };
+    }
+  }
+
+  // ========================================
+  // INVITATION METHODS
+  // ========================================
+
+  /**
+   * Check if a user exists by email address
+   */
+  async checkUserExistsByEmail(email: string): Promise<UserExistsResponse> {
+    try {
+      const { data, error } = await this.supabase.rpc('check_user_exists_by_email', {
+        user_email: email,
+      });
+
+      if (error) {
+        console.error('Check user exists error:', error);
+        return { exists: false, error: error.message };
+      }
+
+      return { exists: data || false };
+    } catch (error: any) {
+      console.error('Check user exists error:', error);
+      return { exists: false, error: error.message };
+    }
+  }
+
+  /**
+   * Invite a user to the organization by email
+   * This uses the Supabase Edge Function for complete invitation handling
+   */
+  async inviteUserByEmail(
+    orgId: number,
+    email: string,
+    role: InvitationRole,
+  ): Promise<InvitationResult> {
+    try {
+      await this.ensureValidSession();
+
+      const { data: session } = await this.supabase.auth.getSession();
+      if (!session.session) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-organization-invitation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`,
+        },
+        body: JSON.stringify({
+          organizationId: orgId,
+          email: email,
+          role: role,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send invitation');
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error: any) {
+      console.error('Invite user error:', error);
+      return {
+        success: false,
+        userExists: false,
+        invitationType: 'new_user',
+        token: '',
+        message: 'Failed to send invitation',
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get invitation details by token
+   */
+  async getInvitationByToken(token: string): Promise<InvitationDetails | null> {
+    try {
+      const { data, error } = await this.supabase.rpc('get_invitation_by_token', {
+        p_token: token,
+      });
+
+      if (error) {
+        console.error('Get invitation error:', error);
+        return null;
+      }
+
+      if (!data?.success) {
+        console.error('Get invitation failed:', data?.error);
+        return null;
+      }
+
+      return {
+        id: data.invitation.id,
+        organization_id: data.invitation.organization_id,
+        organization_name: data.invitation.organization_name,
+        role: data.invitation.role,
+        invited_email: data.invitation.invited_email,
+        invited_by_name: data.invitation.invited_by_name,
+        invited_by_email: data.invitation.invited_by_email,
+        expires_at: data.invitation.expires_at,
+        invited_at: data.invitation.invited_at,
+        status: data.invitation.status,
+        user_exists: data.invitation.user_exists,
+        resend_count: data.invitation.resend_count,
+        last_resend_at: data.invitation.last_resend_at,
+      };
+    } catch (error: any) {
+      console.error('Get invitation error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Accept an organization invitation
+   */
+  async acceptInvitation(token: string): Promise<InvitationActionResponse> {
+    try {
+      await this.ensureValidSession();
+
+      const { data, error } = await this.supabase.rpc('accept_organization_invitation', {
+        p_token: token,
+      });
+
+      if (error) {
+        console.error('Accept invitation error:', error);
+        return {
+          success: false,
+          message: 'Failed to accept invitation',
+          error: error.message,
+        };
+      }
+
+      if (!data?.success) {
+        return {
+          success: false,
+          message: data?.error || 'Failed to accept invitation',
+          error_code: data?.error_code,
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Invitation accepted successfully',
+      };
+    } catch (error: any) {
+      console.error('Accept invitation error:', error);
+      return {
+        success: false,
+        message: 'Failed to accept invitation',
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Decline an organization invitation
+   */
+  async declineInvitation(token: string): Promise<InvitationActionResponse> {
+    try {
+      const { data, error } = await this.supabase.rpc('decline_organization_invitation', {
+        p_token: token,
+      });
+
+      if (error) {
+        console.error('Decline invitation error:', error);
+        return {
+          success: false,
+          message: 'Failed to decline invitation',
+          error: error.message,
+        };
+      }
+
+      if (!data?.success) {
+        return {
+          success: false,
+          message: data?.error || 'Failed to decline invitation',
+          error_code: data?.error_code,
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Invitation declined successfully',
+      };
+    } catch (error: any) {
+      console.error('Decline invitation error:', error);
+      return {
+        success: false,
+        message: 'Failed to decline invitation',
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get pending invitations for an organization (admin/owner only)
+   */
+  async getPendingInvitations(orgId: number): Promise<InvitationListResponse> {
+    try {
+      await this.ensureValidSession();
+
+      const { data, error } = await this.supabase.rpc('get_pending_organization_invitations', {
+        p_organization_id: orgId,
+      });
+
+      if (error) {
+        console.error('Get pending invitations error:', error);
+        return {
+          success: false,
+          invitations: [],
+          error: error.message,
+        };
+      }
+
+      if (!data?.success) {
+        return {
+          success: false,
+          invitations: [],
+          error: data?.error || 'Failed to get pending invitations',
+          error_code: data?.error_code,
+        };
+      }
+
+      return {
+        success: true,
+        invitations: data.invitations || [],
+      };
+    } catch (error: any) {
+      console.error('Get pending invitations error:', error);
+      return {
+        success: false,
+        invitations: [],
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Cancel a pending invitation (admin/owner only)
+   */
+  async cancelInvitation(invitationId: number): Promise<InvitationActionResponse> {
+    try {
+      await this.ensureValidSession();
+
+      const { data, error } = await this.supabase.rpc('cancel_organization_invitation', {
+        p_invitation_id: invitationId,
+      });
+
+      if (error) {
+        console.error('Cancel invitation error:', error);
+        return {
+          success: false,
+          message: 'Failed to cancel invitation',
+          error: error.message,
+        };
+      }
+
+      if (!data?.success) {
+        return {
+          success: false,
+          message: data?.error || 'Failed to cancel invitation',
+          error_code: data?.error_code,
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Invitation cancelled successfully',
+      };
+    } catch (error: any) {
+      console.error('Cancel invitation error:', error);
+      return {
+        success: false,
+        message: 'Failed to cancel invitation',
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Resend an invitation (uses the same Edge Function as initial invite)
+   */
+  async resendInvitation(
+    orgId: number,
+    email: string,
+    role: InvitationRole,
+  ): Promise<InvitationResult> {
+    // Resending is handled by the same function as initial invite
+    // The database function will handle rate limiting and updating resend count
+    return this.inviteUserByEmail(orgId, email, role);
+  }
+
+  // ========================================
+  // USER INVITATION LINKING METHODS (Approach 2)
+  // ========================================
+
+  /**
+   * Link user to their email-based invitations after signup/signin
+   */
+  async linkUserToPendingInvitations(userId: string, email: string): Promise<{
+    success: boolean;
+    linkedCount: number;
+    error?: string;
+  }> {
+    try {
+      // Don't require session validation for this function since it can be called during signup
+      // where session might not be fully established yet
+      const { data, error } = await this.supabase.rpc('link_user_to_pending_invitations', {
+        p_user_id: userId,
+        p_email: email,
+      });
+
+      if (error) {
+        console.error('Link user to invitations error:', error);
+        return {
+          success: false,
+          linkedCount: 0,
+          error: error.message,
+        };
+      }
+
+      return {
+        success: data.success,
+        linkedCount: data.linked_count || 0,
+        error: data.error,
+      };
+    } catch (error: any) {
+      console.error('Link user to invitations error:', error);
+      return {
+        success: false,
+        linkedCount: 0,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get pending invitations for the current user
+   */
+  async getUserPendingInvitations(userId?: string): Promise<{
+    success: boolean;
+    invitations: any[];
+    error?: string;
+  }> {
+    try {
+      let targetUserId = userId;
+      
+      // If no userId provided, get from current session
+      if (!targetUserId) {
+        await this.ensureValidSession();
+        const { data: { user } } = await this.supabase.auth.getUser();
+        if (!user) {
+          return {
+            success: false,
+            invitations: [],
+            error: 'User not authenticated',
+          };
+        }
+        targetUserId = user.id;
+      }
+
+      const { data, error } = await this.supabase.rpc('get_user_pending_invitations', {
+        p_user_id: targetUserId,
+      });
+
+      if (error) {
+        console.error('Get user pending invitations error:', error);
+        return {
+          success: false,
+          invitations: [],
+          error: error.message,
+        };
+      }
+
+      return {
+        success: data.success,
+        invitations: data.invitations || [],
+        error: data.error,
+      };
+    } catch (error: any) {
+      console.error('Get user pending invitations error:', error);
+      return {
+        success: false,
+        invitations: [],
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Quick check if current user has any pending invitations
+   */
+  async userHasPendingInvitations(userId?: string): Promise<boolean> {
+    try {
+      let targetUserId = userId;
+      
+      // If no userId provided, get from current session
+      if (!targetUserId) {
+        await this.ensureValidSession();
+        const { data: { user } } = await this.supabase.auth.getUser();
+        if (!user) {
+          return false;
+        }
+        targetUserId = user.id;
+      }
+
+      const { data, error } = await this.supabase.rpc('user_has_pending_invitations', {
+        p_user_id: targetUserId,
+      });
+
+      if (error) {
+        console.error('Check user pending invitations error:', error);
+        return false;
+      }
+
+      return data || false;
+    } catch (error: any) {
+      console.error('Check user pending invitations error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Accept invitation by token (enhanced to work with user linking)
+   */
+  async acceptUserInvitation(token: string): Promise<InvitationActionResponse> {
+    try {
+      await this.ensureValidSession();
+
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        return {
+          success: false,
+          message: 'Authentication required',
+          error: 'User not authenticated',
+        };
+      }
+
+      // First, try to link the user to this invitation if not already linked
+      const invitation = await this.getInvitationByToken(token);
+      if (invitation && invitation.invited_email) {
+        await this.linkUserToPendingInvitations(user.id, invitation.invited_email);
+      }
+
+      // Then accept the invitation
+      return this.acceptInvitation(token);
+    } catch (error: any) {
+      console.error('Accept user invitation error:', error);
+      return {
+        success: false,
+        message: 'Failed to accept invitation',
+        error: error.message,
+      };
     }
   }
 }

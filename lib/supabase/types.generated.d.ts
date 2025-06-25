@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       approval_approvers: {
@@ -89,6 +64,65 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      attachments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          entity_id: string
+          entity_type: string
+          file_name: string
+          file_size: number
+          file_type: Database["public"]["Enums"]["attachment_file_type"]
+          id: string
+          project_id: number
+          storage_path: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          entity_id: string
+          entity_type: string
+          file_name: string
+          file_size: number
+          file_type: Database["public"]["Enums"]["attachment_file_type"]
+          id?: string
+          project_id: number
+          storage_path: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          entity_id?: string
+          entity_type?: string
+          file_name?: string
+          file_size?: number
+          file_type?: Database["public"]["Enums"]["attachment_file_type"]
+          id?: string
+          project_id?: number
+          storage_path?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       entity_assignees: {
         Row: {
@@ -194,6 +228,7 @@ export type Database = {
           is_synced: boolean
           last_synced_at: string | null
           name: string | null
+          project_id: number
           submitted_by_user_id: string
           team_id: string | null
           updated_at: string
@@ -206,6 +241,7 @@ export type Database = {
           is_synced?: boolean
           last_synced_at?: string | null
           name?: string | null
+          project_id: number
           submitted_by_user_id: string
           team_id?: string | null
           updated_at?: string
@@ -218,6 +254,7 @@ export type Database = {
           is_synced?: boolean
           last_synced_at?: string | null
           name?: string | null
+          project_id?: number
           submitted_by_user_id?: string
           team_id?: string | null
           updated_at?: string
@@ -228,6 +265,13 @@ export type Database = {
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -393,6 +437,71 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          declined_at: string | null
+          email: string
+          expires_at: string
+          id: number
+          invited_at: string
+          invited_by: string
+          last_resend_at: string | null
+          organization_id: number
+          resend_count: number
+          role: string
+          status: string
+          token: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          declined_at?: string | null
+          email: string
+          expires_at?: string
+          id?: number
+          invited_at?: string
+          invited_by: string
+          last_resend_at?: string | null
+          organization_id: number
+          resend_count?: number
+          role: string
+          status?: string
+          token?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          declined_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: number
+          invited_at?: string
+          invited_by?: string
+          last_resend_at?: string | null
+          organization_id?: number
+          resend_count?: number
+          role?: string
+          status?: string
+          token?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1093,6 +1202,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_organization_invitation: {
+        Args: {
+          p_token: string
+        }
+        Returns: Json
+      }
       can_change_member_role: {
         Args: {
           changer_user_id: string
@@ -1102,11 +1217,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      cancel_organization_invitation: {
+        Args: {
+          p_invitation_id: number
+        }
+        Returns: Json
+      }
       check_user_exists_by_email: {
         Args: {
           user_email: string
         }
         Returns: boolean
+      }
+      cleanup_expired_invitations: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       convert_slugs_to_hash: {
         Args: Record<PropertyKey, never>
@@ -1130,11 +1255,27 @@ export type Database = {
         }
         Returns: number
       }
+      create_task_attachment: {
+        Args: {
+          p_task_id: number
+          p_file_name: string
+          p_file_size: number
+          p_file_type: string
+          p_storage_path: string
+        }
+        Returns: string
+      }
       debug_invite_process: {
         Args: {
           org_id: number
           user_email: string
           user_role?: string
+        }
+        Returns: Json
+      }
+      decline_organization_invitation: {
+        Args: {
+          p_token: string
         }
         Returns: Json
       }
@@ -1144,13 +1285,39 @@ export type Database = {
         }
         Returns: number
       }
+      generate_attachment_path: {
+        Args: {
+          project_id: number
+          entity_type: string
+          entity_id: string
+          file_name: string
+        }
+        Returns: string
+      }
+      generate_invitation_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_organization_slug: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_attachment_type: {
+        Args: {
+          file_type: string
+          file_name: string
+        }
+        Returns: Database["public"]["Enums"]["attachment_file_type"]
+      }
       get_current_organization_id: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      get_invitation_by_token: {
+        Args: {
+          p_token: string
+        }
+        Returns: Json
       }
       get_or_create_default_organization: {
         Args: Record<PropertyKey, never>
@@ -1171,6 +1338,12 @@ export type Database = {
           user_email: string
         }[]
       }
+      get_pending_organization_invitations: {
+        Args: {
+          p_organization_id: number
+        }
+        Returns: Json
+      }
       get_project_members: {
         Args: {
           p_project_id: number
@@ -1190,6 +1363,20 @@ export type Database = {
           user_email: string
           user_name: string
           user_avatar_url: string
+        }[]
+      }
+      get_task_attachments: {
+        Args: {
+          p_task_id: number
+        }
+        Returns: {
+          id: string
+          file_name: string
+          file_size: number
+          file_type: string
+          storage_path: string
+          created_at: string
+          created_by: string
         }[]
       }
       get_user_details: {
@@ -1230,6 +1417,12 @@ export type Database = {
           is_current: boolean
         }[]
       }
+      get_user_pending_invitations: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: Json
+      }
       get_user_project_context: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1256,11 +1449,32 @@ export type Database = {
         }
         Returns: Json
       }
+      invite_user_to_organization_by_email: {
+        Args: {
+          p_organization_id: number
+          p_email: string
+          p_role: string
+        }
+        Returns: Json
+      }
       invite_user_to_project: {
         Args: {
           p_project_id: number
           p_user_id: string
           p_role?: string
+        }
+        Returns: Json
+      }
+      is_invitation_token_valid: {
+        Args: {
+          token: string
+        }
+        Returns: boolean
+      }
+      link_user_to_pending_invitations: {
+        Args: {
+          p_user_id: string
+          p_email: string
         }
         Returns: Json
       }
@@ -1323,6 +1537,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_has_pending_invitations: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       approval_status:
@@ -1331,6 +1551,17 @@ export type Database = {
         | "approved"
         | "declined"
         | "revision_requested"
+      attachment_file_type:
+        | "image"
+        | "document"
+        | "spreadsheet"
+        | "presentation"
+        | "pdf"
+        | "video"
+        | "audio"
+        | "archive"
+        | "text"
+        | "other"
       entity_type: "site_diary" | "form" | "entries" | "tasks"
       item_type: "question" | "checklist" | "radio_box" | "photo"
     }
