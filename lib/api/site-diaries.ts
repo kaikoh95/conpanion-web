@@ -374,6 +374,64 @@ export async function updateSiteDiary(id: number, request: Partial<SiteDiary>): 
   return data;
 }
 
+export interface UpdateSiteDiaryAnswersRequest {
+  answers: {
+    item_id: number;
+    value: any;
+  }[];
+  metadata?: Record<string, any>;
+}
+
+export async function updateSiteDiaryAnswers(id: number, request: UpdateSiteDiaryAnswersRequest): Promise<SiteDiaryResponse> {
+  // Update metadata if provided
+  if (request.metadata) {
+    const { error: metadataError } = await supabase
+      .from('site_diaries')
+      .update({
+        metadata: request.metadata,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (metadataError) {
+      console.error('Error updating site diary metadata:', metadataError);
+      throw metadataError;
+    }
+  }
+
+  // Update or insert answers
+  if (request.answers && request.answers.length > 0) {
+    for (const answer of request.answers) {
+      // Try to update existing answer, insert if none exists
+      const { data: updated } = await supabase
+        .from('site_diary_answers')
+        .update({ answer_value: answer.value })
+        .eq('diary_id', id)
+        .eq('item_id', answer.item_id)
+        .select();
+
+      // If no rows were updated, insert new answer
+      if (!updated || updated.length === 0) {
+        await supabase
+          .from('site_diary_answers')
+          .insert({
+            diary_id: id,
+            item_id: answer.item_id,
+            answer_value: answer.value,
+          });
+      }
+    }
+  }
+
+  // Return the updated diary with all its data
+  const updatedDiary = await getSiteDiaryById(id);
+  if (!updatedDiary) {
+    throw new Error('Failed to fetch updated site diary');
+  }
+
+  return updatedDiary;
+}
+
 export async function deleteSiteDiary(id: number): Promise<void> {
   const { error } = await supabase
     .from('site_diaries')

@@ -7,8 +7,68 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
+      approval_approver_responses: {
+        Row: {
+          approval_id: number
+          approver_id: string
+          comment: string | null
+          id: number
+          responded_at: string | null
+          status: Database["public"]["Enums"]["approval_status"]
+        }
+        Insert: {
+          approval_id: number
+          approver_id: string
+          comment?: string | null
+          id?: number
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["approval_status"]
+        }
+        Update: {
+          approval_id?: number
+          approver_id?: string
+          comment?: string | null
+          id?: number
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["approval_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_approver_responses_approval_id_fkey"
+            columns: ["approval_id"]
+            isOneToOne: false
+            referencedRelation: "approvals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approval_approvers: {
         Row: {
           approval_id: number
@@ -32,8 +92,46 @@ export type Database = {
           },
         ]
       }
+      approval_comments: {
+        Row: {
+          approval_id: number
+          comment: string
+          created_at: string | null
+          id: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          approval_id: number
+          comment: string
+          created_at?: string | null
+          id?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          approval_id?: number
+          comment?: string
+          created_at?: string | null
+          id?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_comments_approval_id_fkey"
+            columns: ["approval_id"]
+            isOneToOne: false
+            referencedRelation: "approvals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approvals: {
         Row: {
+          action_comment: string | null
+          action_taken_at: string | null
+          action_taken_by: string | null
           created_at: string
           entity_id: number
           entity_type: Database["public"]["Enums"]["entity_type"]
@@ -44,6 +142,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          action_comment?: string | null
+          action_taken_at?: string | null
+          action_taken_by?: string | null
           created_at?: string
           entity_id?: number
           entity_type: Database["public"]["Enums"]["entity_type"]
@@ -54,6 +155,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          action_comment?: string | null
+          action_taken_at?: string | null
+          action_taken_by?: string | null
           created_at?: string
           entity_id?: number
           entity_type?: Database["public"]["Enums"]["entity_type"]
@@ -1207,6 +1311,12 @@ export type Database = {
           p_token: string
         }
         Returns: Json
+      }
+      calculate_approval_status: {
+        Args: {
+          approval_id_param: number
+        }
+        Returns: Database["public"]["Enums"]["approval_status"]
       }
       can_change_member_role: {
         Args: {

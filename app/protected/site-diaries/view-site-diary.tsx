@@ -7,17 +7,39 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ArrowLeft, Calendar, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import { getSiteDiaryById } from '@/lib/api/site-diaries';
+import { getSiteDiaryById, updateSiteDiaryAnswers, UpdateSiteDiaryAnswersRequest } from '@/lib/api/site-diaries';
 import { SiteDiaryResponse, SiteDiaryTemplateItem } from '@/lib/types/site-diary';
 import { ApprovalStatus } from '@/lib/api/entries';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DiaryApprovalStatus } from './approval-status';
 import { DebugWrapper } from '@/utils/debug';
+import { submitApprovalForEntity, getApprovalWithEntityDetails, ApprovalWithEntityDetails } from '@/lib/api/approvals';
+import { toast } from 'sonner';
+import { ApprovalComments } from '@/components/approvals/ApprovalComments';
+import { Badge } from '@/components/ui/badge';
+import { Users, User } from 'lucide-react';
+import { SiteDiaryResponses } from '@/components/site-diary-responses';
+import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { getAttachments } from '@/lib/api/attachments';
 import { FileViewer } from '@/components/file-viewer';
 import Image from 'next/image';
-import { ZoomIn, FileText } from 'lucide-react';
+import { ZoomIn, FileText, Save, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 interface ViewSiteDiaryProps {
   open: boolean;
@@ -41,10 +63,33 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
 
   // State for edit mode
   const [isEditMode, setIsEditMode] = useState(false);
+  const [editAnswers, setEditAnswers] = useState<Record<number, any>>({});
+  const [editMetadata, setEditMetadata] = useState<Record<string, any>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Load diary data when diaryId changes
+  // State for submit for approval
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // State for approval details
+  const [approvalDetails, setApprovalDetails] = useState<ApprovalWithEntityDetails | null>(null);
+  const [loadingApprovalDetails, setLoadingApprovalDetails] = useState(false);
+
+  // State for unsaved changes confirmation
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Reset edit mode when dialog opens or diary changes
   useEffect(() => {
-    if (!diaryId || !open) return;
+    if (!open) {
+      // Reset edit mode when dialog is closed
+      resetEditState();
+      return;
+    }
+
+    if (!diaryId) return;
+
+    // Reset edit mode when switching to a different diary
+    resetEditState();
 
     const loadDiary = async () => {
       setLoading(true);
@@ -116,6 +161,9 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
         } catch (err) {
           console.error('Exception fetching approval status:', err);
         }
+
+        // Fetch approval details if there's an approval
+        await fetchApprovalDetails();
       } catch (err: any) {
         console.error('Error loading diary:', err);
         setError(err.message || 'Failed to load diary');
@@ -135,7 +183,154 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
 
   // Handle edit toggle
   const handleEditToggle = () => {
+    if (!diaryData) return;
+    
+    // Initialize edit state with current values
+    const currentAnswers: Record<number, any> = {};
+    diaryData.answers.forEach(answer => {
+      if (answer.item_id) {
+        currentAnswers[answer.item_id] = answer.answer_value;
+      }
+    });
+    
+    setEditAnswers(currentAnswers);
+    setEditMetadata(diaryData.diary.metadata || {});
     setIsEditMode(true);
+    setHasUnsavedChanges(false);
+  };
+
+  // Handle save changes
+  const handleSaveChanges = async () => {
+    if (!diaryId || !diaryData) return;
+
+    setIsSaving(true);
+    try {
+      // Prepare answers array
+      const answers = Object.entries(editAnswers).map(([itemId, value]) => ({
+        item_id: parseInt(itemId),
+        value: value,
+      }));
+
+      const request: UpdateSiteDiaryAnswersRequest = {
+        answers,
+        metadata: editMetadata,
+      };
+
+      const updatedDiary = await updateSiteDiaryAnswers(diaryId, request);
+      setDiaryData(updatedDiary);
+      resetEditState();
+      toast.success('Site diary updated successfully');
+      onDiaryUpdated();
+    } catch (err: any) {
+      console.error('Error saving changes:', err);
+      toast.error(err.message || 'Failed to save changes');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle cancel edit
+  const handleCancelEdit = () => {
+    if (hasUnsavedChanges) {
+      setShowDiscardDialog(true);
+    } else {
+      resetEditState();
+    }
+  };
+
+  // Reset edit state
+  const resetEditState = () => {
+    setIsEditMode(false);
+    setEditAnswers({});
+    setEditMetadata({});
+    setHasUnsavedChanges(false);
+  };
+
+  // Handle confirmed discard
+  const handleConfirmedDiscard = () => {
+    resetEditState();
+    setShowDiscardDialog(false);
+    router.push('/protected/site-diaries');
+    onOpenChange(false);
+  };
+
+  // Handle sheet close attempt
+  const handleSheetOpenChange = (isOpen: boolean) => {
+    if (!isOpen && isEditMode && hasUnsavedChanges) {
+      // Prevent closing and show confirmation dialog
+      setShowDiscardDialog(true);
+    } else if (!isOpen) {
+      // No unsaved changes or not in edit mode, proceed with closing
+      router.push('/protected/site-diaries');
+      onOpenChange(isOpen);
+    } else {
+      onOpenChange(isOpen);
+    }
+  };
+
+  // Submit site diary for approval
+  const handleSubmitForApproval = async () => {
+    if (!diaryId || !user) return;
+
+    setIsSubmitting(true);
+
+    try {
+      await submitApprovalForEntity({
+        entityId: diaryId,
+        entityType: 'site_diary',
+        status: 'submitted',
+        userId: user.id,
+      });
+
+      setApprovalStatus('submitted');
+      toast.success('Site diary submitted for approval successfully');
+      onDiaryUpdated();
+      
+      // Refresh approval details after submission
+      await fetchApprovalDetails();
+    } catch (err: any) {
+      console.error('Error submitting for approval:', err);
+      toast.error(err.message || 'Failed to submit for approval');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Fetch approval details
+  const fetchApprovalDetails = async () => {
+    if (!diaryId) return;
+
+    try {
+      setLoadingApprovalDetails(true);
+      
+      // First, get the approval ID for this site diary
+      const supabaseClient = getSupabaseClient();
+      const { data: approvalData, error: approvalError } = await supabaseClient
+        .from('approvals')
+        .select('id')
+        .eq('entity_type', 'site_diary')
+        .eq('entity_id', diaryId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (approvalError) {
+        console.error('Error fetching approval:', approvalError);
+        return;
+      }
+
+      if (approvalData) {
+        // Get full approval details
+        const details = await getApprovalWithEntityDetails(approvalData.id);
+        setApprovalDetails(details);
+      } else {
+        setApprovalDetails(null);
+      }
+    } catch (err) {
+      console.error('Error fetching approval details:', err);
+    } finally {
+      setLoadingApprovalDetails(false);
+    }
   };
 
   // Render answer value based on item type
@@ -162,6 +357,90 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
     }
   };
 
+  // Render editable form field based on item type
+  const renderEditableField = (item: SiteDiaryTemplateItem) => {
+    const currentValue = editAnswers[item.id!] || '';
+
+    const handleValueChange = (value: any) => {
+      setEditAnswers(prev => ({
+        ...prev,
+        [item.id!]: value
+      }));
+      setHasUnsavedChanges(true);
+    };
+
+    switch (item.item_type) {
+      case 'question':
+        // For question type, we'll render as textarea for multi-line support
+        return (
+          <Textarea
+            value={currentValue || ''}
+            onChange={(e) => handleValueChange(e.target.value)}
+            placeholder="Enter your answer..."
+            className="w-full min-h-[100px]"
+          />
+        );
+
+      case 'checklist':
+        return (
+          <div className="space-y-2">
+            {item.options?.map((option, index) => {
+              const isChecked = Array.isArray(currentValue) && currentValue.includes(option);
+              return (
+                <div key={index} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`${item.id}-${index}`}
+                    checked={isChecked}
+                    onCheckedChange={(checked) => {
+                      const currentArray = Array.isArray(currentValue) ? currentValue : [];
+                      if (checked) {
+                        handleValueChange([...currentArray, option]);
+                      } else {
+                        handleValueChange(currentArray.filter((val: string) => val !== option));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={`${item.id}-${index}`}>{option}</Label>
+                </div>
+              );
+            })}
+          </div>
+        );
+
+      case 'radio_box':
+        return (
+          <RadioGroup
+            value={currentValue || ''}
+            onValueChange={handleValueChange}
+          >
+            {item.options?.map((option, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <RadioGroupItem value={option} id={`${item.id}-radio-${index}`} />
+                <Label htmlFor={`${item.id}-radio-${index}`}>{option}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        );
+
+      case 'photo':
+        return (
+          <div className="text-muted-foreground">
+            Photo editing not supported in this view. Please use the main creation form.
+          </div>
+        );
+
+      default:
+        return (
+          <Textarea
+            value={currentValue || ''}
+            onChange={(e) => handleValueChange(e.target.value)}
+            placeholder="Enter your answer..."
+            className="w-full min-h-[100px]"
+          />
+        );
+    }
+  };
+
   // Get answer for a specific item
   const getAnswerForItem = (itemId: number | undefined) => {
     if (!itemId || !diaryData) return null;
@@ -170,65 +449,36 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
     return answer ? answer.answer_value : null;
   };
 
-  // Format weather information
-  const getWeatherInfo = () => {
-    if (!diaryData?.diary.metadata) return 'Not specified';
 
-    const metadata = diaryData.diary.metadata as any;
-    const weather = metadata.weather || 'Not specified';
-    const temp = metadata.temperature || {};
-    const tempStr =
-      temp.min || temp.max
-        ? `${temp.min !== undefined ? temp.min + '°C' : '--'} to ${temp.max !== undefined ? temp.max + '°C' : '--'}`
-        : 'Not specified';
 
-    return `${weather}, ${tempStr}`;
+  // Format approval status for display
+  const formatStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
   };
 
-  // Get resource information
-  const getResourceInfo = () => {
-    if (!diaryData?.diary.metadata) return null;
-
-    const metadata = diaryData.diary.metadata as any;
-
-    return (
-      <div className="space-y-2">
-        <p>
-          <strong>Manpower:</strong> {metadata.manpower || 0} workers
-        </p>
-
-        {metadata.equipment && metadata.equipment.length > 0 && (
-          <div>
-            <strong>Equipment:</strong>
-            <ul className="list-inside list-disc">
-              {metadata.equipment.map((item: string, index: number) => (
-                <li key={index}>{item}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {metadata.materials && (
-          <div>
-            <strong>Materials:</strong>
-            <p>{metadata.materials}</p>
-          </div>
-        )}
-      </div>
-    );
+  // Get status badge color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-500';
+      case 'declined':
+        return 'bg-red-500';
+      case 'submitted':
+        return 'bg-blue-500';
+      case 'revision_requested':
+        return 'bg-yellow-500';
+      case 'draft':
+      default:
+        return 'bg-gray-500';
+    }
   };
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(open) => {
-        if (!open) {
-          // When closing the sheet, clear the URL
-          router.push('/protected/site-diaries');
-        }
-        onOpenChange(open);
-      }}
-    >
+    <>
+      <Sheet
+        open={open}
+        onOpenChange={handleSheetOpenChange}
+      >
       <SheetContent
         className="overflow-y-auto sm:max-w-md md:max-w-xl lg:max-w-2xl [&>button]:hidden"
         side="right"
@@ -270,10 +520,11 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
                 )}
               </div>
 
-              {/* Edit button - only show if user is the author and diary is in draft status */}
+              {/* Edit button - only show if user is the author and diary is not approved/declined */}
               {user &&
                 diaryData.diary.submitted_by_user_id === user.id &&
-                approvalStatus === 'draft' && (
+                approvalStatus !== 'approved' &&
+                approvalStatus !== 'declined' && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -292,62 +543,136 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
                   entityId={diaryId || 0}
                   entityType="site_diary"
                   currentStatus={approvalStatus}
-                  onRefreshData={onDiaryUpdated}
+                  onRefreshData={() => {
+                    onDiaryUpdated();
+                    fetchApprovalDetails();
+                  }}
                 />
               </div>
             )}
 
-            {/* Site Conditions */}
-            <div className="mb-6">
-              <h3 className="mb-2 text-lg font-semibold">Site Conditions</h3>
-              <div className="space-y-3 rounded-md bg-muted p-4">
-                <div>
-                  <p className="mb-1 text-sm font-medium">Weather</p>
-                  <p>{getWeatherInfo()}</p>
+            {/* Site Diary Content */}
+            {!isEditMode ? (
+              <SiteDiaryResponses diaryData={diaryData} />
+            ) : (
+              /* Edit Mode - Custom rendering for responses section only */
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Responses</h3>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelEdit}
+                      disabled={isSaving}
+                      className="flex items-center gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveChanges}
+                      disabled={isSaving}
+                      className="flex items-center gap-2"
+                    >
+                      <Save className="h-4 w-4" />
+                      {isSaving ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </div>
                 </div>
-
-                {diaryData.diary.metadata?.conditions && (
-                  <div>
-                    <p className="mb-1 text-sm font-medium">General Conditions</p>
-                    <p>{diaryData.diary.metadata.conditions}</p>
+                {diaryData.template_items && diaryData.template_items.length > 0 && (
+                  <div className="space-y-4">
+                    {diaryData.template_items.map((item) => (
+                      <div key={item.id} className="rounded-md border p-4">
+                        <p className="mb-2 font-medium">{item.question_value}</p>
+                        <div className="ml-2">
+                          {renderEditableField(item)}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-            </div>
+            )}
 
-            {/* Resources */}
-            <div className="mb-6">
-              <h3 className="mb-2 text-lg font-semibold">Resources</h3>
-              <div className="rounded-md bg-muted p-4">
-                {getResourceInfo() || (
-                  <p className="text-muted-foreground">No resource information provided</p>
-                )}
-              </div>
-            </div>
-
-            {/* Safety */}
-            {diaryData.diary.metadata?.safety && (
+            {/* Approval Details */}
+            {approvalDetails && (
               <div className="mb-6">
-                <h3 className="mb-2 text-lg font-semibold">Safety Observations</h3>
-                <div className="rounded-md bg-muted p-4">
-                  <p>{diaryData.diary.metadata.safety}</p>
+                <h3 className="mb-4 text-lg font-semibold">Approval Details</h3>
+                
+                {/* Approvers Section */}
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Users className="h-4 w-4" />
+                    <h4 className="font-medium">Approvers ({approvalDetails.approvers.length})</h4>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {approvalDetails.approvers.map((approver: any) => {
+                      const response = approvalDetails.approver_responses.find(
+                        (r: any) => r.approver_id === approver.id
+                      );
+                      
+                      return (
+                        <div key={approver.id} className="flex items-center justify-between p-3 rounded-lg border">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback>
+                                <User className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {approver.raw_user_meta_data?.email || 'Unknown'}
+                              </p>
+                              {response?.comment && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  "{response.comment}"
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {response ? (
+                            <Badge 
+                              variant="outline" 
+                              className={`${getStatusColor(response.status)} text-white border-current`}
+                            >
+                              {formatStatus(response.status)}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              Pending
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Comments Section */}
+                <div className="mb-6">
+                  <ApprovalComments
+                    approvalId={approvalDetails.id}
+                    comments={approvalDetails.comments}
+                    onCommentAdded={fetchApprovalDetails}
+                    disabled={approvalDetails.status === 'draft'}
+                  />
                 </div>
               </div>
             )}
 
-            {/* Template Items */}
-            {diaryData.template_items && diaryData.template_items.length > 0 && (
+            {/* Loading state for approval details */}
+            {loadingApprovalDetails && (
               <div className="mb-6">
-                <h3 className="mb-4 text-lg font-semibold">Additional Information</h3>
-                <div className="space-y-4">
-                  {diaryData.template_items.map((item) => (
-                    <div key={item.id} className="rounded-md border p-4">
-                      <p className="mb-2 font-medium">{item.question_value}</p>
-                      <div className="ml-2">
-                        {renderAnswerValue(item, getAnswerForItem(item.id))}
-                      </div>
-                    </div>
-                  ))}
+                <h3 className="mb-4 text-lg font-semibold">Approval Details</h3>
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p className="text-sm text-muted-foreground">Loading approval details...</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -356,10 +681,38 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
             {isEditMode && (
               <div className="mt-4 border-t pt-4">
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsEditMode(false)}>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                    className="flex items-center gap-2"
+                  >
+                    <X className="h-4 w-4" />
                     Cancel
                   </Button>
-                  <Button>Save Changes</Button>
+                  <Button 
+                    onClick={handleSaveChanges} 
+                    disabled={isSaving}
+                    className="flex items-center gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Submit for Approval button - only show for author when in draft status */}
+            {!isEditMode && user && diaryData.diary.submitted_by_user_id === user.id && (approvalStatus === 'draft' || approvalStatus === null) && (
+              <div className="mt-4 border-t pt-4">
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSubmitForApproval}
+                    disabled={isSubmitting}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                  </Button>
                 </div>
               </div>
             )}
@@ -389,6 +742,23 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
         )}
       </SheetContent>
     </Sheet>
+
+    {/* Discard Changes Confirmation Dialog */}
+    <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have unsaved changes that will be lost if you close this panel. Are you sure you want to continue?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmedDiscard}>Discard Changes</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   );
 }
 

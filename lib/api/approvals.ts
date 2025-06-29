@@ -1,4 +1,38 @@
 import { createClient } from '@/utils/supabase/client';
+import { Database } from '@/lib/supabase/types.generated';
+
+// Use generated types from database
+type ApprovalComment = Database['public']['Tables']['approval_comments']['Row'];
+type ApprovalApproverResponse = Database['public']['Tables']['approval_approver_responses']['Row'];
+type Approval = Database['public']['Tables']['approvals']['Row'];
+
+// Enhanced interfaces for API responses
+export interface ApprovalWithDetails {
+  id: number;
+  status: string;
+  created_at: string;
+  entity_type: string;
+  entity_id: number;
+  requester_name: string;
+  entity_title: string; // Dynamic based on entity type
+  entity_summary: string; // Brief description
+  last_updated: string;
+}
+
+export interface ApprovalWithEntityDetails extends ApprovalWithDetails {
+  entity_data: any; // Will be typed based on entity type
+  comments: ApprovalCommentWithUser[];
+  approvers: any[]; // Will be enhanced with user details
+  approver_responses: ApprovalApproverResponseWithUser[];
+}
+
+export interface ApprovalCommentWithUser extends ApprovalComment {
+  user_name: string;
+}
+
+export interface ApprovalApproverResponseWithUser extends ApprovalApproverResponse {
+  approver_name: string;
+}
 
 export interface CreateApprovalParams {
   entity_type: string;
@@ -387,4 +421,470 @@ export async function updateApprovers(approvalId: number, approvers_id: string[]
   }
 
   return updatedApprovers;
+}
+
+// =============================================================================
+// NEW ENHANCED APPROVAL WORKFLOW FUNCTIONS
+// =============================================================================
+
+/**
+ * Get pending approvals for current user (as approver)
+ */
+export async function getPendingApprovalsForUser(): Promise<ApprovalWithDetails[]> {
+  const supabase = createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    throw new Error('No active session');
+  }
+
+  // Get approvals where current user is an approver and hasn't responded yet
+  const { data: approvals, error } = await supabase
+    .from('approvals')
+    .select(`
+      id,
+      status,
+      created_at,
+      entity_type,
+      entity_id,
+      last_updated,
+      requester_id,
+      approval_approvers!inner(approver_id)
+    `)
+    .eq('approval_approvers.approver_id', session.user.id)
+    .in('status', ['submitted']) // Only show submitted approvals
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  // Filter out approvals where user has already responded
+  const pendingApprovals = [];
+  
+  for (const approval of approvals || []) {
+    const { data: existingResponse } = await supabase
+      .from('approval_approver_responses')
+      .select('id')
+      .eq('approval_id', approval.id)
+      .eq('approver_id', session.user.id)
+      .maybeSingle();
+
+    // Only include if user hasn't responded yet
+    if (!existingResponse) {
+      // Get requester name
+      const { data: requesterData } = await supabase.rpc('get_user_details', {
+        user_ids: [approval.requester_id],
+      });
+
+      const requesterName = requesterData?.[0]?.raw_user_meta_data?.email || 'Unknown';
+
+      // Get entity title based on type (for now, just use ID)
+      const entityTitle = await getEntityTitle(approval.entity_type, approval.entity_id);
+
+      pendingApprovals.push({
+        ...approval,
+        requester_name: requesterName,
+        entity_title: entityTitle,
+        entity_summary: `${approval.entity_type} #${approval.entity_id}`,
+      });
+    }
+  }
+
+  return pendingApprovals;
+}
+
+/**
+ * Get approval requests made by current user (as requester)
+ */
+export async function getMyApprovalRequests(): Promise<ApprovalWithDetails[]> {
+  const supabase = createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    throw new Error('No active session');
+  }
+
+  const { data: approvals, error } = await supabase
+    .from('approvals')
+    .select(`
+      id,
+      status,
+      created_at,
+      entity_type,
+      entity_id,
+      last_updated,
+      requester_id
+    `)
+    .eq('requester_id', session.user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  // Enhance with entity titles
+  const enhancedApprovals = await Promise.all(
+    (approvals || []).map(async (approval) => {
+      const entityTitle = await getEntityTitle(approval.entity_type, approval.entity_id);
+      
+      return {
+        ...approval,
+        requester_name: 'You',
+        entity_title: entityTitle,
+        entity_summary: `${approval.entity_type} #${approval.entity_id}`,
+      };
+    })
+  );
+
+  return enhancedApprovals;
+}
+
+/**
+ * Get approval details with entity information
+ */
+export async function getApprovalWithEntityDetails(approvalId: number): Promise<ApprovalWithEntityDetails> {
+  const supabase = createClient();
+
+  // Get basic approval data
+  const { data: approval, error: approvalError } = await supabase
+    .from('approvals')
+    .select(`
+      *,
+      approval_approvers(approver_id)
+    `)
+    .eq('id', approvalId)
+    .single();
+
+  if (approvalError || !approval) {
+    throw new Error('Approval not found');
+  }
+
+  // Get requester name
+  const { data: requesterData } = await supabase.rpc('get_user_details', {
+    user_ids: [approval.requester_id],
+  });
+
+  const requesterName = requesterData?.[0]?.raw_user_meta_data?.email || 'Unknown';
+
+  // Get entity title and data
+  const entityTitle = await getEntityTitle(approval.entity_type, approval.entity_id);
+  const entityData = await getEntityData(approval.entity_type, approval.entity_id);
+
+  // Get comments
+  const comments = await getApprovalComments(approvalId);
+
+  // Get approver responses
+  const approverResponses = await getApproverResponses(approvalId);
+
+  // Get approver details
+  const approverIds = approval.approval_approvers?.map((a: any) => a.approver_id) || [];
+  const { data: approversData } = await supabase.rpc('get_user_details', {
+    user_ids: approverIds,
+  });
+
+  const approvers = approversData || [];
+
+  return {
+    id: approval.id,
+    status: approval.status,
+    created_at: approval.created_at,
+    entity_type: approval.entity_type,
+    entity_id: approval.entity_id,
+    requester_name: requesterName,
+    entity_title: entityTitle,
+    entity_summary: `${approval.entity_type} #${approval.entity_id}`,
+    last_updated: approval.last_updated,
+    entity_data: entityData,
+    comments,
+    approvers,
+    approver_responses: approverResponses,
+  };
+}
+
+/**
+ * Add comment to approval
+ */
+export async function addApprovalComment(approvalId: number, comment: string): Promise<ApprovalComment> {
+  const supabase = createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    throw new Error('No active session');
+  }
+
+  const { data, error } = await supabase
+    .from('approval_comments')
+    .insert({
+      approval_id: approvalId,
+      user_id: session.user.id,
+      comment: comment.trim(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Get comments for approval
+ */
+export async function getApprovalComments(approvalId: number): Promise<ApprovalCommentWithUser[]> {
+  const supabase = createClient();
+
+  const { data: comments, error } = await supabase
+    .from('approval_comments')
+    .select('*')
+    .eq('approval_id', approvalId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  // Get user details for comments
+  const userIds = Array.from(new Set(comments?.map(c => c.user_id) || []));
+  const { data: usersData } = await supabase.rpc('get_user_details', {
+    user_ids: userIds,
+  });
+
+  const usersMap = new Map(usersData?.map((u: any) => [u.id, u.raw_user_meta_data?.email || 'Unknown']) || []);
+
+  return (comments || []).map(comment => ({
+    ...comment,
+    user_name: usersMap.get(comment.user_id) || 'Unknown',
+  }));
+}
+
+/**
+ * Individual approver response (for multiple approver workflow)
+ */
+export async function submitApproverResponse(
+  approvalId: number,
+  action: 'approved' | 'declined' | 'revision_requested',
+  comment?: string
+): Promise<ApprovalApproverResponse> {
+  const supabase = createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    throw new Error('No active session');
+  }
+
+  // Verify user is an approver
+  const { data: approverCheck } = await supabase
+    .from('approval_approvers')
+    .select('*')
+    .eq('approval_id', approvalId)
+    .eq('approver_id', session.user.id)
+    .single();
+
+  if (!approverCheck) {
+    throw new Error('You are not authorized to approve this request');
+  }
+
+  // Insert or update approver response
+  const { data, error } = await supabase
+    .from('approval_approver_responses')
+    .upsert({
+      approval_id: approvalId,
+      approver_id: session.user.id,
+      status: action,
+      comment: comment?.trim() || null,
+      responded_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  // The trigger will automatically update the overall approval status
+  return data;
+}
+
+/**
+ * Get approver responses for an approval
+ */
+export async function getApproverResponses(approvalId: number): Promise<ApprovalApproverResponseWithUser[]> {
+  const supabase = createClient();
+
+  const { data: responses, error } = await supabase
+    .from('approval_approver_responses')
+    .select('*')
+    .eq('approval_id', approvalId)
+    .order('responded_at', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  // Get approver names
+  const approverIds = Array.from(new Set(responses?.map(r => r.approver_id) || []));
+  const { data: approversData } = await supabase.rpc('get_user_details', {
+    user_ids: approverIds,
+  });
+
+  const approversMap = new Map(
+    approversData?.map((u: any) => [u.id, u.raw_user_meta_data?.email || 'Unknown']) || []
+  );
+
+  return (responses || []).map(response => ({
+    ...response,
+    approver_name: approversMap.get(response.approver_id) || 'Unknown',
+  }));
+}
+
+/**
+ * Check if current user can approve (is an approver and hasn't responded yet)
+ */
+export async function canUserApprove(approvalId: number): Promise<boolean> {
+  const supabase = createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    return false;
+  }
+
+  // Check if user is an approver
+  const { data: approverCheck } = await supabase
+    .from('approval_approvers')
+    .select('*')
+    .eq('approval_id', approvalId)
+    .eq('approver_id', session.user.id)
+    .single();
+
+  if (!approverCheck) {
+    return false;
+  }
+
+  // Check if user has already responded
+  const { data: existingResponse } = await supabase
+    .from('approval_approver_responses')
+    .select('id')
+    .eq('approval_id', approvalId)
+    .eq('approver_id', session.user.id)
+    .maybeSingle();
+
+  return !existingResponse;
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Get entity title for display in lists
+ */
+async function getEntityTitle(entityType: string, entityId: number): Promise<string> {
+  const supabase = createClient();
+
+  try {
+    switch (entityType) {
+      case 'site_diary':
+        const { data: diary } = await supabase
+          .from('site_diaries')
+          .select('name')
+          .eq('id', entityId)
+          .single();
+        return diary?.name || `Site Diary #${entityId}`;
+
+      case 'form':
+        const { data: form } = await supabase
+          .from('forms')
+          .select('name')
+          .eq('id', entityId)
+          .single();
+        return form?.name || `Form #${entityId}`;
+
+      case 'entries':
+        const { data: entry } = await supabase
+          .from('form_entries')
+          .select('name')
+          .eq('id', entityId)
+          .single();
+        return entry?.name || `Entry #${entityId}`;
+
+      case 'tasks':
+        const { data: task } = await supabase
+          .from('tasks')
+          .select('title')
+          .eq('id', entityId)
+          .single();
+        return task?.title || `Task #${entityId}`;
+
+      default:
+        return `${entityType} #${entityId}`;
+    }
+  } catch (error) {
+    console.error('Error getting entity title:', error);
+    return `${entityType} #${entityId}`;
+  }
+}
+
+/**
+ * Get entity data for approval detail view
+ */
+async function getEntityData(entityType: string, entityId: number): Promise<any> {
+  const supabase = createClient();
+
+  try {
+    switch (entityType) {
+      case 'site_diary':
+        // Import getSiteDiaryById for complete data
+        const { getSiteDiaryById } = await import('@/lib/api/site-diaries');
+        const diaryData = await getSiteDiaryById(entityId);
+        return diaryData;
+
+      case 'form':
+        const { data: form } = await supabase
+          .from('forms')
+          .select('*')
+          .eq('id', entityId)
+          .single();
+        return form;
+
+      case 'entries':
+        const { data: entry } = await supabase
+          .from('form_entries')
+          .select('*')
+          .eq('id', entityId)
+          .single();
+        return entry;
+
+      case 'tasks':
+        const { data: task } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('id', entityId)
+          .single();
+        return task;
+
+      default:
+        return null;
+    }
+  } catch (error) {
+    console.error('Error getting entity data:', error);
+    return null;
+  }
 }
