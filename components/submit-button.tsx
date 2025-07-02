@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { type ComponentProps } from 'react';
+import { type ComponentProps, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 
 type Props = ComponentProps<typeof Button> & {
@@ -10,6 +10,14 @@ type Props = ComponentProps<typeof Button> & {
 
 export function SubmitButton({ children, pendingText = 'Submitting...', ...props }: Props) {
   const { pending } = useFormStatus();
+
+  useEffect(() => {
+    if (pending) {
+      console.log('🔄 SubmitButton: Form submission started');
+    } else {
+      console.log('🔄 SubmitButton: Form submission completed or not started');
+    }
+  }, [pending]);
 
   return (
     <Button type="submit" aria-disabled={pending} {...props}>
