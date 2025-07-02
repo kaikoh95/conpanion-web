@@ -23,6 +23,7 @@ import StatusPill from '@/app/components/tasks/StatusPill';
 import PriorityPill from '@/app/components/tasks/PriorityPill';
 import { TaskWithRelations } from '../models';
 import { Database } from '@/lib/supabase/types.generated';
+import { TaskAttachmentsViewer } from '@/components/task-attachments-viewer';
 
 type Status = Database['public']['Tables']['statuses']['Row'];
 type Priority = Database['public']['Tables']['priorities']['Row'];
@@ -640,6 +641,12 @@ export default function TaskPage() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Task Attachments */}
+          <div>
+            <h3 className="mb-2 text-sm font-medium text-muted-foreground">Attachments</h3>
+            <TaskAttachmentsViewer taskId={task.id} />
           </div>
 
           {/* Comments */}

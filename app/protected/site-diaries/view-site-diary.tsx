@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Pencil } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ArrowLeft, Calendar, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { getSiteDiaryById } from '@/lib/api/site-diaries';
@@ -13,6 +14,10 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DiaryApprovalStatus } from './approval-status';
 import { DebugWrapper } from '@/utils/debug';
+import { getAttachments } from '@/lib/api/attachments';
+import { FileViewer } from '@/components/file-viewer';
+import Image from 'next/image';
+import { ZoomIn, FileText } from 'lucide-react';
 
 interface ViewSiteDiaryProps {
   open: boolean;
@@ -150,7 +155,7 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
         return <span>{answerValue}</span>;
 
       case 'photo':
-        return <span className="text-muted-foreground">Photo upload not yet implemented</span>;
+        return <FileAnswerViewer diaryId={diaryId} itemId={item.id} />;
 
       default:
         return <span>{answerValue}</span>;
@@ -384,5 +389,226 @@ export function ViewSiteDiary({ open, onOpenChange, diaryId, onDiaryUpdated }: V
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+// File Answer Viewer Component
+interface FileAnswerViewerProps {
+  diaryId: number | null;
+  itemId: number | undefined;
+}
+
+function FileAnswerViewer({ diaryId, itemId }: FileAnswerViewerProps) {
+  const [attachmentIds, setAttachmentIds] = useState<string[]>([]);
+  const [directFileUrls, setDirectFileUrls] = useState<Array<{ url: string, isImage: boolean, isPdf?: boolean, name?: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
+  
+  // Get project ID when component mounts
+  const [projectId, setProjectId] = useState<number | null>(null);
+  
+  useEffect(() => {
+    const getProjectId = async () => {
+      if (!diaryId) return;
+      
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('site_diaries')
+          .select('project_id')
+          .eq('id', diaryId)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching project ID:', error);
+        } else if (data) {
+          setProjectId(data.project_id);
+        }
+      } catch (err) {
+        console.error('Error in getProjectId:', err);
+      }
+    };
+    
+    getProjectId();
+  }, [diaryId]);
+
+  useEffect(() => {
+    const fetchFileAttachments = async () => {
+      if (!diaryId || !itemId) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      setDirectFileUrls([]); // Reset direct URLs
+      
+      try {
+        // Convert diary ID to string for API call
+        const entityId = diaryId.toString();
+        console.log(`Fetching attachments for diary: ${entityId}, item: ${itemId}`);
+        
+        // First try to get attachments from the attachments table
+        const { data: attachments, error: fetchError } = await getAttachments('site_diary', entityId);
+        
+        if (fetchError) {
+          console.error('Error fetching attachments:', fetchError);
+          setError('Failed to load files');
+          return;
+        }
+        
+        console.log(`Found ${attachments?.length || 0} total attachments for diary ${entityId}`);
+        setDebugInfo(`Total attachments: ${attachments?.length || 0}`);
+        
+        if (attachments && attachments.length > 0) {
+          // Log all attachment paths to help debug
+          attachments.forEach(att => {
+            console.log(`Attachment path: ${att.storage_path}, ID: ${att.id}, Type: ${att.file_type}`);
+          });
+          
+          // Modify the filter condition to be more flexible
+          // The file path structure is: projectId/site_diary/diaryId/fileName
+          // We should check if the file name contains the item ID
+          const itemAttachments = attachments.filter(att => {
+            // Split the path to get the filename part
+            const pathParts = att.storage_path.split('/');
+            const fileName = pathParts[pathParts.length - 1];
+            
+            // Check for item ID in the storage path or filename
+            const itemIdStr = String(itemId);
+            return att.storage_path.includes(`/${itemIdStr}_`) || 
+                   att.storage_path.includes(`/${itemIdStr}/`) ||
+                   fileName.includes(`_${itemIdStr}_`) ||
+                   fileName.includes(`item_${itemIdStr}`) ||
+                   fileName.startsWith(`item_${itemIdStr}`);
+          });
+          
+          console.log(`Found ${itemAttachments.length} attachments for item ${itemId}`);
+          setDebugInfo(prev => `${prev}, Item attachments: ${itemAttachments.length}`);
+          
+          // If we still don't find any attachments, look for any files for this diary
+          if (itemAttachments.length === 0) {
+            console.log('No specific attachments found, using all files as fallback');
+            
+            // Use all files attached to this diary (not just images)
+            const anyFiles = attachments;
+            
+            if (anyFiles.length > 0) {
+              setAttachmentIds(anyFiles.map(att => att.id));
+              setDebugInfo(prev => `${prev}, Using all ${anyFiles.length} files as fallback`);
+            } else {
+              // If still no attachments, try to directly check storage
+              await checkStorageDirectly();
+            }
+          } else {
+            setAttachmentIds(itemAttachments.map(att => att.id));
+          }
+        } else {
+          // No attachments found in the database, try direct storage access
+          console.log('No attachments found in database, checking storage directly');
+          await checkStorageDirectly();
+        }
+      } catch (err) {
+        console.error('Error in fetchFileAttachments:', err);
+        setError('An error occurred while loading files');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // Helper function to check storage directly and generate signed URLs
+    const checkStorageDirectly = async () => {
+      try {
+        const supabase = getSupabaseClient();
+        
+        // Check if we have the project ID
+        if (projectId) {
+          const pathPrefix = `${projectId}/site_diary/${diaryId}`;
+          console.log(`Checking storage path: ${pathPrefix}`);
+          
+          const { data: storageFiles, error: storageError } = await supabase.storage
+            .from('attachments')
+            .list(pathPrefix);
+          
+          if (storageError) {
+            console.error('Error listing storage files:', storageError);
+          } else if (storageFiles && storageFiles.length > 0) {
+            console.log(`Found ${storageFiles.length} files in storage:`, storageFiles);
+            setDebugInfo(prev => `${prev}, Files directly in storage: ${storageFiles.length}`);
+            
+            // Get signed URLs for all files
+            const urlResults = await Promise.all(
+              storageFiles.map(async (file) => {
+                const filePath = `${pathPrefix}/${file.name}`;
+                const { data: urlData } = await supabase.storage
+                  .from('attachments')
+                  .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
+                
+                if (!urlData?.signedUrl) return null;
+                
+                // Determine file type for rendering purposes
+                const fileName = file.name.toLowerCase();
+                const isImage = fileName.endsWith('.jpg') || 
+                              fileName.endsWith('.jpeg') || 
+                              fileName.endsWith('.png') || 
+                              fileName.endsWith('.gif') || 
+                              fileName.endsWith('.webp');
+                
+                // Check if this is a PDF
+                const isPdf = fileName.endsWith('.pdf');
+                
+                return { 
+                  url: urlData.signedUrl, 
+                  isImage,
+                  isPdf,
+                  name: file.name // Include the actual file name
+                };
+              })
+            );
+            
+            // Filter out any null URLs
+            const validUrls = urlResults.filter(Boolean) as Array<{ url: string, isImage: boolean, isPdf?: boolean, name?: string }>;
+            console.log(`Created ${validUrls.length} signed URLs for files`);
+            
+            if (validUrls.length > 0) {
+              setDirectFileUrls(validUrls);
+            }
+          }
+        } else {
+          console.log('Cannot check storage directly - project ID not available');
+        }
+      } catch (storageErr) {
+        console.error('Error checking storage directly:', storageErr);
+      }
+    };
+    
+    fetchFileAttachments();
+  }, [diaryId, itemId, projectId]);
+  
+  if (loading) {
+    return <span className="text-muted-foreground">Loading files...</span>;
+  }
+  
+  if (error) {
+    return <span className="text-red-500">{error}</span>;
+  }
+  
+  // First check if we have attachment IDs (preferred method)
+  if (attachmentIds.length > 0) {
+    return <FileViewer attachmentIds={attachmentIds} />;
+  }
+  
+  // If we have direct file URLs instead
+  if (directFileUrls.length > 0) {
+    return <FileViewer directFileUrls={directFileUrls} />;
+  }
+  
+  // No files found through either method
+  return (
+    <div>
+      <span className="text-muted-foreground">No files available</span>
+      <span className="ml-2 text-xs text-muted-foreground">({debugInfo})</span>
+    </div>
   );
 }

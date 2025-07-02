@@ -40,6 +40,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { AssigneeSelector } from '@/components/AssigneeSelector';
 import { ProjectMember } from '@/hooks/useProjectMembers';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { useProject } from '@/contexts/ProjectContext';
 
 export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuilderProps) {
   const router = useRouter();
@@ -55,6 +56,7 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   const { user } = useAuth();
+  const { current: currentProject } = useProject();
   const [assignees, setAssignees] = useState<{ id: string; name: string; avatar_url?: string }[]>(
     [],
   );
@@ -134,15 +136,18 @@ export function CreateFormDialog({ open, onOpenChange, onFormCreated }: FormBuil
     try {
       setIsSubmitting(true);
 
-      // Create the form first
+      if (!currentProject?.id) {
+        toast.error('No active project selected');
+        return;
+      }
+
       const formResponse = await createForm({
         name: title.trim() || 'New form',
         items: generateFormItems(questions),
         userId: user.id,
-        projectId: user.activeProjectId,
+        projectId: currentProject.id,
       });
 
-      // If there are assignees and we have a valid form ID, add them
       const formId = formResponse.form.id;
       if (assignees.length > 0 && typeof formId === 'number') {
         const supabase = getSupabaseClient();

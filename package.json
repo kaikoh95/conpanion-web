@@ -47,7 +47,8 @@
     "react-day-picker": "^9.6.5",
     "react-dom": "19.0.0",
     "react-textarea-autosize": "^8.5.9",
-    "sonner": "^2.0.3"
+    "sonner": "^2.0.3",
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@types/node": "22.10.2",
