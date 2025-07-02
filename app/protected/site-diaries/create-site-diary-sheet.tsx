@@ -38,6 +38,8 @@ import { uploadAttachment } from '@/lib/api/attachments';
 import { useRouter } from 'next/navigation';
 import { useProject } from '@/contexts/ProjectContext';
 import SiteDiaryPhotoUploader from '@/components/site-diary-photo-uploader';
+import { ApproverSelector } from '@/components/ApproverSelector';
+import { SelectedApproversDisplay } from '@/components/SelectedApproversDisplay';
 
 interface CreateSiteDiarySheetProps {
   open: boolean;
@@ -88,9 +90,7 @@ export function CreateSiteDiarySheet({
   });
 
   // State for approvers
-  const [approvers, setApprovers] = useState<{ id: string; name: string }[]>([]);
   const [selectedApprovers, setSelectedApprovers] = useState<string[]>([]);
-  const [loadingApprovers, setLoadingApprovers] = useState(false);
 
   // State for template and answers
   const [template, setTemplate] = useState<SiteDiaryTemplate | null>(null);
@@ -172,41 +172,15 @@ export function CreateSiteDiarySheet({
     }
   }, [diaryDate, template]);
 
-  // Load project members for approvers dropdown
-  useEffect(() => {
-    if (!open || !projectId) return;
 
-    const loadProjectMembers = async () => {
-      setLoadingApprovers(true);
-      try {
-        // Temporary solution: using hardcoded test data for approvers
-        // This will be replaced with proper API calls once the database schema is updated
-        setApprovers([
-          { id: user?.id || 'current-user', name: 'You (Current User)' },
-          // Add a few example users for testing
-          { id: 'test-user-1', name: 'Test User 1' },
-          { id: 'test-user-2', name: 'Test User 2' },
-          { id: 'test-user-3', name: 'Project Manager' },
-        ]);
-      } catch (err) {
-        console.error('Error loading approvers:', err);
-      } finally {
-        setLoadingApprovers(false);
-      }
-    };
-
-    loadProjectMembers();
-  }, [open, projectId, user]);
 
   // Handle approver selection
-  const handleApproverChange = (approverId: string) => {
-    setSelectedApprovers((prev) => {
-      if (prev.includes(approverId)) {
-        return prev.filter((id) => id !== approverId);
-      } else {
-        return [...prev, approverId];
-      }
-    });
+  const handleApproversChange = (approverIds: string[]) => {
+    setSelectedApprovers(approverIds);
+  };
+
+  const handleRemoveApprover = (approverId: string) => {
+    setSelectedApprovers(prev => prev.filter(id => id !== approverId));
   };
 
   // Handle metadata changes
@@ -639,38 +613,27 @@ export function CreateSiteDiarySheet({
 
             {/* Approvers section */}
             <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Approvers</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Approvers</h3>
+                <ApproverSelector
+                  selectedApprovers={selectedApprovers}
+                  onApproversChange={handleApproversChange}
+                  projectId={projectId}
+                />
+              </div>
+              
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   Select team members who need to approve this site diary. If no approvers are
                   selected, the diary will remain in draft status.
                 </p>
 
-                {loadingApprovers ? (
-                  <div className="py-2 text-center">Loading project members...</div>
-                ) : approvers.length === 0 ? (
-                  <div className="py-2 text-center text-muted-foreground">
-                    No project members found to assign as approvers
-                  </div>
-                ) : (
-                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-2">
-                    {approvers.map((approver) => (
-                      <div key={approver.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`approver-${approver.id}`}
-                          checked={selectedApprovers.includes(approver.id)}
-                          onCheckedChange={() => handleApproverChange(approver.id)}
-                        />
-                        <Label
-                          htmlFor={`approver-${approver.id}`}
-                          className="cursor-pointer text-sm"
-                        >
-                          {approver.name}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <SelectedApproversDisplay
+                  selectedApprovers={selectedApprovers}
+                  onRemoveApprover={handleRemoveApprover}
+                  projectId={projectId}
+                  showRemoveButton={true}
+                />
               </div>
             </div>
 

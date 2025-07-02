@@ -142,13 +142,64 @@ export function ApprovalStatusAccordian({
       try {
         const supabase = createClient();
 
-        // We need to get all available users from auth.users using the get_user_details RPC function
-        // First we need a way to get all user IDs
-        // As a workaround, let's fetch first from a table that references users
+        // First, get the project_id for this entry
+        let projectId: number | null = null;
+        
+        if (entityType === 'entries') {
+          // Get project_id from form_entries table
+          const { data: entryData, error: entryError } = await supabase
+            .from('form_entries')
+            .select('project_id')
+            .eq('id', entryId)
+            .single();
+
+          if (entryError) {
+            console.error('Error fetching entry project:', entryError);
+            return;
+          }
+          
+          projectId = entryData?.project_id;
+        } else if (entityType === 'tasks') {
+          // Get project_id from tasks table
+          const { data: taskData, error: taskError } = await supabase
+            .from('tasks')
+            .select('project_id')
+            .eq('id', entryId)
+            .single();
+
+          if (taskError) {
+            console.error('Error fetching task project:', taskError);
+            return;
+          }
+          
+          projectId = taskData?.project_id;
+        } else if (entityType === 'site_diary') {
+          // Get project_id from site_diaries table
+          const { data: diaryData, error: diaryError } = await supabase
+            .from('site_diaries')
+            .select('project_id')
+            .eq('id', entryId)
+            .single();
+
+          if (diaryError) {
+            console.error('Error fetching site diary project:', diaryError);
+            return;
+          }
+          
+          projectId = diaryData?.project_id;
+        }
+
+        if (!projectId) {
+          console.warn('No project_id found for this entity');
+          return;
+        }
+
+        // Now fetch users who are members of this specific project
         const { data: projectUsers, error: projectUsersError } = await supabase
           .from('projects_users')
           .select('user_id')
-          .limit(100); // Limit to a reasonable number
+          .eq('project_id', projectId)
+          .eq('status', 'active'); // Only get active project members
 
         if (projectUsersError) {
           console.error('Error fetching project users:', projectUsersError);
@@ -156,7 +207,7 @@ export function ApprovalStatusAccordian({
         }
 
         if (!projectUsers || projectUsers.length === 0) {
-          console.warn('No users found in projects_users table');
+          console.warn('No active users found in this project');
           return;
         }
 
@@ -173,7 +224,7 @@ export function ApprovalStatusAccordian({
           return;
         }
 
-        console.log('Fetched users:', userData);
+        console.log('Fetched project users:', userData);
         setUsers(userData || []);
       } catch (err) {
         console.error('Failed to fetch users:', err);
@@ -183,7 +234,7 @@ export function ApprovalStatusAccordian({
     if (dialogOpen) {
       fetchUsers();
     }
-  }, [dialogOpen]);
+  }, [dialogOpen, entryId, entityType]);
 
   // Filter users based on search input
   useEffect(() => {
@@ -435,8 +486,7 @@ export function ApprovalStatusAccordian({
                   <DialogHeader>
                     <DialogTitle>Create Approval Request</DialogTitle>
                     <DialogDescription>
-                      Select the approvers who will review this entry. You can search by email
-                      address.
+                      Select the approvers who will review this entry. Only active members of this project are shown. You can search by email address.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
