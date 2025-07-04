@@ -13,10 +13,11 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface SignInFormProps {
   invitationToken?: string;
+  projectInvitationToken?: string;
   searchParams: Message;
 }
 
-export function SignInForm({ invitationToken, searchParams }: SignInFormProps) {
+export function SignInForm({ invitationToken, projectInvitationToken, searchParams }: SignInFormProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
@@ -31,7 +32,8 @@ export function SignInForm({ invitationToken, searchParams }: SignInFormProps) {
     
     console.log('🔄 SignInForm: Starting client-side sign-in process');
     console.log('🔄 SignInForm: Email:', email);
-    console.log('🔄 SignInForm: Invitation token:', invitationToken || 'none');
+    console.log('🔄 SignInForm: Organization invitation token:', invitationToken || 'none');
+    console.log('🔄 SignInForm: Project invitation token:', projectInvitationToken || 'none');
 
     startTransition(async () => {
       try {
@@ -65,6 +67,9 @@ export function SignInForm({ invitationToken, searchParams }: SignInFormProps) {
           if (invitationToken) {
             formData.append('invitation', invitationToken);
           }
+          if (projectInvitationToken) {
+            formData.append('project-invitation', projectInvitationToken);
+          }
           
           // Note: signInAction will try to authenticate again, but that's okay
           // It will handle invitation linking and other server-side logic
@@ -77,8 +82,11 @@ export function SignInForm({ invitationToken, searchParams }: SignInFormProps) {
         // Step 4: Handle client-side redirect
         console.log('🔄 SignInForm: Handling client-side redirect...');
         if (invitationToken) {
-          console.log('🔄 SignInForm: Redirecting to invitation page');
+          console.log('🔄 SignInForm: Redirecting to organization invitation page');
           router.push(`/invitation/${invitationToken}`);
+        } else if (projectInvitationToken) {
+          console.log('🔄 SignInForm: Redirecting to project invitation page');
+          router.push(`/project-invitation/${projectInvitationToken}`);
         } else {
           console.log('🔄 SignInForm: Redirecting to protected area');
           router.push('/protected');
@@ -93,9 +101,12 @@ export function SignInForm({ invitationToken, searchParams }: SignInFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      {/* Hidden field to pass invitation token */}
+      {/* Hidden fields to pass invitation tokens */}
       {invitationToken && (
         <input type="hidden" name="invitation" value={invitationToken} />
+      )}
+      {projectInvitationToken && (
+        <input type="hidden" name="project-invitation" value={projectInvitationToken} />
       )}
       
       <div className="flex flex-col gap-2">

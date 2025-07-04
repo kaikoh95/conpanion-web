@@ -5,11 +5,13 @@ import { createClient } from '@/utils/supabase/server';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { organizationAPI } from '@/lib/api/organizations';
+import { projectAPI } from '@/lib/api/projects';
 
 export const signUpAction = async (formData: FormData) => {
   const email = formData.get('email')?.toString();
   const password = formData.get('password')?.toString();
   const invitationToken = formData.get('invitation')?.toString();
+  const projectInvitationToken = formData.get('project-invitation')?.toString();
   const supabase = await createClient();
   const origin = (await headers()).get('origin');
 
@@ -20,7 +22,9 @@ export const signUpAction = async (formData: FormData) => {
   // Determine the redirect URL based on whether there's an invitation
   const redirectTo = invitationToken 
     ? `${origin}/auth/callback?invitation=${invitationToken}`
-    : `${origin}/auth/callback`;
+    : projectInvitationToken
+      ? `${origin}/auth/callback?project-invitation=${projectInvitationToken}`
+      : `${origin}/auth/callback`;
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -41,22 +45,41 @@ export const signUpAction = async (formData: FormData) => {
   
   // If user was created immediately, handle invitation linking
   if (user && data.session) {
-    // Link user to any pending invitations for their email
+    // Link user to any pending organization invitations
     const linkResult = await organizationAPI.linkUserToPendingInvitations(user.id, user.email!);
-    console.log('Linked invitations after immediate signup:', linkResult);
+    console.log('Linked organization invitations after immediate signup:', linkResult);
     
-    // If there's an invitation token, redirect directly to the invitation
+    // Link user to any pending project invitations
+    const projectLinkResult = await projectAPI.linkUserToPendingProjectInvitations(user.id);
+    console.log('Linked project invitations after immediate signup:', projectLinkResult);
+    
+    // If there's an organization invitation token, redirect directly to it
     if (invitationToken) {
       return redirect(`/invitation/${invitationToken}`);
     }
     
-    // Check if user has any pending invitations
-    const hasPending = await organizationAPI.userHasPendingInvitations(user.id);
-    if (hasPending) {
+    // If there's a project invitation token, redirect directly to it
+    if (projectInvitationToken) {
+      return redirect(`/project-invitation/${projectInvitationToken}`);
+    }
+    
+    // Check if user has any pending organization invitations
+    const hasPendingOrg = await organizationAPI.userHasPendingInvitations(user.id);
+    if (hasPendingOrg) {
       const pendingInvitations = await organizationAPI.getUserPendingInvitations(user.id);
       if (pendingInvitations.success && pendingInvitations.invitations.length > 0) {
         const firstInvitation = pendingInvitations.invitations[0];
         return redirect(`/invitation/${firstInvitation.token}`);
+      }
+    }
+    
+    // Check if user has any pending project invitations
+    const hasPendingProject = await projectAPI.userHasPendingProjectInvitations(user.id);
+    if (hasPendingProject) {
+      const pendingProjectInvitations = await projectAPI.getUserPendingProjectInvitations(user.id);
+      if (pendingProjectInvitations.success && pendingProjectInvitations.invitations.length > 0) {
+        const firstProjectInvitation = pendingProjectInvitations.invitations[0];
+        return redirect(`/project-invitation/${firstProjectInvitation.token}`);
       }
     }
     
@@ -66,7 +89,9 @@ export const signUpAction = async (formData: FormData) => {
     // Email verification is enabled, show success message
     const successMessage = invitationToken 
       ? 'Thanks for signing up! Please check your email for a verification link. After verification, you\'ll be able to accept your organization invitation.'
-      : 'Thanks for signing up! Please check your email for a verification link.';
+      : projectInvitationToken
+        ? 'Thanks for signing up! Please check your email for a verification link. After verification, you\'ll be able to accept your project invitation.'
+        : 'Thanks for signing up! Please check your email for a verification link.';
     
     return encodedRedirect('success', '/sign-up', successMessage);
   }
@@ -76,9 +101,11 @@ export const signInAction = async (formData: FormData) => {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const invitationToken = formData.get('invitation')?.toString();
+  const projectInvitationToken = formData.get('project-invitation')?.toString();
   
   console.log('🔄 signInAction: Starting sign-in process for:', email);
-  console.log('🔄 signInAction: Invitation token:', invitationToken ? 'present' : 'none');
+  console.log('🔄 signInAction: Organization invitation token:', invitationToken ? 'present' : 'none');
+  console.log('🔄 signInAction: Project invitation token:', projectInvitationToken ? 'present' : 'none');
   
   const supabase = await createClient();
 
@@ -108,10 +135,15 @@ export const signInAction = async (formData: FormData) => {
     console.log('✅ signInAction: User retrieved successfully:', user.email);
     
     try {
-      // Link user to any pending invitations for their email
-      console.log('🔄 signInAction: Linking pending invitations...');
+      // Link user to any pending organization invitations for their email
+      console.log('🔄 signInAction: Linking pending organization invitations...');
       const linkResult = await organizationAPI.linkUserToPendingInvitations(user.id, user.email!);
-      console.log('✅ signInAction: Linked invitations result:', linkResult);
+      console.log('✅ signInAction: Linked organization invitations result:', linkResult);
+      
+      // Link user to any pending project invitations
+      console.log('🔄 signInAction: Linking pending project invitations...');
+      const projectLinkResult = await projectAPI.linkUserToPendingProjectInvitations(user.id);
+      console.log('✅ signInAction: Linked project invitations result:', projectLinkResult);
     } catch (error) {
       console.error('❌ signInAction: Error linking invitations:', error);
       // Don't fail the sign-in if invitation linking fails
@@ -121,28 +153,50 @@ export const signInAction = async (formData: FormData) => {
     return encodedRedirect('error', '/sign-in', 'Authentication succeeded but user not found');
   }
 
-  // If there's an invitation token, redirect to the invitation page
+  // If there's an organization invitation token, redirect to the invitation page
   if (invitationToken) {
-    console.log('🔄 signInAction: Redirecting to invitation page:', invitationToken);
+    console.log('🔄 signInAction: Redirecting to organization invitation page:', invitationToken);
     return redirect(`/invitation/${invitationToken}`);
+  }
+
+  // If there's a project invitation token, redirect to the project invitation page
+  if (projectInvitationToken) {
+    console.log('🔄 signInAction: Redirecting to project invitation page:', projectInvitationToken);
+    return redirect(`/project-invitation/${projectInvitationToken}`);
   }
 
   // Check if user has any pending invitations
   if (user) {
     try {
-      console.log('🔄 signInAction: Checking for pending invitations...');
-      const hasPending = await organizationAPI.userHasPendingInvitations(user.id);
-      console.log('🔄 signInAction: Has pending invitations:', hasPending);
+      console.log('🔄 signInAction: Checking for pending organization invitations...');
+      const hasPendingOrg = await organizationAPI.userHasPendingInvitations(user.id);
+      console.log('🔄 signInAction: Has pending organization invitations:', hasPendingOrg);
       
-      if (hasPending) {
+      if (hasPendingOrg) {
         // Redirect to a pending invitations page or show the first one
         const pendingInvitations = await organizationAPI.getUserPendingInvitations(user.id);
-        console.log('🔄 signInAction: Pending invitations result:', pendingInvitations);
+        console.log('🔄 signInAction: Pending organization invitations result:', pendingInvitations);
         
         if (pendingInvitations.success && pendingInvitations.invitations.length > 0) {
           const firstInvitation = pendingInvitations.invitations[0];
-          console.log('🔄 signInAction: Redirecting to first pending invitation:', firstInvitation.token);
+          console.log('🔄 signInAction: Redirecting to first pending organization invitation:', firstInvitation.token);
           return redirect(`/invitation/${firstInvitation.token}`);
+        }
+      }
+      
+      console.log('🔄 signInAction: Checking for pending project invitations...');
+      const hasPendingProject = await projectAPI.userHasPendingProjectInvitations(user.id);
+      console.log('🔄 signInAction: Has pending project invitations:', hasPendingProject);
+      
+      if (hasPendingProject) {
+        // Redirect to a pending project invitations page or show the first one
+        const pendingProjectInvitations = await projectAPI.getUserPendingProjectInvitations(user.id);
+        console.log('🔄 signInAction: Pending project invitations result:', pendingProjectInvitations);
+        
+        if (pendingProjectInvitations.success && pendingProjectInvitations.invitations.length > 0) {
+          const firstProjectInvitation = pendingProjectInvitations.invitations[0];
+          console.log('🔄 signInAction: Redirecting to first pending project invitation:', firstProjectInvitation.token);
+          return redirect(`/project-invitation/${firstProjectInvitation.token}`);
         }
       }
     } catch (error) {

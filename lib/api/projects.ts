@@ -10,6 +10,17 @@ import {
   UpdateProjectMembershipRequest,
   UserProjectsResult,
 } from '@/lib/types/project';
+import {
+  ProjectInvitationResult,
+  ProjectInvitationDetails,
+  ProjectInvitationActionResponse,
+  PendingProjectInvitation,
+  ProjectInvitationListResponse,
+  ProjectUserExistsResponse,
+  ProjectInvitationRole,
+  UserPendingProjectInvitation,
+  UserPendingProjectInvitationsResponse,
+} from '@/lib/types/project-invitation';
 
 export class ProjectAPI {
   private supabase = createClient();
@@ -471,6 +482,294 @@ export class ProjectAPI {
     } catch (error: any) {
       console.error('Error in updateMemberRole:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Check if user exists by email for project invitations
+   */
+  async checkUserExistsByEmailForProject(email: string): Promise<ProjectUserExistsResponse> {
+    try {
+      const { data: result, error } = await this.supabase.rpc('check_user_exists_by_email_for_project', {
+        p_email: email,
+      });
+
+      if (error) {
+        throw new Error(`Failed to check user existence: ${error.message}`);
+      }
+
+      return {
+        exists: result?.exists || false,
+        user_id: result?.user_id || undefined,
+      };
+    } catch (error: any) {
+      console.error('Error in checkUserExistsByEmailForProject:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Invite user to project by email
+   */
+  async inviteUserByEmailToProject(
+    projectId: number,
+    email: string,
+    role: ProjectInvitationRole = 'member'
+  ): Promise<ProjectInvitationResult> {
+    try {
+      const {
+        data: { user },
+      } = await this.supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Call the Supabase Edge Function
+      const { data: response, error } = await this.supabase.functions.invoke(
+        'send-project-invitation',
+        {
+          body: {
+            projectId,
+            email,
+            role,
+          },
+        }
+      );
+
+      if (error) {
+        throw new Error(`Failed to send project invitation: ${error.message}`);
+      }
+
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to send project invitation');
+      }
+
+      return {
+        success: true,
+        invitation_id: response.invitation_id,
+        action: response.action || 'created',
+        user_exists: response.userExists,
+        resend_count: response.resend_count || 0,
+      };
+    } catch (error: any) {
+      console.error('Error in inviteUserByEmailToProject:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get project invitation by token
+   */
+  async getProjectInvitationByToken(token: string): Promise<ProjectInvitationDetails> {
+    try {
+      const { data: result, error } = await this.supabase.rpc('get_project_invitation_by_token', {
+        p_token: token,
+      });
+
+      if (error) {
+        throw new Error(`Failed to get project invitation: ${error.message}`);
+      }
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Project invitation not found');
+      }
+
+      return result.invitation;
+    } catch (error: any) {
+      console.error('Error in getProjectInvitationByToken:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Accept project invitation
+   */
+  async acceptProjectInvitation(token: string): Promise<ProjectInvitationActionResponse> {
+    try {
+      const { data: result, error } = await this.supabase.rpc('accept_project_invitation', {
+        p_token: token,
+      });
+
+      if (error) {
+        throw new Error(`Failed to accept project invitation: ${error.message}`);
+      }
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to accept project invitation');
+      }
+
+      return {
+        success: true,
+        message: result.message,
+        project_id: result.project_id,
+        membership_id: result.membership_id,
+        role: result.role,
+        action: result.action,
+      };
+    } catch (error: any) {
+      console.error('Error in acceptProjectInvitation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Decline project invitation
+   */
+  async declineProjectInvitation(token: string): Promise<ProjectInvitationActionResponse> {
+    try {
+      const { data: result, error } = await this.supabase.rpc('decline_project_invitation', {
+        p_token: token,
+      });
+
+      if (error) {
+        throw new Error(`Failed to decline project invitation: ${error.message}`);
+      }
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to decline project invitation');
+      }
+
+      return {
+        success: true,
+        message: result.message,
+        project_id: result.project_id,
+      };
+    } catch (error: any) {
+      console.error('Error in declineProjectInvitation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get pending project invitations for a project
+   */
+  async getPendingProjectInvitations(projectId: number): Promise<ProjectInvitationListResponse> {
+    try {
+      const { data: invitations, error } = await this.supabase.rpc('get_pending_project_invitations', {
+        p_project_id: projectId,
+      });
+
+      if (error) {
+        throw new Error(`Failed to get pending project invitations: ${error.message}`);
+      }
+
+      return {
+        success: true,
+        invitations: invitations || [],
+      };
+    } catch (error: any) {
+      console.error('Error in getPendingProjectInvitations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel project invitation
+   */
+  async cancelProjectInvitation(invitationId: number): Promise<ProjectInvitationActionResponse> {
+    try {
+      const { data: result, error } = await this.supabase.rpc('cancel_project_invitation', {
+        p_invitation_id: invitationId,
+      });
+
+      if (error) {
+        throw new Error(`Failed to cancel project invitation: ${error.message}`);
+      }
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to cancel project invitation');
+      }
+
+      return {
+        success: true,
+        message: result.message,
+      };
+    } catch (error: any) {
+      console.error('Error in cancelProjectInvitation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resend project invitation
+   */
+  async resendProjectInvitation(
+    projectId: number,
+    email: string,
+    role: ProjectInvitationRole
+  ): Promise<ProjectInvitationResult> {
+    try {
+      // Resending is handled by the same invitation function
+      return await this.inviteUserByEmailToProject(projectId, email, role);
+    } catch (error: any) {
+      console.error('Error in resendProjectInvitation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Link user to pending project invitations
+   */
+  async linkUserToPendingProjectInvitations(userId: string): Promise<any> {
+    try {
+      const { data: result, error } = await this.supabase.rpc('link_user_to_pending_project_invitations', {
+        p_user_id: userId,
+      });
+
+      if (error) {
+        throw new Error(`Failed to link user to pending project invitations: ${error.message}`);
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Error in linkUserToPendingProjectInvitations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's pending project invitations
+   */
+  async getUserPendingProjectInvitations(userId: string): Promise<UserPendingProjectInvitationsResponse> {
+    try {
+      const { data: invitations, error } = await this.supabase.rpc('get_user_pending_project_invitations', {
+        p_user_id: userId,
+      });
+
+      if (error) {
+        throw new Error(`Failed to get user's pending project invitations: ${error.message}`);
+      }
+
+      return {
+        success: true,
+        invitations: invitations || [],
+        count: invitations?.length || 0,
+      };
+    } catch (error: any) {
+      console.error('Error in getUserPendingProjectInvitations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if user has pending project invitations
+   */
+  async userHasPendingProjectInvitations(userId: string): Promise<boolean> {
+    try {
+      const { data: result, error } = await this.supabase.rpc('user_has_pending_project_invitations', {
+        p_user_id: userId,
+      });
+
+      if (error) {
+        console.error('Error checking pending project invitations:', error);
+        return false;
+      }
+
+      return result || false;
+    } catch (error: any) {
+      console.error('Error in userHasPendingProjectInvitations:', error);
+      return false;
     }
   }
 }

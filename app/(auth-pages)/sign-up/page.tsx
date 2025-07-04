@@ -12,18 +12,21 @@ import { ClientAuthHandler } from '../sign-in/ClientAuthHandler';
 import { Suspense } from 'react';
 
 interface SignupProps {
-  searchParams: Promise<Message & { invitation?: string }>;
+  searchParams: Promise<Message & { invitation?: string; 'project-invitation'?: string }>;
 }
 
 export default async function Signup(props: SignupProps) {
   const searchParams = await props.searchParams;
   const invitationToken = searchParams.invitation;
+  const projectInvitationToken = searchParams['project-invitation'];
   
   // Get invitation details if token is provided
   let invitationDetails = null;
   let debugInfo = null;
+  let invitationType: 'organization' | 'project' | null = null;
   
   if (invitationToken) {
+    invitationType = 'organization';
     try {
       const supabase = await createClient();
       const { data: invitation, error: invitationError } = await supabase.rpc('get_invitation_by_token', {
@@ -52,6 +55,37 @@ export default async function Signup(props: SignupProps) {
       console.error('Error fetching invitation details:', error);
       debugInfo = { error: error instanceof Error ? error.message : 'Unknown error', token: invitationToken };
     }
+  } else if (projectInvitationToken) {
+    invitationType = 'project';
+    try {
+      const supabase = await createClient();
+      const { data: invitation, error: invitationError } = await supabase.rpc('get_project_invitation_by_token', {
+        p_token: projectInvitationToken,
+      });
+
+      console.log('Signup page - project invitation fetch result:', { invitation, invitationError });
+      debugInfo = { invitation, invitationError, token: projectInvitationToken };
+
+      if (invitationError) {
+        console.error('Error getting project invitation:', invitationError);
+      } else if (invitation && invitation.success && invitation.invitation) {
+        const invData = invitation.invitation;
+        console.log('Raw project invitation data:', invData);
+        
+        invitationDetails = {
+          project_name: invData.project_name || 'Unknown Project',
+          organization_name: invData.organization_name || 'Unknown Organization',
+          invited_email: invData.email || 'Unknown Email',
+          invited_by_name: invData.inviter_name || 'Unknown Inviter',
+        };
+        console.log('Parsed project invitation details:', invitationDetails);
+      } else {
+        console.log('Project invitation not found or invalid:', invitation);
+      }
+    } catch (error) {
+      console.error('Error fetching project invitation details:', error);
+      debugInfo = { error: error instanceof Error ? error.message : 'Unknown error', token: projectInvitationToken };
+    }
   }
   
   if ('message' in searchParams) {
@@ -71,12 +105,13 @@ export default async function Signup(props: SignupProps) {
       
       <div className="flex w-full max-w-sm flex-col gap-6">
         {/* Debug info for invitation fetching */}
-        {invitationToken && !invitationDetails && (
+        {(invitationToken || projectInvitationToken) && !invitationDetails && (
           <Card className="border-amber-200 bg-amber-50">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm text-amber-900">Debug: Invitation Loading</CardTitle>
               <CardDescription className="text-xs text-amber-700">
-                Token: {invitationToken}
+                Token: {invitationToken || projectInvitationToken}
+                Type: {invitationType}
               </CardDescription>
             </CardHeader>
             {debugInfo && (
@@ -98,9 +133,14 @@ export default async function Signup(props: SignupProps) {
                 <Building2 className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <CardTitle className="text-sm text-blue-900">Organization Invitation</CardTitle>
+                <CardTitle className="text-sm text-blue-900">
+                  {invitationType === 'project' ? 'Project Invitation' : 'Organization Invitation'}
+                </CardTitle>
                 <CardDescription className="text-xs text-blue-700">
-                  You're signing up to join {invitationDetails.organization_name}
+                  {invitationType === 'project' 
+                    ? `You're signing up to join ${invitationDetails.project_name} in ${invitationDetails.organization_name}`
+                    : `You're signing up to join ${invitationDetails.organization_name}`
+                  }
                 </CardDescription>
               </div>
             </div>
@@ -117,13 +157,22 @@ export default async function Signup(props: SignupProps) {
       <form className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-medium">
-            {invitationDetails ? 'Join Organization' : 'Sign up'}
+            {invitationDetails 
+              ? (invitationType === 'project' ? 'Join Project' : 'Join Organization')
+              : 'Sign up'
+            }
           </h1>
           <p className="text-sm text-foreground">
             Already have an account?{' '}
             <Link 
               className="font-medium text-primary underline" 
-              href={invitationToken ? `/sign-in?invitation=${invitationToken}` : "/sign-in"}
+              href={
+                invitationToken 
+                  ? `/sign-in?invitation=${invitationToken}` 
+                  : projectInvitationToken 
+                    ? `/sign-in?project-invitation=${projectInvitationToken}`
+                    : "/sign-in"
+              }
             >
               Sign in
             </Link>
@@ -131,9 +180,12 @@ export default async function Signup(props: SignupProps) {
         </div>
 
         <div className="flex flex-col gap-4">
-          {/* Hidden field to pass invitation token */}
+          {/* Hidden fields to pass invitation tokens */}
           {invitationToken && (
             <input type="hidden" name="invitation" value={invitationToken} />
+          )}
+          {projectInvitationToken && (
+            <input type="hidden" name="project-invitation" value={projectInvitationToken} />
           )}
           
           <div className="flex flex-col gap-2">
@@ -163,7 +215,10 @@ export default async function Signup(props: SignupProps) {
           </div>
 
           <SubmitButton formAction={signUpAction} pendingText="Signing up...">
-            {invitationDetails ? 'Sign up & Join Organization' : 'Sign up'}
+            {invitationDetails 
+              ? (invitationType === 'project' ? 'Sign up & Join Project' : 'Sign up & Join Organization')
+              : 'Sign up'
+            }
           </SubmitButton>
 
           <FormMessage message={searchParams} />

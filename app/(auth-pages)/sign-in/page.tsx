@@ -9,12 +9,13 @@ import { SignInForm } from './SignInForm';
 import { Suspense } from 'react';
 
 interface LoginProps {
-  searchParams: Promise<Message & { invitation?: string }>;
+  searchParams: Promise<Message & { invitation?: string; 'project-invitation'?: string }>;
 }
 
 export default async function Login(props: LoginProps) {
   const searchParams = await props.searchParams;
   const invitationToken = searchParams.invitation;
+  const projectInvitationToken = searchParams['project-invitation'];
   
   return (
     <>
@@ -30,7 +31,13 @@ export default async function Login(props: LoginProps) {
             Don't have an account?{' '}
             <Link 
               className="font-medium text-foreground underline" 
-              href={invitationToken ? `/sign-up?invitation=${invitationToken}` : "/sign-up"}
+              href={
+                invitationToken 
+                  ? `/sign-up?invitation=${invitationToken}` 
+                  : projectInvitationToken 
+                    ? `/sign-up?project-invitation=${projectInvitationToken}`
+                    : "/sign-up"
+              }
             >
               Sign up
             </Link>
@@ -38,7 +45,8 @@ export default async function Login(props: LoginProps) {
         </div>
 
         <SignInForm 
-          invitationToken={invitationToken} 
+          invitationToken={invitationToken}
+          projectInvitationToken={projectInvitationToken}
           searchParams={searchParams} 
         />
       </div>
