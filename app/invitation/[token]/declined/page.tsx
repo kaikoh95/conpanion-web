@@ -8,7 +8,8 @@ interface DeclinedPageProps {
 }
 
 export default async function InvitationDeclinedPage({ params }: DeclinedPageProps) {
-  const { token } = await params;
+  // Token not needed for this page, but keeping params for consistency
+  await params;
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center p-4">
@@ -35,7 +36,7 @@ export default async function InvitationDeclinedPage({ params }: DeclinedPagePro
           </div>
           
           <div className="text-sm text-muted-foreground">
-            <p>If you change your mind, you'll need to request a new invitation from the organization administrator.</p>
+            <p>If you change your mind, you&apos;ll need to request a new invitation from the organization administrator.</p>
           </div>
         </CardContent>
         

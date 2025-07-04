@@ -328,7 +328,7 @@ export function TaskDrawer({
             // Check if this is an RLS policy violation
             if (labelError.code === '42501') {
               setLabelError(
-                "You don't have permission to create new labels. Please contact an administrator.",
+                "You don&apos;t have permission to create new labels. Please contact an administrator.",
               );
               setSavingLabel(false);
               return;
@@ -343,7 +343,7 @@ export function TaskDrawer({
           labelId = labelData.id;
         } catch (err) {
           console.error('Exception creating label:', err);
-          setLabelError("You don't have permission to create new labels");
+          setLabelError("You don&apos;t have permission to create new labels");
           setSavingLabel(false);
           return;
         }

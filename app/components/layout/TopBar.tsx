@@ -1,8 +1,7 @@
 'use client';
 
-import { Search, Bell, User, Menu } from 'lucide-react';
+import { Search, User, Menu } from 'lucide-react';
 import Link from 'next/link';
-import { signOutAction } from '@/app/actions';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
@@ -13,17 +12,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { getSupabaseClient, createFreshSupabaseClient } from '@/lib/supabase/client';
 import { RefObject } from 'react';
-import { useRouter } from 'next/navigation';
 
 interface TopBarProps {
-  isSidebarOpen: boolean;
   onSidebarToggle: () => void;
   toggleButtonRef: RefObject<HTMLButtonElement | null>;
 }
 
-export default function TopBar({ isSidebarOpen, onSidebarToggle, toggleButtonRef }: TopBarProps) {
+export default function TopBar({ onSidebarToggle, toggleButtonRef }: TopBarProps) {
   const { user } = useAuth();
-  const router = useRouter();
   const [userProfile, setUserProfile] = useState<{
     global_avatar_url: string | null;
     global_display_name: string | null;

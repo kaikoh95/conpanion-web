@@ -23,7 +23,7 @@ export default function InvitationNotFound() {
               Invalid Invitation Link
             </p>
             <p className="text-sm text-amber-700 mt-1">
-              The invitation you're trying to access either doesn't exist, has been used, or has expired.
+              The invitation you&apos;re trying to access either doesn&apos;t exist, has been used, or has expired.
             </p>
           </div>
           

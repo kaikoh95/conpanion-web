@@ -100,7 +100,7 @@ export default async function Signup(props: SignupProps) {
               <div>
                 <CardTitle className="text-sm text-blue-900">Organization Invitation</CardTitle>
                 <CardDescription className="text-xs text-blue-700">
-                  You're signing up to join {invitationDetails.organization_name}
+                  You&apos;re signing up to join {invitationDetails.organization_name}
                 </CardDescription>
               </div>
             </div>

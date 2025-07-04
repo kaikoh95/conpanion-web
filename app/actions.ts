@@ -37,7 +37,6 @@ export const signUpAction = async (formData: FormData) => {
 
   // Check if user was created immediately (email verification disabled)
   const user = data.user;
-  const isEmailVerificationDisabled = user && !data.session?.access_token;
   
   // If user was created immediately, handle invitation linking
   if (user && data.session) {

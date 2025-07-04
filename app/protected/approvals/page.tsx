@@ -97,7 +97,7 @@ export default function ApprovalsPage() {
             <CardHeader>
               <CardTitle>My Approval Requests</CardTitle>
               <CardDescription>
-                Items you've requested approval for
+                Items you&apos;ve requested approval for
               </CardDescription>
             </CardHeader>
             <CardContent>

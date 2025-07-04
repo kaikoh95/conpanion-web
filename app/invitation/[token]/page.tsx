@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 import { OrganizationAPI } from '@/lib/api/organizations';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+
 import { Building2, Mail, User, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
@@ -67,7 +67,7 @@ async function InvitationContent({ token, error }: { token: string; error?: stri
           </div>
           <CardTitle>Organization Invitation</CardTitle>
           <CardDescription>
-            You've been invited to join an organization
+            You&apos;ve been invited to join an organization
           </CardDescription>
         </CardHeader>
         

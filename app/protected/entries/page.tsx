@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, X, ArrowLeft, Check, Pencil, Image } from 'lucide-react';
-import { ImageViewer } from '@/components/image-viewer';
+
 import { FileViewer } from '@/components/file-viewer';
 import {
   Select,
@@ -36,7 +36,7 @@ import { getFormById } from '@/lib/api/forms';
 import { FormItem } from '@/lib/types/form';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 // Add imports for AlertDialog components
 import {
   AlertDialog,
@@ -77,7 +77,6 @@ function SearchParamsWrapper() {
 // Main component content without direct useSearchParams usage
 function EntriesPageContent({ entryId }: { entryId: string | null }) {
   const supabase = createClient();
-  const router = useRouter();
   const { user } = useAuth();
   const { current: currentProject } = useProject();
   const [allEntries, setAllEntries] = useState<FormEntry[]>([]); // Store all fetched entries
@@ -102,7 +101,7 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
 
   // State for edit mode
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editedAnswers, setEditedAnswers] = useState<Record<number, any>>({});
+  const [editedAnswers, setEditedAnswers] = useState<Record<number, unknown>>({});
   const [editedEntryName, setEditedEntryName] = useState<string>('');
   const [formErrors, setFormErrors] = useState<Record<number, string>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -144,9 +143,10 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
         setAllEntries(fetchedEntries);
         // Apply initial filters immediately after fetching
         setFilteredEntries(filterEntries(fetchedEntries, searchTerm, selectedStatus));
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error loading entries:', err);
-        setError(err.message || 'Failed to load entries');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load entries';
+        setError(errorMessage);
         setAllEntries([]);
         setFilteredEntries([]);
       } finally {
@@ -157,9 +157,7 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
     loadEntries();
 
     // Add event listener for approval creation
-    const handleApprovalCreated = async (event: Event) => {
-      const customEvent = event as CustomEvent<{ entryId: number }>;
-
+    const handleApprovalCreated = async () => {
       // Fetch fresh data for the current project
       if (currentProject?.id) {
         const fetchedEntries = await fetchFormEntriesByProject(supabase, currentProject.id);
@@ -274,7 +272,7 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
           setEditedEntryName(entryData.entry.name || '');
 
           // Create a map of item_id -> answer_value for editing
-          const answersMap: Record<number, any> = {};
+          const answersMap: Record<number, unknown> = {};
           entryData.answers.forEach((answer: FormEntryAnswer) => {
             answersMap[answer.item_id] = answer.answer_value;
             // Log each answer for debugging
@@ -533,7 +531,7 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
       setEntryDetail(updatedEntry);
 
       // Update the answers map
-      const answersMap: Record<number, any> = {};
+      const answersMap: Record<number, unknown> = {};
       updatedEntry?.answers.forEach((answer: FormEntryAnswer) => {
         answersMap[answer.item_id] = answer.answer_value;
       });
@@ -561,7 +559,7 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
     // Reset edited values to original values
     if (entryDetail) {
       setEditedEntryName(entryDetail.entry.name || '');
-      const answersMap: Record<number, any> = {};
+      const answersMap: Record<number, unknown> = {};
       entryDetail.answers.forEach((answer: FormEntryAnswer) => {
         answersMap[answer.item_id] = answer.answer_value;
       });

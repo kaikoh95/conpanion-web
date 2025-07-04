@@ -1,8 +1,4 @@
-import { signInAction } from '@/app/actions';
-import { FormMessage, Message } from '@/components/form-message';
-import { SubmitButton } from '@/components/submit-button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Message } from '@/components/form-message';
 import Link from 'next/link';
 import { ClientAuthHandler } from './ClientAuthHandler';
 import { SignInForm } from './SignInForm';
@@ -27,7 +23,7 @@ export default async function Login(props: LoginProps) {
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-medium">Sign in</h1>
           <p className="text-sm text-foreground">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link 
               className="font-medium text-foreground underline" 
               href={invitationToken ? `/sign-up?invitation=${invitationToken}` : "/sign-up"}
