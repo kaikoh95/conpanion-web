@@ -183,6 +183,20 @@ export class NotificationAPI {
     if (error) throw error;
     if (!notificationId) throw new Error('Failed to create notification');
 
+    // Handle case where notification was not created due to user preferences
+    if (notificationId === -1) {
+      console.log(
+        'Notification not created - all recipients have disabled this notification type',
+        {
+          type: request.type,
+          title: request.title,
+          recipients: request.recipient_user_ids,
+        },
+      );
+      // Return -1 to indicate notification was filtered out by preferences
+      return -1;
+    }
+
     return notificationId;
   }
 
