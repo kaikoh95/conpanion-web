@@ -8,6 +8,7 @@ import { NotificationList } from './NotificationList';
 import { NotificationEmpty } from './NotificationEmpty';
 import { NotificationBadge } from './NotificationBadge';
 import { formatNotificationTime } from '@/lib/types/notification';
+import { useRouter } from 'next/navigation';
 
 interface NotificationDropdownProps {
   className?: string;
@@ -15,9 +16,9 @@ interface NotificationDropdownProps {
 
 export function NotificationDropdown({ className }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const router = useRouter();
 
   const { notifications, unreadCount, isLoading, markAllAsRead, loadNotifications, refresh } =
     useNotifications();
@@ -32,7 +33,6 @@ export function NotificationDropdown({ className }: NotificationDropdownProps) {
         !buttonRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
-        setShowSettings(false);
       }
     }
 
@@ -51,7 +51,11 @@ export function NotificationDropdown({ className }: NotificationDropdownProps) {
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
-    setShowSettings(false);
+  };
+
+  const handleSettingsClick = () => {
+    setIsOpen(false);
+    router.push('/protected/settings/notifications');
   };
 
   const handleMarkAllAsRead = async () => {
@@ -125,7 +129,7 @@ export function NotificationDropdown({ className }: NotificationDropdownProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowSettings(!showSettings)}
+                onClick={handleSettingsClick}
                 className="h-8 w-8"
               >
                 <Settings className="h-4 w-4" />
@@ -145,23 +149,7 @@ export function NotificationDropdown({ className }: NotificationDropdownProps) {
             </div>
           </div>
 
-          {/* Settings Panel */}
-          {showSettings && (
-            <div className="border-b p-4">
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium">Quick Settings</h4>
-                <div className="space-y-2 text-sm">
-                  <button className="block w-full text-left hover:text-primary">
-                    Notification preferences
-                  </button>
-                  <button className="block w-full text-left hover:text-primary">
-                    Email notifications
-                  </button>
-                  <button className="block w-full text-left hover:text-primary">Quiet hours</button>
-                </div>
-              </div>
-            </div>
-          )}
+
 
           {/* Content */}
           <div className="max-h-96 overflow-y-auto">
