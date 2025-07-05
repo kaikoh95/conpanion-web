@@ -241,30 +241,45 @@ export default function ProjectMembersPage() {
 
     setIsInviting(true);
     try {
-      // Invite user to project using real API
-      await projectAPI.inviteUserToProject(projectId, inviteEmail, inviteRole);
+      // Use the new organization-aware invitation function
+      const result = await projectAPI.inviteUserToProjectByEmail(projectId, inviteEmail, inviteRole);
 
-      setInviteMessage({
-        type: 'success',
-        text: `Successfully invited ${inviteEmail} to the project`,
-      });
+      if (result.success) {
+        setInviteMessage({
+          type: 'success',
+          text: result.message || `Successfully invited ${inviteEmail} to the project`,
+        });
 
-      // Reset form
-      setInviteEmail('');
-      setInviteRole('member');
-      setShowInviteDialog(false);
+        // Reset form
+        setInviteEmail('');
+        setInviteRole('member');
+        setShowInviteDialog(false);
 
-      // Reload members to show the new member
-      const members = await projectAPI.getProjectMembers(projectId);
-      setProjectMembers(members);
+        // Reload members to show the new member
+        const members = await projectAPI.getProjectMembers(projectId);
+        setProjectMembers(members);
 
-      // Show success notification
-      setNotification({
-        isOpen: true,
-        type: 'success',
-        title: 'Invitation Sent',
-        message: `Successfully invited ${inviteEmail} to join as ${inviteRole}.`,
-      });
+        // Show success notification
+        setNotification({
+          isOpen: true,
+          type: 'success',
+          title: 'Invitation Sent',
+          message: result.message || `Successfully invited ${inviteEmail} to join as ${inviteRole}.`,
+        });
+      } else {
+        // Handle specific error cases
+        if (result.error_code === 'NOT_ORGANIZATION_MEMBER') {
+          setInviteMessage({
+            type: 'error',
+            text: 'This user must be invited to the organization first before they can be invited to projects.',
+          });
+        } else {
+          setInviteMessage({
+            type: 'error',
+            text: result.error || 'Failed to send invitation',
+          });
+        }
+      }
     } catch (error: any) {
       setInviteMessage({
         type: 'error',
