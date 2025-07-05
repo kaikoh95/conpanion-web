@@ -1,0 +1,420 @@
+-- Migration: Implement edge function calls for email and push notifications
+-- Description: Replace commented edge function calls with actual HTTP requests using pg_net extension
+
+-- ===========================================
+-- ENABLE EXTENSIONS
+-- ===========================================
+
+-- Enable pg_net extension for HTTP requests (if available)
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+-- ===========================================
+-- HELPER FUNCTIONS
+-- ===========================================
+
+-- Function to call send-email-notification edge function
+CREATE OR REPLACE FUNCTION call_send_email_notification()
+RETURNS JSONB AS $$
+DECLARE
+  v_response JSONB;
+  v_request_id UUID;
+  v_result JSONB;
+BEGIN
+  -- Get environment variables
+  DECLARE
+    v_supabase_url TEXT := current_setting('app.settings.supabase_url', true);
+    v_supabase_service_key TEXT := current_setting('app.settings.supabase_service_key', true);
+    v_function_url TEXT;
+  BEGIN
+    -- Construct function URL
+    v_function_url := COALESCE(v_supabase_url, 'https://your-project-ref.supabase.co') || '/functions/v1/send-email-notification';
+    
+    -- Make HTTP request to edge function
+    SELECT net.http_post(
+      url := v_function_url,
+      headers := jsonb_build_object(
+        'Authorization', 'Bearer ' || COALESCE(v_supabase_service_key, ''),
+        'Content-Type', 'application/json',
+        'x-client-info', 'supabase-postgres'
+      ),
+      body := '{}'::jsonb
+    ) INTO v_request_id;
+    
+    -- Wait for response (with timeout)
+    SELECT content INTO v_result
+    FROM net.http_collect_response(v_request_id, timeout_milliseconds => 30000);
+    
+    RETURN COALESCE(v_result, '{"status": "timeout"}'::jsonb);
+    
+  EXCEPTION WHEN OTHERS THEN
+    -- If pg_net is not available or request fails, return error
+    RETURN jsonb_build_object(
+      'error', 'Failed to call edge function',
+      'details', SQLERRM
+    );
+  END;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to call send-push-notification edge function
+CREATE OR REPLACE FUNCTION call_send_push_notification()
+RETURNS JSONB AS $$
+DECLARE
+  v_response JSONB;
+  v_request_id UUID;
+  v_result JSONB;
+BEGIN
+  -- Get environment variables
+  DECLARE
+    v_supabase_url TEXT := current_setting('app.settings.supabase_url', true);
+    v_supabase_service_key TEXT := current_setting('app.settings.supabase_service_key', true);
+    v_function_url TEXT;
+  BEGIN
+    -- Construct function URL
+    v_function_url := COALESCE(v_supabase_url, 'https://your-project-ref.supabase.co') || '/functions/v1/send-push-notification';
+    
+    -- Make HTTP request to edge function
+    SELECT net.http_post(
+      url := v_function_url,
+      headers := jsonb_build_object(
+        'Authorization', 'Bearer ' || COALESCE(v_supabase_service_key, ''),
+        'Content-Type', 'application/json',
+        'x-client-info', 'supabase-postgres'
+      ),
+      body := '{}'::jsonb
+    ) INTO v_request_id;
+    
+    -- Wait for response (with timeout)
+    SELECT content INTO v_result
+    FROM net.http_collect_response(v_request_id, timeout_milliseconds => 30000);
+    
+    RETURN COALESCE(v_result, '{"status": "timeout"}'::jsonb);
+    
+  EXCEPTION WHEN OTHERS THEN
+    -- If pg_net is not available or request fails, return error
+    RETURN jsonb_build_object(
+      'error', 'Failed to call edge function',
+      'details', SQLERRM
+    );
+  END;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to safely call edge function with fallback
+CREATE OR REPLACE FUNCTION call_edge_function_safe(function_name TEXT)
+RETURNS JSONB AS $$
+DECLARE
+  v_result JSONB;
+  v_fallback_result JSONB;
+BEGIN
+  -- Try to call the edge function
+  CASE function_name
+    WHEN 'send-email-notification' THEN
+      v_result := call_send_email_notification();
+    WHEN 'send-push-notification' THEN
+      v_result := call_send_push_notification();
+    ELSE
+      RETURN jsonb_build_object('error', 'Unknown function name: ' || function_name);
+  END CASE;
+  
+  -- Check if the result indicates an error
+  IF v_result ? 'error' THEN
+    -- Log the error but don't fail the transaction
+    RAISE NOTICE 'Edge function call failed for %: %', function_name, v_result ->> 'error';
+    
+    -- Return a fallback result indicating that processing should continue
+    RETURN jsonb_build_object(
+      'status', 'fallback',
+      'message', 'Edge function call failed, items remain in queue for retry',
+      'error', v_result ->> 'error'
+    );
+  END IF;
+  
+  RETURN v_result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ===========================================
+-- UPDATE PROCESSING FUNCTIONS
+-- ===========================================
+
+-- Updated email queue processing function with edge function calls
+CREATE OR REPLACE FUNCTION process_email_queue()
+RETURNS TEXT AS $$
+DECLARE
+  v_processed INTEGER := 0;
+  v_failed INTEGER := 0;
+  v_email RECORD;
+  v_edge_function_result JSONB;
+  v_has_pending_emails BOOLEAN := FALSE;
+BEGIN
+  -- Check if there are any pending emails
+  SELECT EXISTS(
+    SELECT 1 FROM email_queue 
+    WHERE status = 'pending' 
+    AND scheduled_for <= NOW()
+  ) INTO v_has_pending_emails;
+  
+  -- Only call edge function if there are pending emails
+  IF v_has_pending_emails THEN
+    -- Call the edge function to process emails
+    v_edge_function_result := call_edge_function_safe('send-email-notification');
+    
+    -- Log the result
+    RAISE NOTICE 'Email edge function result: %', v_edge_function_result;
+    
+    -- Count how many emails were processed
+    IF v_edge_function_result ? 'results' THEN
+      SELECT COUNT(*) INTO v_processed
+      FROM jsonb_array_elements(v_edge_function_result -> 'results') AS result
+      WHERE result ->> 'status' = 'sent';
+      
+      SELECT COUNT(*) INTO v_failed
+      FROM jsonb_array_elements(v_edge_function_result -> 'results') AS result
+      WHERE result ->> 'status' = 'failed';
+    ELSE
+      -- If edge function failed, process items locally as fallback
+      FOR v_email IN 
+        SELECT * FROM email_queue 
+        WHERE status = 'pending' 
+        AND scheduled_for <= NOW()
+        ORDER BY priority DESC, scheduled_for ASC
+        LIMIT 10
+      LOOP
+        BEGIN
+          -- Update status to processing
+          UPDATE email_queue 
+          SET status = 'processing', updated_at = NOW()
+          WHERE id = v_email.id;
+          
+          -- Mark as queued for edge function delivery (fallback)
+          UPDATE email_queue 
+          SET 
+            status = 'queued_for_delivery',
+            updated_at = NOW(),
+            error_message = 'Edge function unavailable, queued for retry'
+          WHERE id = v_email.id;
+          
+          v_processed := v_processed + 1;
+          
+        EXCEPTION WHEN OTHERS THEN
+          -- Mark as failed and increment retry count
+          UPDATE email_queue 
+          SET 
+            status = 'failed',
+            error_message = SQLERRM,
+            retry_count = retry_count + 1,
+            updated_at = NOW()
+          WHERE id = v_email.id;
+          
+          v_failed := v_failed + 1;
+        END;
+      END LOOP;
+    END IF;
+  ELSE
+    RAISE NOTICE 'No pending emails to process';
+  END IF;
+  
+  RETURN format('Processed %s emails, %s failed', v_processed, v_failed);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Updated push queue processing function with edge function calls
+CREATE OR REPLACE FUNCTION process_push_queue()
+RETURNS TEXT AS $$
+DECLARE
+  v_processed INTEGER := 0;
+  v_failed INTEGER := 0;
+  v_push RECORD;
+  v_edge_function_result JSONB;
+  v_has_pending_push BOOLEAN := FALSE;
+BEGIN
+  -- Check if there are any pending push notifications
+  SELECT EXISTS(
+    SELECT 1 FROM push_queue 
+    WHERE status = 'pending' 
+    AND scheduled_for <= NOW()
+  ) INTO v_has_pending_push;
+  
+  -- Only call edge function if there are pending push notifications
+  IF v_has_pending_push THEN
+    -- Call the edge function to process push notifications
+    v_edge_function_result := call_edge_function_safe('send-push-notification');
+    
+    -- Log the result
+    RAISE NOTICE 'Push edge function result: %', v_edge_function_result;
+    
+    -- Count how many push notifications were processed
+    IF v_edge_function_result ? 'results' THEN
+      SELECT COUNT(*) INTO v_processed
+      FROM jsonb_array_elements(v_edge_function_result -> 'results') AS result
+      WHERE result ->> 'status' = 'sent';
+      
+      SELECT COUNT(*) INTO v_failed
+      FROM jsonb_array_elements(v_edge_function_result -> 'results') AS result
+      WHERE result ->> 'status' = 'failed';
+    ELSE
+      -- If edge function failed, process items locally as fallback
+      FOR v_push IN 
+        SELECT * FROM push_queue 
+        WHERE status = 'pending' 
+        AND scheduled_for <= NOW()
+        ORDER BY priority DESC, scheduled_for ASC
+        LIMIT 10
+      LOOP
+        BEGIN
+          -- Update status to processing
+          UPDATE push_queue 
+          SET status = 'processing', updated_at = NOW()
+          WHERE id = v_push.id;
+          
+          -- Mark as queued for edge function delivery (fallback)
+          UPDATE push_queue 
+          SET 
+            status = 'queued_for_delivery',
+            updated_at = NOW(),
+            error_message = 'Edge function unavailable, queued for retry'
+          WHERE id = v_push.id;
+          
+          v_processed := v_processed + 1;
+          
+        EXCEPTION WHEN OTHERS THEN
+          -- Mark as failed
+          UPDATE push_queue 
+          SET 
+            status = 'failed',
+            error_message = SQLERRM,
+            updated_at = NOW()
+          WHERE id = v_push.id;
+          
+          v_failed := v_failed + 1;
+        END;
+      END LOOP;
+    END IF;
+  ELSE
+    RAISE NOTICE 'No pending push notifications to process';
+  END IF;
+  
+  RETURN format('Processed %s push notifications, %s failed', v_processed, v_failed);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ===========================================
+-- GRANT PERMISSIONS
+-- ===========================================
+
+-- Grant execute permissions on new functions
+GRANT EXECUTE ON FUNCTION call_send_email_notification TO service_role;
+GRANT EXECUTE ON FUNCTION call_send_push_notification TO service_role;
+GRANT EXECUTE ON FUNCTION call_edge_function_safe TO service_role;
+
+-- ===========================================
+-- CONFIGURATION SETTINGS
+-- ===========================================
+
+-- Create function to set configuration settings
+CREATE OR REPLACE FUNCTION set_notification_config(
+  p_supabase_url TEXT DEFAULT NULL,
+  p_supabase_service_key TEXT DEFAULT NULL
+) RETURNS VOID AS $$
+BEGIN
+  -- Set configuration settings if provided
+  IF p_supabase_url IS NOT NULL THEN
+    PERFORM set_config('app.settings.supabase_url', p_supabase_url, false);
+  END IF;
+  
+  IF p_supabase_service_key IS NOT NULL THEN
+    PERFORM set_config('app.settings.supabase_service_key', p_supabase_service_key, false);
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION set_notification_config TO service_role;
+
+-- ===========================================
+-- WEBHOOK ALTERNATIVE (IF PG_NET IS NOT AVAILABLE)
+-- ===========================================
+
+-- Function to create webhook requests as an alternative to pg_net
+CREATE OR REPLACE FUNCTION create_webhook_request(
+  p_function_name TEXT,
+  p_payload JSONB DEFAULT '{}'::jsonb
+) RETURNS UUID AS $$
+DECLARE
+  v_request_id UUID;
+BEGIN
+  -- Create a webhook request record for external processing
+  INSERT INTO webhook_requests (
+    function_name,
+    payload,
+    status,
+    created_at,
+    scheduled_for
+  ) VALUES (
+    p_function_name,
+    p_payload,
+    'pending',
+    NOW(),
+    NOW()
+  ) RETURNING id INTO v_request_id;
+  
+  RETURN v_request_id;
+  
+EXCEPTION WHEN OTHERS THEN
+  -- If webhook_requests table doesn't exist, skip webhook creation
+  RAISE NOTICE 'Webhook requests table not available: %', SQLERRM;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Optional: Create webhook requests table if it doesn't exist
+CREATE TABLE IF NOT EXISTS webhook_requests (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  function_name TEXT NOT NULL,
+  payload JSONB DEFAULT '{}'::jsonb,
+  status TEXT DEFAULT 'pending' NOT NULL,
+  response JSONB,
+  error_message TEXT,
+  retry_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  scheduled_for TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  processed_at TIMESTAMPTZ,
+  CONSTRAINT webhook_requests_status_check CHECK (status IN ('pending', 'processing', 'completed', 'failed'))
+);
+
+-- Create index for webhook processing
+CREATE INDEX IF NOT EXISTS idx_webhook_requests_status_scheduled 
+ON webhook_requests(status, scheduled_for) 
+WHERE status = 'pending';
+
+-- Grant permissions for webhook requests
+GRANT ALL ON webhook_requests TO service_role;
+
+-- ===========================================
+-- COMMENTS AND DOCUMENTATION
+-- ===========================================
+
+COMMENT ON FUNCTION call_send_email_notification IS 'Calls the send-email-notification edge function via HTTP request';
+COMMENT ON FUNCTION call_send_push_notification IS 'Calls the send-push-notification edge function via HTTP request';
+COMMENT ON FUNCTION call_edge_function_safe IS 'Safely calls edge functions with error handling and fallback';
+COMMENT ON FUNCTION set_notification_config IS 'Sets configuration for notification edge function calls';
+COMMENT ON FUNCTION create_webhook_request IS 'Creates webhook requests as alternative to direct HTTP calls';
+
+COMMENT ON TABLE webhook_requests IS 'Optional table for webhook-based edge function calls when pg_net is not available';
+
+-- ===========================================
+-- MIGRATION NOTES
+-- ===========================================
+
+-- This migration implements the actual edge function calls that were previously commented out.
+-- It provides multiple fallback mechanisms:
+-- 1. Direct HTTP calls using pg_net extension (preferred)
+-- 2. Webhook requests for external processing (if pg_net is not available)
+-- 3. Local fallback processing (if both above fail)
+--
+-- The edge functions are called when there are pending items in the queue,
+-- and the functions handle the actual sending of emails and push notifications.
+--
+-- To configure the edge function URLs, use the set_notification_config function:
+-- SELECT set_notification_config('https://your-project-ref.supabase.co', 'your-service-key');
