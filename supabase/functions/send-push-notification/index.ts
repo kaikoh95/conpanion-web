@@ -118,8 +118,8 @@ serve(async (req) => {
         await supabase
           .from('notification_deliveries')
           .update({
-            push_sent_at: new Date().toISOString(),
-            push_status: 'sent',
+            delivered_at: new Date().toISOString(),
+            status: 'sent',
           })
           .eq('notification_id', pushItem.notification_id)
           .eq('user_id', notification.user_id);
