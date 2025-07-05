@@ -7,8 +7,16 @@ import { NotificationItem } from './NotificationItem';
 import { Loader2, BellOff, Settings } from 'lucide-react';
 import Link from 'next/link';
 
-export function NotificationList() {
-  const { notifications, isLoading, markAllAsRead, unreadCount } = useNotifications();
+interface NotificationListProps {
+  showUnreadOnly?: boolean;
+}
+
+export function NotificationList({ showUnreadOnly = false }: NotificationListProps) {
+  const { notifications, unreadNotifications, isLoading, markAllAsRead, unreadCount } =
+    useNotifications();
+
+  // Use unread notifications for bell popup, all notifications for full page
+  const displayNotifications = showUnreadOnly ? unreadNotifications : notifications;
 
   return (
     <div className="flex h-full flex-col">
@@ -54,17 +62,21 @@ export function NotificationList() {
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : notifications.length === 0 ? (
+        ) : displayNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-6 text-center sm:p-8">
             <BellOff className="mb-4 h-12 w-12 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">No notifications yet</p>
+            <p className="text-sm text-muted-foreground">
+              {showUnreadOnly ? 'No unread notifications' : 'No notifications yet'}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              You'll see notifications here when you get them
+              {showUnreadOnly
+                ? "You're all caught up!"
+                : "You'll see notifications here when you get them"}
             </p>
           </div>
         ) : (
           <div className="divide-y">
-            {notifications.map((notification) => (
+            {displayNotifications.map((notification) => (
               <NotificationItem key={notification.id} notification={notification} />
             ))}
           </div>
@@ -72,7 +84,7 @@ export function NotificationList() {
       </ScrollArea>
 
       {/* Footer */}
-      {notifications.length > 0 && (
+      {displayNotifications.length > 0 && (
         <div className="border-t p-3">
           <Button variant="ghost" size="sm" className="w-full text-xs" asChild>
             <Link href="/protected/notifications">View all notifications</Link>

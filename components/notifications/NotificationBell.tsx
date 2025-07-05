@@ -42,7 +42,7 @@ export function NotificationBell() {
         className="h-[70vh] max-h-[600px] w-[calc(100vw-2rem)] max-w-[400px] overflow-hidden p-0 sm:w-[400px]"
         sideOffset={8}
       >
-        <NotificationList />
+        <NotificationList showUnreadOnly={true} />
       </DropdownMenuContent>
     </DropdownMenu>
   );

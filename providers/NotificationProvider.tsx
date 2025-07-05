@@ -9,6 +9,7 @@ import { notificationIcons } from '@/lib/types/notifications';
 
 interface NotificationContextType {
   notifications: Notification[];
+  unreadNotifications: Notification[];
   unreadCount: number;
   isLoading: boolean;
   markAsRead: (notificationId: string) => Promise<void>;
@@ -207,11 +208,13 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     };
   }, [user?.id, supabase]);
 
-  // Calculate unread count
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  // Calculate unread notifications and count
+  const unreadNotifications = notifications.filter((n) => !n.is_read);
+  const unreadCount = unreadNotifications.length;
 
   const value: NotificationContextType = {
     notifications,
+    unreadNotifications,
     unreadCount,
     isLoading,
     markAsRead,
