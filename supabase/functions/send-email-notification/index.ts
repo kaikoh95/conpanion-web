@@ -3,48 +3,49 @@
 // This enables autocomplete, go to definition, etc.
 
 // Setup type definitions for built-in Supabase Runtime APIs
-import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Resend } from 'https://esm.sh/resend@2.0.0'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Resend } from 'https://esm.sh/resend@2.0.0';
 
-console.log("Hello from Functions!")
+console.log('Hello from Functions!');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 interface EmailNotification {
-  id: string
-  user_id: string
-  notification_id: string
-  to_email: string
-  subject: string
-  html_content: string
-  text_content: string
-  metadata?: Record<string, any>
+  id: string;
+  user_id: string;
+  notification_id: string;
+  to_email: string;
+  subject: string;
+  html_content: string;
+  text_content: string;
+  metadata?: Record<string, any>;
 }
 
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')!
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const resend = new Resend(resendApiKey)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const resendApiKey = Deno.env.get('RESEND_API_KEY')!;
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const resend = new Resend(resendApiKey);
 
     // Get pending email notifications
     const { data: emailQueue, error: queueError } = await supabase
       .from('notification_email_queue')
-      .select(`
+      .select(
+        `
         *,
         notifications!inner(
           title,
@@ -59,46 +60,46 @@ serve(async (req) => {
             raw_user_meta_data
           )
         )
-      `)
+      `,
+      )
       .eq('status', 'pending')
       .order('priority', { ascending: false })
       .order('created_at', { ascending: true })
-      .limit(10)
+      .limit(10);
 
     if (queueError) {
-      throw new Error(`Failed to fetch email queue: ${queueError.message}`)
+      throw new Error(`Failed to fetch email queue: ${queueError.message}`);
     }
 
     if (!emailQueue || emailQueue.length === 0) {
-      return new Response(
-        JSON.stringify({ message: 'No pending emails' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ message: 'No pending emails' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const results = []
-    
+    const results = [];
+
     for (const email of emailQueue) {
       try {
-        const notification = email.notifications
-        const user = notification.user
-        const userEmail = user.email
-        const userName = user.raw_user_meta_data?.full_name || user.email.split('@')[0]
+        const notification = email.notifications;
+        const user = notification.user;
+        const userEmail = user.email;
+        const userName = user.raw_user_meta_data?.full_name || user.email.split('@')[0];
 
         // Generate email content based on notification type
-        const { subject, html, text } = generateEmailContent(notification, userName)
+        const { subject, html, text } = generateEmailContent(notification, userName);
 
         // Send email using Resend
         const { data: emailData, error: sendError } = await resend.emails.send({
-          from: 'ProjectFlow <notifications@projectflow.app>',
+          from: 'Conpanion <notifications@getconpanion.com>',
           to: userEmail,
           subject,
           html,
           text,
-        })
+        });
 
         if (sendError) {
-          throw sendError
+          throw sendError;
         }
 
         // Update queue status
@@ -107,74 +108,72 @@ serve(async (req) => {
           .update({
             status: 'sent',
             sent_at: new Date().toISOString(),
-            metadata: { resend_id: emailData?.id }
+            metadata: { resend_id: emailData?.id },
           })
-          .eq('id', email.id)
+          .eq('id', email.id);
 
         // Update delivery status
         await supabase
           .from('notification_deliveries')
           .update({
             email_sent_at: new Date().toISOString(),
-            email_status: 'sent'
+            email_status: 'sent',
           })
           .eq('notification_id', email.notification_id)
-          .eq('user_id', email.user_id)
+          .eq('user_id', email.user_id);
 
-        results.push({ 
-          id: email.id, 
-          status: 'sent', 
-          resend_id: emailData?.id 
-        })
-
+        results.push({
+          id: email.id,
+          status: 'sent',
+          resend_id: emailData?.id,
+        });
       } catch (error) {
-        console.error(`Failed to send email ${email.id}:`, error)
-        
+        console.error(`Failed to send email ${email.id}:`, error);
+
         // Update queue status to failed
         await supabase
           .from('notification_email_queue')
           .update({
             status: 'failed',
             error_message: error.message,
-            retry_count: email.retry_count + 1
+            retry_count: email.retry_count + 1,
           })
-          .eq('id', email.id)
+          .eq('id', email.id);
 
-        results.push({ 
-          id: email.id, 
-          status: 'failed', 
-          error: error.message 
-        })
+        results.push({
+          id: email.id,
+          status: 'failed',
+          error: error.message,
+        });
       }
     }
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         message: `Processed ${results.length} emails`,
-        results 
+        results,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
   } catch (error) {
-    console.error('Error in send-email-notification:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    )
+    console.error('Error in send-email-notification:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
-})
+});
 
-function generateEmailContent(notification: any, userName: string): { 
-  subject: string; 
-  html: string; 
-  text: string 
+function generateEmailContent(
+  notification: any,
+  userName: string,
+): {
+  subject: string;
+  html: string;
+  text: string;
 } {
-  const baseUrl = Deno.env.get('NEXT_PUBLIC_SITE_URL') || 'https://projectflow.app'
-  
+  const baseUrl = Deno.env.get('APP_URL') || 'https://www.getconpanion.com';
+
   // Common email template
   const emailTemplate = (content: string, actionUrl?: string, actionText?: string) => ({
     html: `
@@ -196,7 +195,7 @@ function generateEmailContent(notification: any, userName: string): {
         <body>
           <div class="container">
             <div class="header">
-              <h1>ProjectFlow</h1>
+              <h1>Conpanion</h1>
             </div>
             <div class="content">
               <p>Hi ${userName},</p>
@@ -211,8 +210,8 @@ function generateEmailContent(notification: any, userName: string): {
         </body>
       </html>
     `,
-    text: `Hi ${userName},\n\n${notification.message}\n\n${actionUrl ? `View details: ${actionUrl}` : ''}\n\nManage notifications: ${baseUrl}/protected/settings/notifications`
-  })
+    text: `Hi ${userName},\n\n${notification.message}\n\n${actionUrl ? `View details: ${actionUrl}` : ''}\n\nManage notifications: ${baseUrl}/protected/settings/notifications`,
+  });
 
   // Generate content based on notification type
   switch (notification.type) {
@@ -222,9 +221,9 @@ function generateEmailContent(notification: any, userName: string): {
         ...emailTemplate(
           `<p><strong>${notification.title}</strong></p><p>${notification.message}</p>`,
           `${baseUrl}/protected/tasks/${notification.entity_id}`,
-          'View Task'
-        )
-      }
+          'View Task',
+        ),
+      };
 
     case 'task_comment':
       return {
@@ -232,9 +231,9 @@ function generateEmailContent(notification: any, userName: string): {
         ...emailTemplate(
           `<p><strong>${notification.title}</strong></p><p>${notification.message}</p>`,
           `${baseUrl}/protected/tasks/${notification.data?.task_id}#comment-${notification.entity_id}`,
-          'View Comment'
-        )
-      }
+          'View Comment',
+        ),
+      };
 
     case 'approval_requested':
       return {
@@ -242,9 +241,9 @@ function generateEmailContent(notification: any, userName: string): {
         ...emailTemplate(
           `<p><strong>${notification.title}</strong></p><p>${notification.message}</p><p style="color: #ff6600; font-weight: bold;">⚠️ This requires your approval</p>`,
           `${baseUrl}/protected/approvals/${notification.entity_id}`,
-          'Review & Approve'
-        )
-      }
+          'Review & Approve',
+        ),
+      };
 
     case 'organization_added':
       return {
@@ -252,9 +251,9 @@ function generateEmailContent(notification: any, userName: string): {
         ...emailTemplate(
           `<p><strong>${notification.title}</strong></p><p>${notification.message}</p>`,
           `${baseUrl}/protected/organizations/${notification.entity_id}`,
-          'View Organization'
-        )
-      }
+          'View Organization',
+        ),
+      };
 
     case 'project_added':
       return {
@@ -262,27 +261,29 @@ function generateEmailContent(notification: any, userName: string): {
         ...emailTemplate(
           `<p><strong>${notification.title}</strong></p><p>${notification.message}</p>`,
           `${baseUrl}/protected/projects/${notification.entity_id}`,
-          'View Project'
-        )
-      }
+          'View Project',
+        ),
+      };
 
     case 'system':
       return {
         subject: `System Notice: ${notification.title}`,
         ...emailTemplate(
           `<p><strong>${notification.title}</strong></p><p>${notification.message}</p>`,
-          notification.data?.action_url
-        )
-      }
+          notification.data?.action_url,
+        ),
+      };
 
     default:
       return {
         subject: notification.title,
         ...emailTemplate(
           `<p><strong>${notification.title}</strong></p><p>${notification.message}</p>`,
-          notification.entity_id ? `${baseUrl}/protected/${notification.entity_type}s/${notification.entity_id}` : undefined
-        )
-      }
+          notification.entity_id
+            ? `${baseUrl}/protected/${notification.entity_type}s/${notification.entity_id}`
+            : undefined,
+        ),
+      };
   }
 }
 

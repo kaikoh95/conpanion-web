@@ -1,7 +1,7 @@
 {
-  "name": "ProjectFlow - Construction Project Management",
-  "short_name": "ProjectFlow",
-  "description": "Project management tool for construction companies",
+  "description": "Construction Companion App",
+  "short_name": "Conpanion",
+  "name": "Conpanion - Construction Companion App",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

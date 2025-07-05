@@ -249,7 +249,7 @@ $$ LANGUAGE plpgsql;
 
 -- Create trigger for project members
 CREATE TRIGGER project_member_notification_trigger
-AFTER INSERT ON project_members
+AFTER INSERT ON projects_users
 FOR EACH ROW
 EXECUTE FUNCTION notify_project_membership();
 
@@ -387,6 +387,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 -- Add comment
 COMMENT ON TRIGGER task_notification_trigger ON tasks IS 'Creates notifications for task assignment and status changes';
 COMMENT ON TRIGGER task_comment_notification_trigger ON task_comments IS 'Creates notifications for new comments and mentions';
-COMMENT ON TRIGGER project_member_notification_trigger ON project_members IS 'Creates notifications when users are added to projects';
+COMMENT ON TRIGGER project_member_notification_trigger ON projects_users IS 'Creates notifications when users are added to projects';
 COMMENT ON TRIGGER organization_user_notification_trigger ON organization_users IS 'Creates notifications when users are added to organizations';
 COMMENT ON TRIGGER approval_notification_trigger ON approvals IS 'Creates notifications for approval requests and status changes';

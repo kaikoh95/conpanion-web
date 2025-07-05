@@ -1,11 +1,11 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/utils/supabase/client';
-import { useAuth } from '@/providers/AuthProvider';
-import type { Notification } from '@/lib/types/notifications';
-import { RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
+import type { Notification, NotificationType } from '@/lib/types/notifications';
+import { notificationIcons } from '@/lib/types/notifications';
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -16,7 +16,7 @@ interface NotificationContextType {
   refreshNotifications: () => Promise<void>;
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+const NotificationContext = createContext<NotificationContextType | null>(null);
 
 export function useNotifications() {
   const context = useContext(NotificationContext);
@@ -27,20 +27,22 @@ export function useNotifications() {
 }
 
 interface NotificationProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
-  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
 
   // Load notifications
   const loadNotifications = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) {
+      setNotifications([]);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -58,104 +60,130 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [user, supabase]);
+  }, [user?.id, supabase]);
 
-  // Load unread count
-  const loadUnreadCount = useCallback(async () => {
-    if (!user) return;
+  // Mark notification as read
+  const markAsRead = useCallback(
+    async (notificationId: string) => {
+      if (!user?.id) return;
+
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .update({
+            is_read: true,
+            read_at: new Date().toISOString(),
+          })
+          .eq('id', notificationId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        // Update local state
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notificationId
+              ? { ...n, is_read: true, read_at: new Date().toISOString() }
+              : n,
+          ),
+        );
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+      }
+    },
+    [user?.id, supabase],
+  );
+
+  // Mark all notifications as read
+  const markAllAsRead = useCallback(async () => {
+    if (!user?.id) return;
 
     try {
-      const { count, error } = await supabase
+      const { error } = await supabase
         .from('notifications')
-        .select('*', { count: 'exact', head: true })
+        .update({
+          is_read: true,
+          read_at: new Date().toISOString(),
+        })
         .eq('user_id', user.id)
         .eq('is_read', false);
 
       if (error) throw error;
-      setUnreadCount(count || 0);
+
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, is_read: true, read_at: new Date().toISOString() })),
+      );
+
+      toast.success('All notifications marked as read');
     } catch (error) {
-      console.error('Error loading unread count:', error);
+      console.error('Error marking all as read:', error);
+      toast.error('Failed to mark all as read');
     }
-  }, [user, supabase]);
+  }, [user?.id, supabase]);
 
-  // Handle new notification
-  const handleNewNotification = useCallback((notification: Notification) => {
-    // Add to list
-    setNotifications((prev: Notification[]) => [notification, ...prev]);
-    setUnreadCount((prev: number) => prev + 1);
+  // Refresh notifications
+  const refreshNotifications = useCallback(async () => {
+    await loadNotifications();
+  }, [loadNotifications]);
 
-    // Show toast notification
-    toast(notification.title, {
-      description: notification.message,
-      action: notification.entity_id ? {
-        label: 'View',
-        onClick: () => {
-          // Navigate to entity
-          const entityPath = getEntityPath(notification);
-          if (entityPath) {
-            window.location.href = entityPath;
-          }
-        }
-      } : undefined,
-    });
-
-    // Browser notification if permitted
-    if (window.Notification && window.Notification.permission === 'granted' && document.hidden) {
-      const browserNotification = new window.Notification(notification.title, {
-        body: notification.message,
-        icon: '/icon-192x192.png',
-        badge: '/badge-72x72.png',
-      });
-
-      browserNotification.onclick = () => {
-        window.focus();
-        const entityPath = getEntityPath(notification);
-        if (entityPath) {
-          window.location.href = entityPath;
-        }
-      };
-    }
-  }, []);
-
-  // Handle notification update
-  const handleNotificationUpdate = useCallback((updatedNotification: Notification) => {
-    setNotifications((prev: Notification[]) => 
-      prev.map((n: Notification) => n.id === updatedNotification.id ? updatedNotification : n)
-    );
-    
-    // Update unread count if notification was marked as read
-    if (updatedNotification.is_read) {
-      setUnreadCount((prev: number) => Math.max(0, prev - 1));
-    }
-  }, []);
-
-  // Set up real-time subscription
+  // Load notifications on mount and user change
   useEffect(() => {
-    if (!user) {
-      setNotifications([]);
-      setUnreadCount(0);
-      setIsLoading(false);
-      return;
-    }
-
-    // Initial load
     loadNotifications();
-    loadUnreadCount();
+  }, [loadNotifications]);
 
-    // Subscribe to real-time updates
-    const newChannel = supabase
-      .channel(`user-notifications:${user.id}`)
+  // Subscribe to real-time notifications
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('notifications')
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${user.id}`
+          filter: `user_id=eq.${user.id}`,
         },
-        (payload: any) => {
-          handleNewNotification(payload.new as Notification);
-        }
+        (payload) => {
+          const newNotification = payload.new as Notification;
+
+          // Add to local state
+          setNotifications((prev) => [newNotification, ...prev]);
+
+          // Show toast notification with mobile-responsive styling
+          const icon = notificationIcons[newNotification.type] || '🔔';
+          toast(newNotification.title, {
+            description: newNotification.message,
+            icon: icon,
+            duration: 5000,
+            position: 'top-center',
+            style: {
+              maxWidth: 'calc(100vw - 2rem)',
+            },
+            className: 'sm:max-w-md',
+          });
+
+          // Show browser notification if permission granted
+          if (
+            typeof window !== 'undefined' &&
+            'Notification' in window &&
+            Notification.permission === 'granted'
+          ) {
+            new Notification(newNotification.title, {
+              body: newNotification.message,
+              icon: '/icon-192x192.png',
+              badge: '/icon-72x72.png',
+              tag: `notification-${newNotification.id}`,
+              data: {
+                notification_id: newNotification.id,
+                entity_type: newNotification.entity_type,
+                entity_id: newNotification.entity_id,
+              },
+            });
+          }
+        },
       )
       .on(
         'postgres_changes',
@@ -163,85 +191,24 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
           event: 'UPDATE',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${user.id}`
+          filter: `user_id=eq.${user.id}`,
         },
-        (payload: any) => {
-          handleNotificationUpdate(payload.new as Notification);
-        }
+        (payload) => {
+          const updatedNotification = payload.new as Notification;
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === updatedNotification.id ? updatedNotification : n)),
+          );
+        },
       )
       .subscribe();
 
-    setChannel(newChannel);
-
-    // Request browser notification permission
-    if (window.Notification && window.Notification.permission === 'default') {
-      window.Notification.requestPermission();
-    }
-
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      supabase.removeChannel(channel);
     };
-  }, [user, supabase, loadNotifications, loadUnreadCount, handleNewNotification, handleNotificationUpdate]);
+  }, [user?.id, supabase]);
 
-  // Mark notification as read
-  const markAsRead = useCallback(async (notificationId: string) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ 
-          is_read: true, 
-          read_at: new Date().toISOString() 
-        })
-        .eq('id', notificationId)
-        .eq('user_id', user?.id);
-
-      if (error) throw error;
-
-      // Update local state
-      setNotifications((prev: Notification[]) =>
-        prev.map((n: Notification) => n.id === notificationId ? { ...n, is_read: true } : n)
-      );
-      setUnreadCount((prev: number) => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      toast.error('Failed to mark notification as read');
-    }
-  }, [user, supabase]);
-
-  // Mark all notifications as read
-  const markAllAsRead = useCallback(async () => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ 
-          is_read: true, 
-          read_at: new Date().toISOString() 
-        })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-
-      if (error) throw error;
-
-      // Update local state
-      setNotifications((prev: Notification[]) => prev.map((n: Notification) => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-      
-      toast.success('All notifications marked as read');
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-      toast.error('Failed to mark all notifications as read');
-    }
-  }, [user, supabase]);
-
-  // Refresh notifications
-  const refreshNotifications = useCallback(async () => {
-    setIsLoading(true);
-    await Promise.all([loadNotifications(), loadUnreadCount()]);
-  }, [loadNotifications, loadUnreadCount]);
+  // Calculate unread count
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const value: NotificationContextType = {
     notifications,
@@ -252,31 +219,5 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     refreshNotifications,
   };
 
-  return (
-    <NotificationContext.Provider value={value}>
-      {children}
-    </NotificationContext.Provider>
-  );
-}
-
-// Helper function to get entity path
-function getEntityPath(notification: Notification): string | null {
-  const { entity_type, entity_id, data } = notification;
-  
-  if (!entity_type || !entity_id) return null;
-
-  switch (entity_type) {
-    case 'task':
-      return `/tasks/${entity_id}`;
-    case 'project':
-      return `/projects/${entity_id}`;
-    case 'organization':
-      return `/organizations/${entity_id}`;
-    case 'approval':
-      return `/approvals/${entity_id}`;
-    case 'task_comment':
-      return data.task_id ? `/tasks/${data.task_id}#comment-${entity_id}` : null;
-    default:
-      return null;
-  }
+  return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 }

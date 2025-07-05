@@ -7,8 +7,8 @@ import { Toaster } from 'sonner';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'ProjectFlow - Construction Project Management',
-  description: 'Project management tool for construction companies',
+  title: 'Conpanion',
+  description: 'Construction Companion App',
   manifest: '/manifest.json',
   themeColor: '#0066cc',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',

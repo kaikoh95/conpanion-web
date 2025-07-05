@@ -1,5 +1,5 @@
 // Service Worker for Web Push Notifications
-const CACHE_NAME = 'projectflow-v1';
+const CACHE_NAME = 'conpanion-v1';
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
@@ -13,11 +13,9 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+        cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)),
       );
-    })
+    }),
   );
   self.clients.claim();
 });
@@ -53,25 +51,23 @@ self.addEventListener('push', (event) => {
       {
         action: 'view',
         title: 'View',
-        icon: '/icons/check.png'
+        icon: '/icons/check.png',
       },
       {
         action: 'dismiss',
         title: 'Dismiss',
-        icon: '/icons/x.png'
-      }
-    ]
+        icon: '/icons/x.png',
+      },
+    ],
   };
 
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 // Notification click event - handle notification interactions
 self.addEventListener('notificationclick', (event) => {
   console.log('[Service Worker] Notification clicked:', event);
-  
+
   event.notification.close();
 
   const { action } = event;
@@ -83,7 +79,7 @@ self.addEventListener('notificationclick', (event) => {
 
   // Determine URL to open
   let targetUrl = '/protected/notifications';
-  
+
   if (url) {
     targetUrl = url;
   } else if (entity_type && entity_id) {
@@ -121,7 +117,7 @@ self.addEventListener('notificationclick', (event) => {
       if (clients.openWindow) {
         return clients.openWindow(targetUrl);
       }
-    })
+    }),
   );
 });
 
@@ -140,11 +136,11 @@ async function syncNotifications() {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       throw new Error('Sync failed');
     }
-    
+
     const data = await response.json();
     console.log('[Service Worker] Notifications synced:', data);
   } catch (error) {
@@ -155,11 +151,11 @@ async function syncNotifications() {
 // Message event - handle messages from the app
 self.addEventListener('message', (event) => {
   console.log('[Service Worker] Message received:', event.data);
-  
+
   if (event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
+
   if (event.data.type === 'NOTIFICATION_READ') {
     // Clear notification if it's still showing
     self.registration.getNotifications({ tag: event.data.tag }).then((notifications) => {

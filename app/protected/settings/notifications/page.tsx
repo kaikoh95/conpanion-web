@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2, Bell, BellOff } from 'lucide-react';
 import type { NotificationPreference, NotificationType } from '@/lib/types/notifications';
-import { useServiceWorker } from '@/hooks/useServiceWorker';
 
 const notificationTypes: { type: NotificationType; label: string; description: string }[] = [
   {
@@ -62,17 +61,12 @@ const notificationTypes: { type: NotificationType; label: string; description: s
 
 export default function NotificationPreferencesPage() {
   const { user } = useAuth();
-  const [preferences, setPreferences] = useState<Record<NotificationType, NotificationPreference>>({} as any);
+  const [preferences, setPreferences] = useState<Record<NotificationType, NotificationPreference>>(
+    {} as any,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const supabase = createClient();
-  const { 
-    isSupported: isPushSupported, 
-    isSubscribed, 
-    subscribeToPush, 
-    unsubscribeFromPush,
-    permissionState 
-  } = useServiceWorker();
 
   useEffect(() => {
     loadPreferences();
@@ -91,7 +85,7 @@ export default function NotificationPreferencesPage() {
 
       // Create a map of preferences by type
       const prefsMap: Record<string, NotificationPreference> = {};
-      
+
       // Initialize with defaults for all types
       notificationTypes.forEach(({ type }) => {
         prefsMap[type] = {
@@ -123,7 +117,7 @@ export default function NotificationPreferencesPage() {
   const updatePreference = async (
     type: NotificationType,
     channel: 'email_enabled' | 'push_enabled' | 'in_app_enabled',
-    value: boolean
+    value: boolean,
   ) => {
     if (!user) return;
 
@@ -136,7 +130,7 @@ export default function NotificationPreferencesPage() {
     setIsSaving(true);
     try {
       const existingPref = preferences[type];
-      
+
       // Prepare the updated preference
       const updatedPref = {
         ...existingPref,
@@ -145,17 +139,18 @@ export default function NotificationPreferencesPage() {
       };
 
       // Upsert the preference
-      const { error } = await supabase
-        .from('notification_preferences')
-        .upsert({
+      const { error } = await supabase.from('notification_preferences').upsert(
+        {
           user_id: user.id,
           type,
           email_enabled: updatedPref.email_enabled,
           push_enabled: updatedPref.push_enabled,
           in_app_enabled: updatedPref.in_app_enabled,
-        }, {
+        },
+        {
           onConflict: 'user_id,type',
-        });
+        },
+      );
 
       if (error) throw error;
 
@@ -183,10 +178,10 @@ export default function NotificationPreferencesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Notification Preferences</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="text-2xl font-bold sm:text-3xl">Notification Preferences</h1>
+        <p className="mt-1 text-muted-foreground sm:mt-2">
           Manage how you receive notifications for different events
         </p>
       </div>
@@ -202,44 +197,50 @@ export default function NotificationPreferencesPage() {
           {notificationTypes.map(({ type, label, description }) => {
             const pref = preferences[type];
             const isSystem = type === 'system';
-            
+
             return (
               <div key={type} className="space-y-4 border-b pb-6 last:border-0">
                 <div>
                   <h3 className="font-medium">{label}</h3>
                   <p className="text-sm text-muted-foreground">{description}</p>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div className="flex items-center space-x-2">
                     <Switch
                       id={`${type}-in-app`}
                       checked={pref?.in_app_enabled ?? true}
-                      onCheckedChange={(checked) => updatePreference(type, 'in_app_enabled', checked)}
+                      onCheckedChange={(checked: boolean) =>
+                        updatePreference(type, 'in_app_enabled', checked)
+                      }
                       disabled={isSaving || isSystem}
                     />
                     <Label htmlFor={`${type}-in-app`} className="cursor-pointer">
                       In-App
                     </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <Switch
                       id={`${type}-email`}
                       checked={pref?.email_enabled ?? true}
-                      onCheckedChange={(checked) => updatePreference(type, 'email_enabled', checked)}
+                      onCheckedChange={(checked: boolean) =>
+                        updatePreference(type, 'email_enabled', checked)
+                      }
                       disabled={isSaving || isSystem}
                     />
                     <Label htmlFor={`${type}-email`} className="cursor-pointer">
                       Email
                     </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <Switch
                       id={`${type}-push`}
                       checked={pref?.push_enabled ?? true}
-                      onCheckedChange={(checked) => updatePreference(type, 'push_enabled', checked)}
+                      onCheckedChange={(checked: boolean) =>
+                        updatePreference(type, 'push_enabled', checked)
+                      }
                       disabled={isSaving || isSystem}
                     />
                     <Label htmlFor={`${type}-push`} className="cursor-pointer">
@@ -261,19 +262,14 @@ export default function NotificationPreferencesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div className="space-y-1">
               <Label>Browser Notifications</Label>
               <p className="text-sm text-muted-foreground">
-                {permissionState === 'granted' 
-                  ? 'Permission granted' 
-                  : permissionState === 'denied'
-                  ? 'Permission denied - please enable in browser settings'
-                  : 'Click to enable browser notifications'}
+                Click to enable notifications for this browser
               </p>
             </div>
             <Button
-              variant={permissionState === 'granted' ? 'secondary' : 'default'}
               onClick={() => {
                 if (window.Notification && window.Notification.permission === 'default') {
                   window.Notification.requestPermission().then((permission) => {
@@ -289,50 +285,12 @@ export default function NotificationPreferencesPage() {
                   toast.error('Your browser does not support notifications');
                 }
               }}
-              disabled={permissionState === 'denied'}
+              className="w-full sm:w-auto"
             >
-              {permissionState === 'granted' ? (
-                <>
-                  <Bell className="h-4 w-4 mr-2" />
-                  Enabled
-                </>
-              ) : (
-                <>
-                  <BellOff className="h-4 w-4 mr-2" />
-                  Enable Notifications
-                </>
-              )}
+              <Bell className="mr-2 h-4 w-4" />
+              Enable Notifications
             </Button>
           </div>
-
-          {isPushSupported && permissionState === 'granted' && (
-            <div className="flex items-center justify-between pt-4 border-t">
-              <div className="space-y-1">
-                <Label>Push Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  {isSubscribed 
-                    ? 'Receive notifications even when the browser is closed' 
-                    : 'Enable push notifications for this device'}
-                </p>
-              </div>
-              <Switch
-                checked={isSubscribed}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    subscribeToPush();
-                  } else {
-                    unsubscribeFromPush();
-                  }
-                }}
-              />
-            </div>
-          )}
-
-          {!isPushSupported && (
-            <div className="text-sm text-muted-foreground">
-              Push notifications are not supported in your browser
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

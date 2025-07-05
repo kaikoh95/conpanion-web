@@ -1,51 +1,36 @@
-// Notification system types
+// Notification system types and constants
 
 export type NotificationType =
   | 'system'
-  | 'organization_added'
-  | 'project_added'
   | 'task_assigned'
   | 'task_updated'
+  | 'task_unassigned'
   | 'task_comment'
   | 'comment_mention'
-  | 'task_unassigned'
+  | 'project_added'
+  | 'organization_added'
   | 'approval_requested'
-  | 'approval_status_changed'
-  | 'entity_assigned';
+  | 'approval_status_changed';
 
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'critical';
 
-export type DeliveryStatus = 'pending' | 'delivered' | 'failed' | 'retry';
-
-export type EmailStatus = 'pending' | 'sending' | 'sent' | 'failed' | 'cancelled';
+export type NotificationDeliveryStatus = 'pending' | 'sent' | 'failed';
 
 export interface Notification {
   id: string;
   user_id: string;
   type: NotificationType;
-  priority: NotificationPriority;
   title: string;
   message: string;
-  data: Record<string, any>;
+  data?: Record<string, any>;
   entity_type?: string;
   entity_id?: string;
+  priority: NotificationPriority;
   is_read: boolean;
   read_at?: string;
   created_at: string;
-  created_by?: string;
   updated_at: string;
-}
-
-export interface NotificationDelivery {
-  id: string;
-  notification_id: string;
-  channel: 'realtime' | 'email' | 'push' | 'sms' | 'webhook';
-  status: DeliveryStatus;
-  delivered_at?: string;
-  retry_count: number;
-  error_message?: string;
-  metadata: Record<string, any>;
-  created_at: string;
+  created_by?: string;
 }
 
 export interface NotificationPreference {
@@ -59,44 +44,30 @@ export interface NotificationPreference {
   updated_at: string;
 }
 
-export interface UserDevice {
+export interface NotificationDelivery {
   id: string;
+  notification_id: string;
   user_id: string;
-  platform: 'ios' | 'android' | 'web';
-  token: string;
-  device_name?: string;
-  push_enabled: boolean;
-  last_used: string;
+  email_sent_at?: string;
+  email_status?: NotificationDeliveryStatus;
+  push_sent_at?: string;
+  push_status?: NotificationDeliveryStatus;
   created_at: string;
   updated_at: string;
 }
 
-// Helper type for notification creation
-export interface CreateNotificationParams {
-  user_id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  data?: Record<string, any>;
-  entity_type?: string;
-  entity_id?: string;
-  priority?: NotificationPriority;
-  created_by?: string;
-}
-
-// Notification icon map
+// Notification icons mapping
 export const notificationIcons: Record<NotificationType, string> = {
   system: '🔔',
-  organization_added: '🏢',
-  project_added: '📁',
-  task_assigned: '📋',
+  task_assigned: '📝',
   task_updated: '🔄',
+  task_unassigned: '❌',
   task_comment: '💬',
-  comment_mention: '@',
-  task_unassigned: '📤',
-  approval_requested: '✅',
-  approval_status_changed: '📝',
-  entity_assigned: '👤',
+  comment_mention: '👤',
+  project_added: '📁',
+  organization_added: '🏢',
+  approval_requested: '✋',
+  approval_status_changed: '✅',
 };
 
 // Priority colors

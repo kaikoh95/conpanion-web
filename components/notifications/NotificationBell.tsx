@@ -25,11 +25,11 @@ export function NotificationBell() {
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span 
+            <span
               className={cn(
-                "absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center",
-                "rounded-full bg-red-500 text-[10px] font-bold text-white",
-                "animate-in zoom-in-50 duration-200"
+                'absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center',
+                'rounded-full bg-red-500 text-[10px] font-bold text-white',
+                'duration-200 animate-in zoom-in-50',
               )}
             >
               {unreadCount > 99 ? '99+' : unreadCount}
@@ -37,9 +37,10 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        align="end" 
-        className="w-[400px] max-h-[600px] overflow-hidden p-0"
+      <DropdownMenuContent
+        align="end"
+        className="h-[70vh] max-h-[600px] w-[calc(100vw-2rem)] max-w-[400px] overflow-hidden p-0 sm:w-[400px]"
+        sideOffset={8}
       >
         <NotificationList />
       </DropdownMenuContent>
