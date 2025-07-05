@@ -43,21 +43,52 @@ This document describes the implementation of edge function calls for email and 
 
 ## Configuration
 
-### Setting Up Edge Function URLs
+### Setting Up Vault Secrets
 
-Use the `set_notification_config` function to configure your Supabase project details:
+**Step 1: Run the vault secrets setup script**
 
 ```sql
--- Configure for your Supabase project
-SELECT set_notification_config(
-  'https://your-project-ref.supabase.co',
-  'your-service-role-key'
-);
+-- Run this script to create vault secret functions and placeholders
+\i scripts/setup-vault-secrets.sql
 ```
 
-### Environment Variables
+**Step 2: Configure your actual secrets**
 
-The edge functions themselves require these environment variables:
+```sql
+-- Update vault secrets with your actual values
+SELECT update_vault_secret('notification_supabase_url', 'https://your-project-ref.supabase.co');
+SELECT update_vault_secret('notification_supabase_service_key', 'your-service-role-key');
+SELECT update_vault_secret('notification_resend_api_key', 'your-resend-api-key');
+SELECT update_vault_secret('notification_vapid_public_key', 'your-vapid-public-key');
+SELECT update_vault_secret('notification_vapid_private_key', 'your-vapid-private-key');
+SELECT update_vault_secret('notification_vapid_email', 'mailto:your-email@domain.com');
+```
+
+**Step 3: Validate configuration**
+
+```sql
+-- Check if all secrets are configured
+SELECT validate_notification_secrets();
+SELECT notification_secrets_configured();
+```
+
+### Required Vault Secrets
+
+**For System Configuration:**
+- `notification_supabase_url` - Your Supabase project URL
+- `notification_supabase_service_key` - Your service role key
+
+**For Email Notifications:**
+- `notification_resend_api_key` - Your Resend API key
+
+**For Push Notifications:**
+- `notification_vapid_public_key` - VAPID public key
+- `notification_vapid_private_key` - VAPID private key
+- `notification_vapid_email` - VAPID email address
+
+### Environment Variables (Edge Functions)
+
+The edge functions themselves still require these environment variables in Supabase:
 
 **For Email Notifications:**
 - `SUPABASE_URL`
@@ -140,9 +171,12 @@ SELECT process_email_queue();
 -- Test push processing
 SELECT process_push_queue();
 
--- Check configuration
-SELECT current_setting('app.settings.supabase_url', true);
-SELECT current_setting('app.settings.supabase_service_key', true);
+-- Check vault secret configuration
+SELECT validate_notification_secrets();
+SELECT notification_secrets_configured();
+
+-- Test individual secrets (returns the secret name, not the value)
+SELECT name, description FROM vault.secrets WHERE name LIKE 'notification_%';
 ```
 
 ### Create Test Notifications

@@ -1,4 +1,4 @@
-THIS SHOULD BE A LINTER ERROR-- Migration: Implement edge function calls for email and push notifications
+-- Migration: Implement edge function calls for email and push notifications
 -- Description: Replace commented edge function calls with actual HTTP requests using pg_net extension
 
 -- ===========================================
@@ -20,20 +20,28 @@ DECLARE
   v_request_id UUID;
   v_result JSONB;
 BEGIN
-  -- Get environment variables
+  -- Get vault secrets
   DECLARE
-    v_supabase_url TEXT := current_setting('app.settings.supabase_url', true);
-    v_supabase_service_key TEXT := current_setting('app.settings.supabase_service_key', true);
+    v_supabase_url TEXT := get_vault_secret('notification_supabase_url');
+    v_supabase_service_key TEXT := get_vault_secret('notification_supabase_service_key');
     v_function_url TEXT;
   BEGIN
+    -- Validate required secrets
+    IF v_supabase_url IS NULL OR v_supabase_service_key IS NULL THEN
+      RETURN jsonb_build_object(
+        'error', 'Missing required vault secrets',
+        'details', 'notification_supabase_url or notification_supabase_service_key not configured'
+      );
+    END IF;
+    
     -- Construct function URL
-    v_function_url := COALESCE(v_supabase_url, 'https://your-project-ref.supabase.co') || '/functions/v1/send-email-notification';
+    v_function_url := v_supabase_url || '/functions/v1/send-email-notification';
     
     -- Make HTTP request to edge function
     SELECT net.http_post(
       url := v_function_url,
       headers := jsonb_build_object(
-        'Authorization', 'Bearer ' || COALESCE(v_supabase_service_key, ''),
+        'Authorization', 'Bearer ' || v_supabase_service_key,
         'Content-Type', 'application/json',
         'x-client-info', 'supabase-postgres'
       ),
@@ -64,20 +72,28 @@ DECLARE
   v_request_id UUID;
   v_result JSONB;
 BEGIN
-  -- Get environment variables
+  -- Get vault secrets
   DECLARE
-    v_supabase_url TEXT := current_setting('app.settings.supabase_url', true);
-    v_supabase_service_key TEXT := current_setting('app.settings.supabase_service_key', true);
+    v_supabase_url TEXT := get_vault_secret('notification_supabase_url');
+    v_supabase_service_key TEXT := get_vault_secret('notification_supabase_service_key');
     v_function_url TEXT;
   BEGIN
+    -- Validate required secrets
+    IF v_supabase_url IS NULL OR v_supabase_service_key IS NULL THEN
+      RETURN jsonb_build_object(
+        'error', 'Missing required vault secrets',
+        'details', 'notification_supabase_url or notification_supabase_service_key not configured'
+      );
+    END IF;
+    
     -- Construct function URL
-    v_function_url := COALESCE(v_supabase_url, 'https://your-project-ref.supabase.co') || '/functions/v1/send-push-notification';
+    v_function_url := v_supabase_url || '/functions/v1/send-push-notification';
     
     -- Make HTTP request to edge function
     SELECT net.http_post(
       url := v_function_url,
       headers := jsonb_build_object(
-        'Authorization', 'Bearer ' || COALESCE(v_supabase_service_key, ''),
+        'Authorization', 'Bearer ' || v_supabase_service_key,
         'Content-Type', 'application/json',
         'x-client-info', 'supabase-postgres'
       ),
@@ -309,28 +325,49 @@ GRANT EXECUTE ON FUNCTION call_send_push_notification TO service_role;
 GRANT EXECUTE ON FUNCTION call_edge_function_safe TO service_role;
 
 -- ===========================================
--- CONFIGURATION SETTINGS
+-- VAULT DEPENDENCIES
 -- ===========================================
 
--- Create function to set configuration settings
-CREATE OR REPLACE FUNCTION set_notification_config(
-  p_supabase_url TEXT DEFAULT NULL,
-  p_supabase_service_key TEXT DEFAULT NULL
-) RETURNS VOID AS $$
+-- Note: This migration depends on vault secret functions that should be created
+-- by running the scripts/setup-vault-secrets.sql script first.
+-- The following functions are required:
+-- - get_vault_secret(secret_name TEXT) RETURNS TEXT
+-- - validate_notification_secrets() RETURNS JSONB
+-- - notification_secrets_configured() RETURNS BOOLEAN
+
+-- Validate that vault secrets are available
+DO $$
 BEGIN
-  -- Set configuration settings if provided
-  IF p_supabase_url IS NOT NULL THEN
-    PERFORM set_config('app.settings.supabase_url', p_supabase_url, false);
+  -- Check if vault secret functions exist
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc 
+    WHERE proname = 'get_vault_secret' 
+    AND pronargs = 1
+  ) THEN
+    RAISE NOTICE 'WARNING: get_vault_secret function not found. Please run scripts/setup-vault-secrets.sql first.';
   END IF;
   
-  IF p_supabase_service_key IS NOT NULL THEN
-    PERFORM set_config('app.settings.supabase_service_key', p_supabase_service_key, false);
+  -- Check if notification secrets are configured
+  IF EXISTS (
+    SELECT 1 FROM pg_proc 
+    WHERE proname = 'notification_secrets_configured' 
+    AND pronargs = 0
+  ) THEN
+    DECLARE
+      secrets_configured BOOLEAN;
+    BEGIN
+      SELECT notification_secrets_configured() INTO secrets_configured;
+      
+      IF NOT secrets_configured THEN
+        RAISE NOTICE 'WARNING: Notification secrets are not properly configured. Please update vault secrets.';
+      ELSE
+        RAISE NOTICE 'INFO: Notification secrets are properly configured.';
+      END IF;
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'WARNING: Could not validate notification secrets: %', SQLERRM;
+    END;
   END IF;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Grant execute permission
-GRANT EXECUTE ON FUNCTION set_notification_config TO service_role;
+END $$;
 
 -- ===========================================
 -- WEBHOOK ALTERNATIVE (IF PG_NET IS NOT AVAILABLE)
@@ -395,10 +432,9 @@ GRANT ALL ON webhook_requests TO service_role;
 -- COMMENTS AND DOCUMENTATION
 -- ===========================================
 
-COMMENT ON FUNCTION call_send_email_notification IS 'Calls the send-email-notification edge function via HTTP request';
-COMMENT ON FUNCTION call_send_push_notification IS 'Calls the send-push-notification edge function via HTTP request';
+COMMENT ON FUNCTION call_send_email_notification IS 'Calls the send-email-notification edge function via HTTP request using vault secrets';
+COMMENT ON FUNCTION call_send_push_notification IS 'Calls the send-push-notification edge function via HTTP request using vault secrets';
 COMMENT ON FUNCTION call_edge_function_safe IS 'Safely calls edge functions with error handling and fallback';
-COMMENT ON FUNCTION set_notification_config IS 'Sets configuration for notification edge function calls';
 COMMENT ON FUNCTION create_webhook_request IS 'Creates webhook requests as alternative to direct HTTP calls';
 
 COMMENT ON TABLE webhook_requests IS 'Optional table for webhook-based edge function calls when pg_net is not available';
@@ -416,5 +452,17 @@ COMMENT ON TABLE webhook_requests IS 'Optional table for webhook-based edge func
 -- The edge functions are called when there are pending items in the queue,
 -- and the functions handle the actual sending of emails and push notifications.
 --
--- To configure the edge function URLs, use the set_notification_config function:
--- SELECT set_notification_config('https://your-project-ref.supabase.co', 'your-service-key');
+-- PREREQUISITES:
+-- 1. Run scripts/setup-vault-secrets.sql to create vault secret functions
+-- 2. Configure vault secrets with actual values (not placeholders)
+-- 3. Ensure pg_net extension is enabled for HTTP requests
+--
+-- CONFIGURATION:
+-- Edge function URLs are configured via vault secrets:
+-- - notification_supabase_url: Your Supabase project URL
+-- - notification_supabase_service_key: Your service role key
+-- - notification_resend_api_key: Your Resend API key (for email edge function)
+-- - notification_vapid_*: VAPID keys for push notifications (for push edge function)
+--
+-- To update secrets, use the update_vault_secret function:
+-- SELECT update_vault_secret('notification_supabase_url', 'https://your-project.supabase.co');
