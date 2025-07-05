@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS email_queue (
   error_message TEXT,
   retry_count INTEGER DEFAULT 0 NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   CONSTRAINT email_queue_email_valid CHECK (to_email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
   CONSTRAINT email_queue_retry_limit CHECK (retry_count >= 0 AND retry_count <= 5)
 );
@@ -166,6 +167,7 @@ CREATE TABLE IF NOT EXISTS push_queue (
   sent_at TIMESTAMPTZ,
   error_message TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   CONSTRAINT push_queue_platform_check CHECK (platform IN ('ios', 'android', 'web'))
 );
 
@@ -184,6 +186,21 @@ CREATE TABLE IF NOT EXISTS user_devices (
   CONSTRAINT user_devices_platform_check CHECK (platform IN ('ios', 'android', 'web'))
 );
 
+-- Notification templates for configurable messages
+CREATE TABLE IF NOT EXISTS notification_templates (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  type notification_type NOT NULL,
+  name TEXT NOT NULL,
+  subject_template TEXT NOT NULL,
+  message_template TEXT NOT NULL,
+  description TEXT,
+  placeholders TEXT[], -- Array of placeholder names for documentation
+  is_active BOOLEAN DEFAULT true NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  UNIQUE(type, name)
+);
+
 -- Add table comments
 COMMENT ON TABLE notifications IS 'Core notifications table storing all notification records';
 COMMENT ON TABLE notification_deliveries IS 'Tracks delivery status of notifications across different channels';
@@ -191,6 +208,7 @@ COMMENT ON TABLE notification_preferences IS 'User preferences for notification 
 COMMENT ON TABLE email_queue IS 'Queue for email notifications awaiting delivery';
 COMMENT ON TABLE push_queue IS 'Queue for push notifications awaiting delivery';
 COMMENT ON TABLE user_devices IS 'Registered devices for push notifications';
+COMMENT ON TABLE notification_templates IS 'Configurable message templates for notifications with placeholder support';
 
 -- Add column comments for important fields
 COMMENT ON COLUMN notifications.data IS 'Additional context data for the notification in JSON format';
@@ -285,12 +303,24 @@ DROP INDEX IF EXISTS idx_notification_preferences_user;
 CREATE INDEX idx_notification_preferences_user 
 ON notification_preferences(user_id);
 
+-- Notification templates indexes
+DROP INDEX IF EXISTS idx_notification_templates_type;
+CREATE INDEX idx_notification_templates_type 
+ON notification_templates(type) 
+WHERE is_active = true;
+
+DROP INDEX IF EXISTS idx_notification_templates_type_name;
+CREATE INDEX idx_notification_templates_type_name 
+ON notification_templates(type, name) 
+WHERE is_active = true;
+
 -- Add comments for indexes
 COMMENT ON INDEX idx_notifications_user_unread IS 'Optimizes queries for unread notifications per user';
 COMMENT ON INDEX idx_notifications_created IS 'Optimizes queries for recent notifications';
 COMMENT ON INDEX idx_notifications_entity IS 'Optimizes queries by entity reference';
 COMMENT ON INDEX idx_email_queue_status_scheduled IS 'Optimizes email processing queries';
 COMMENT ON INDEX idx_push_queue_status IS 'Optimizes push notification processing';
+COMMENT ON INDEX idx_notification_templates_type IS 'Optimizes template lookups by notification type';
 
 -- ===========================================
 -- ROW LEVEL SECURITY
@@ -303,6 +333,7 @@ ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_devices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE push_queue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_templates ENABLE ROW LEVEL SECURITY;
 
 -- Notifications table policies
 DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
@@ -401,11 +432,24 @@ ON push_queue FOR ALL
 USING (auth.role() = 'service_role')
 WITH CHECK (auth.role() = 'service_role');
 
+-- Notification templates policies (read-only for authenticated users, editable by service role)
+DROP POLICY IF EXISTS "Anyone can view active templates" ON notification_templates;
+CREATE POLICY "Anyone can view active templates" 
+ON notification_templates FOR SELECT 
+USING (is_active = true);
+
+DROP POLICY IF EXISTS "Service role can manage templates" ON notification_templates;
+CREATE POLICY "Service role can manage templates" 
+ON notification_templates FOR ALL 
+USING (auth.role() = 'service_role')
+WITH CHECK (auth.role() = 'service_role');
+
 -- Grant necessary permissions to authenticated users
 GRANT SELECT, UPDATE ON notifications TO authenticated;
 GRANT SELECT ON notification_deliveries TO authenticated;
 GRANT ALL ON notification_preferences TO authenticated;
 GRANT ALL ON user_devices TO authenticated;
+GRANT SELECT ON notification_templates TO authenticated;
 
 -- Grant service role full access
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
@@ -418,10 +462,89 @@ ALTER TABLE notification_preferences FORCE ROW LEVEL SECURITY;
 ALTER TABLE user_devices FORCE ROW LEVEL SECURITY;
 ALTER TABLE email_queue FORCE ROW LEVEL SECURITY;
 ALTER TABLE push_queue FORCE ROW LEVEL SECURITY;
+ALTER TABLE notification_templates FORCE ROW LEVEL SECURITY;
 
 -- ===========================================
 -- FUNCTIONS
 -- ===========================================
+
+-- Function to get formatted notification template
+CREATE OR REPLACE FUNCTION get_notification_template(
+  p_type notification_type,
+  p_template_name TEXT DEFAULT 'default',
+  p_template_data TEXT[] DEFAULT '{}'::TEXT[]
+) RETURNS TABLE(subject TEXT, message TEXT) AS $$
+DECLARE
+  v_template RECORD;
+  v_formatted_subject TEXT;
+  v_formatted_message TEXT;
+BEGIN
+  -- Get the template
+  SELECT subject_template, message_template 
+  INTO v_template
+  FROM notification_templates 
+  WHERE type = p_type 
+  AND name = p_template_name 
+  AND is_active = true
+  LIMIT 1;
+  
+  -- If specific template not found, try default
+  IF NOT FOUND AND p_template_name != 'default' THEN
+    SELECT subject_template, message_template 
+    INTO v_template
+    FROM notification_templates 
+    WHERE type = p_type 
+    AND name = 'default' 
+    AND is_active = true
+    LIMIT 1;
+  END IF;
+  
+  -- If still not found, return basic fallback
+  IF NOT FOUND THEN
+    subject := 'Notification';
+    message := 'You have a new notification';
+    RETURN NEXT;
+    RETURN;
+  END IF;
+  
+  -- Format the templates with provided data
+  BEGIN
+    -- Use format() with variadic arguments
+    CASE array_length(p_template_data, 1)
+      WHEN 0 THEN
+        v_formatted_subject := v_template.subject_template;
+        v_formatted_message := v_template.message_template;
+      WHEN 1 THEN
+        v_formatted_subject := format(v_template.subject_template, p_template_data[1]);
+        v_formatted_message := format(v_template.message_template, p_template_data[1]);
+      WHEN 2 THEN
+        v_formatted_subject := format(v_template.subject_template, p_template_data[1], p_template_data[2]);
+        v_formatted_message := format(v_template.message_template, p_template_data[1], p_template_data[2]);
+      WHEN 3 THEN
+        v_formatted_subject := format(v_template.subject_template, p_template_data[1], p_template_data[2], p_template_data[3]);
+        v_formatted_message := format(v_template.message_template, p_template_data[1], p_template_data[2], p_template_data[3]);
+      WHEN 4 THEN
+        v_formatted_subject := format(v_template.subject_template, p_template_data[1], p_template_data[2], p_template_data[3], p_template_data[4]);
+        v_formatted_message := format(v_template.message_template, p_template_data[1], p_template_data[2], p_template_data[3], p_template_data[4]);
+      WHEN 5 THEN
+        v_formatted_subject := format(v_template.subject_template, p_template_data[1], p_template_data[2], p_template_data[3], p_template_data[4], p_template_data[5]);
+        v_formatted_message := format(v_template.message_template, p_template_data[1], p_template_data[2], p_template_data[3], p_template_data[4], p_template_data[5]);
+      ELSE
+        -- Fallback for more than 5 parameters
+        v_formatted_subject := v_template.subject_template;
+        v_formatted_message := v_template.message_template;
+    END CASE;
+  EXCEPTION WHEN OTHERS THEN
+    -- If formatting fails, return the template as-is
+    v_formatted_subject := v_template.subject_template;
+    v_formatted_message := v_template.message_template;
+  END;
+  
+  subject := v_formatted_subject;
+  message := v_formatted_message;
+  RETURN NEXT;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to queue email notification
 CREATE OR REPLACE FUNCTION queue_email_notification(p_notification_id UUID)
@@ -533,12 +656,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Master notification creation function
+-- Master notification creation function with template support
 CREATE OR REPLACE FUNCTION create_notification(
   p_user_id UUID,
   p_type notification_type,
-  p_title TEXT,
-  p_message TEXT,
+  p_template_name TEXT DEFAULT 'default',
+  p_template_data TEXT[] DEFAULT '{}'::TEXT[],
   p_data JSONB DEFAULT '{}',
   p_entity_type TEXT DEFAULT NULL,
   p_entity_id TEXT DEFAULT NULL,
@@ -548,18 +671,20 @@ CREATE OR REPLACE FUNCTION create_notification(
 DECLARE
   v_notification_id UUID;
   v_user_preferences RECORD;
+  v_template RECORD;
 BEGIN
   -- Validate input
   IF p_user_id IS NULL THEN
     RAISE EXCEPTION 'User ID is required';
   END IF;
   
-  IF p_title IS NULL OR p_title = '' THEN
-    RAISE EXCEPTION 'Title is required';
-  END IF;
+  -- Get formatted template content
+  SELECT subject, message INTO v_template
+  FROM get_notification_template(p_type, p_template_name, p_template_data)
+  LIMIT 1;
   
-  IF p_message IS NULL OR p_message = '' THEN
-    RAISE EXCEPTION 'Message is required';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'No template found for type: %', p_type;
   END IF;
   
   -- Insert the notification
@@ -567,7 +692,7 @@ BEGIN
     user_id, type, title, message, data, 
     entity_type, entity_id, priority, created_by
   ) VALUES (
-    p_user_id, p_type, p_title, p_message, p_data,
+    p_user_id, p_type, v_template.subject, v_template.message, p_data,
     p_entity_type, p_entity_id, p_priority, COALESCE(p_created_by, auth.uid())
   ) RETURNING id INTO v_notification_id;
   
@@ -746,9 +871,8 @@ BEGIN
     v_notification_id := create_notification(
       p_user_id => NEW.user_id,
       p_type => 'task_assigned',
-      p_title => 'New Task Assignment',
-      p_message => format('%s assigned you to: %s', 
-        COALESCE(v_assigner_name, 'Someone'), v_task.title),
+      p_template_name => 'default',
+      p_template_data => ARRAY[COALESCE(v_assigner_name, 'Someone'), v_task.title],
       p_data => jsonb_build_object(
         'task_id', v_task.id,
         'task_title', v_task.title,
@@ -790,8 +914,8 @@ BEGIN
     PERFORM create_notification(
       p_user_id => OLD.user_id,
       p_type => 'task_unassigned',
-      p_title => 'Task Unassigned',
-      p_message => format('You were removed from task: %s', v_task.title),
+      p_template_name => 'default',
+      p_template_data => ARRAY[v_task.title],
       p_data => jsonb_build_object(
         'task_id', v_task.id,
         'task_title', v_task.title,
@@ -834,9 +958,8 @@ BEGIN
     v_notification_id := create_notification(
       p_user_id => NEW.user_id,
       p_type => 'form_assigned',
-      p_title => 'New Form Assignment',
-      p_message => format('%s assigned you to form: %s', 
-        COALESCE(v_assigner_name, 'Someone'), v_form.name),
+      p_template_name => 'default',
+      p_template_data => ARRAY[COALESCE(v_assigner_name, 'Someone'), v_form.name],
       p_data => jsonb_build_object(
         'form_id', v_form.id,
         'form_title', v_form.name,
@@ -876,8 +999,8 @@ BEGIN
     PERFORM create_notification(
       p_user_id => OLD.user_id,
       p_type => 'form_unassigned',
-      p_title => 'Form Unassigned',
-      p_message => format('You were removed from form: %s', v_form.name),
+      p_template_name => 'default',
+      p_template_data => ARRAY[v_form.name],
       p_data => jsonb_build_object(
         'form_id', v_form.id,
         'form_title', v_form.name,
@@ -923,8 +1046,8 @@ BEGIN
         PERFORM create_notification(
           p_user_id => v_assignee_id,
           p_type => 'task_updated',
-          p_title => 'Task Status Updated',
-          p_message => format('Task "%s" status was updated', NEW.title),
+          p_template_name => 'default',
+          p_template_data => ARRAY[NEW.title, COALESCE(v_updater_name, 'Someone')],
           p_data => jsonb_build_object(
             'task_id', NEW.id,
             'task_title', NEW.title,
@@ -978,9 +1101,8 @@ BEGIN
       PERFORM create_notification(
         p_user_id => v_assignee_id,
         p_type => 'task_comment',
-        p_title => 'New Comment on Your Task',
-        p_message => format('%s commented on "%s"', 
-          COALESCE(v_commenter_name, 'Someone'), v_task.title),
+        p_template_name => 'default',
+        p_template_data => ARRAY[COALESCE(v_commenter_name, 'Someone'), v_task.title],
         p_data => jsonb_build_object(
           'task_id', NEW.task_id,
           'task_title', v_task.title,
@@ -1012,9 +1134,8 @@ BEGIN
       PERFORM create_notification(
         p_user_id => v_user_id::UUID,
         p_type => 'comment_mention',
-        p_title => 'You were mentioned in a comment',
-        p_message => format('%s mentioned you in "%s"', 
-          COALESCE(v_commenter_name, 'Someone'), v_task.title),
+        p_template_name => 'default',
+        p_template_data => ARRAY[COALESCE(v_commenter_name, 'Someone'), v_task.title],
         p_data => jsonb_build_object(
           'task_id', NEW.task_id,
           'task_title', v_task.title,
@@ -1060,8 +1181,8 @@ BEGIN
     PERFORM create_notification(
       p_user_id => NEW.user_id,
       p_type => 'project_added',
-      p_title => 'Added to Project',
-      p_message => format('You have been added to project: %s', v_project_name),
+      p_template_name => 'default',
+      p_template_data => ARRAY[COALESCE(v_added_by_name, 'Someone'), v_project_name],
       p_data => jsonb_build_object(
         'project_id', NEW.project_id,
         'project_name', v_project_name,
@@ -1104,8 +1225,8 @@ BEGIN
     PERFORM create_notification(
       p_user_id => NEW.user_id,
       p_type => 'organization_added',
-      p_title => 'Added to Organization',
-      p_message => format('You have been added to %s', v_org_name),
+      p_template_name => 'default',
+      p_template_data => ARRAY[COALESCE(v_added_by_name, 'Someone'), v_org_name],
       p_data => jsonb_build_object(
         'organization_id', NEW.organization_id,
         'organization_name', v_org_name,
@@ -1160,9 +1281,8 @@ BEGIN
     PERFORM create_notification(
       p_user_id => NEW.requester_id,
       p_type => 'approval_requested',
-      p_title => 'Approval Request Submitted',
-      p_message => format('Your approval request for "%s" has been submitted and is pending review', 
-        COALESCE(v_entity_title, 'Unknown Item')),
+      p_template_name => 'requester_confirmation',
+      p_template_data => ARRAY[COALESCE(v_entity_title, 'Unknown Item')],
       p_data => jsonb_build_object(
         'approval_id', NEW.id,
         'entity_type', NEW.entity_type,
@@ -1186,9 +1306,8 @@ BEGIN
       PERFORM create_notification(
         p_user_id => v_approver.approver_id,
         p_type => 'approval_requested',
-        p_title => 'Approval Required',
-        p_message => format('%s requested approval for: %s', 
-          COALESCE(v_requester_name, 'Someone'), COALESCE(v_entity_title, 'Unknown Item')),
+        p_template_name => 'default',
+        p_template_data => ARRAY[COALESCE(v_requester_name, 'Someone'), COALESCE(v_entity_title, 'Unknown Item')],
         p_data => jsonb_build_object(
           'approval_id', NEW.id,
           'entity_type', NEW.entity_type,
@@ -1216,9 +1335,8 @@ BEGIN
     PERFORM create_notification(
       p_user_id => NEW.requester_id,
       p_type => 'approval_status_changed',
-      p_title => format('Approval %s', NEW.status),
-      p_message => format('Your approval request "%s" has been %s', 
-        COALESCE(v_entity_title, 'Unknown Item'), NEW.status),
+      p_template_name => 'default',
+      p_template_data => ARRAY[NEW.status, COALESCE(v_entity_title, 'Unknown Item'), NEW.status, COALESCE(v_approved_by_name, 'Someone')],
       p_data => jsonb_build_object(
         'approval_id', NEW.id,
         'entity_type', NEW.entity_type,
@@ -1335,9 +1453,8 @@ BEGIN
     PERFORM create_notification(
       p_user_id => v_approval.requester_id,
       p_type => 'approval_requested',
-      p_title => 'New Comment on Your Approval Request',
-      p_message => format('%s commented on your approval request for "%s"', 
-        COALESCE(v_commenter_name, 'Someone'), COALESCE(v_entity_title, 'Unknown Item')),
+      p_template_name => 'comment_notification',
+      p_template_data => ARRAY[COALESCE(v_commenter_name, 'Someone'), COALESCE(v_entity_title, 'Unknown Item')],
       p_data => jsonb_build_object(
         'approval_id', NEW.approval_id,
         'comment_id', NEW.id,
@@ -1365,9 +1482,8 @@ BEGIN
     PERFORM create_notification(
       p_user_id => v_approver.approver_id,
       p_type => 'approval_requested',
-      p_title => 'New Comment on Approval Request',
-      p_message => format('%s commented on approval request for "%s"', 
-        COALESCE(v_commenter_name, 'Someone'), COALESCE(v_entity_title, 'Unknown Item')),
+      p_template_name => 'comment_notification',
+      p_template_data => ARRAY[COALESCE(v_commenter_name, 'Someone'), COALESCE(v_entity_title, 'Unknown Item')],
       p_data => jsonb_build_object(
         'approval_id', NEW.approval_id,
         'comment_id', NEW.id,
@@ -1430,9 +1546,8 @@ BEGIN
   PERFORM create_notification(
     p_user_id => v_approval.requester_id,
     p_type => 'approval_status_changed',
-    p_title => 'Approval Response Received',
-    p_message => format('%s responded to your approval request for "%s"', 
-      COALESCE(v_approver_name, 'An approver'), COALESCE(v_entity_title, 'Unknown Item')),
+    p_template_name => 'response_received',
+    p_template_data => ARRAY[COALESCE(v_approver_name, 'An approver'), COALESCE(v_entity_title, 'Unknown Item')],
     p_data => jsonb_build_object(
       'approval_id', NEW.approval_id,
       'response_id', NEW.id,
@@ -1460,9 +1575,8 @@ BEGIN
     PERFORM create_notification(
       p_user_id => v_approver.approver_id,
       p_type => 'approval_requested',
-      p_title => 'Approver Response Update',
-      p_message => format('%s responded to approval request for "%s"', 
-        COALESCE(v_approver_name, 'An approver'), COALESCE(v_entity_title, 'Unknown Item')),
+      p_template_name => 'response_notification',
+      p_template_data => ARRAY[COALESCE(v_approver_name, 'An approver'), COALESCE(v_entity_title, 'Unknown Item')],
       p_data => jsonb_build_object(
         'approval_id', NEW.approval_id,
         'response_id', NEW.id,
@@ -1853,8 +1967,10 @@ GRANT EXECUTE ON FUNCTION get_unread_notification_count TO authenticated;
 GRANT EXECUTE ON FUNCTION create_default_notification_preferences TO service_role;
 GRANT EXECUTE ON FUNCTION create_default_preferences_on_profile_creation TO service_role;
 GRANT EXECUTE ON FUNCTION initialize_notification_preferences TO authenticated;
+GRANT EXECUTE ON FUNCTION get_notification_template TO service_role;
 
 -- Add function comments
+COMMENT ON FUNCTION get_notification_template IS 'Gets and formats notification templates with placeholder substitution';
 COMMENT ON FUNCTION create_notification IS 'Creates a notification and queues delivery to configured channels';
 COMMENT ON FUNCTION queue_email_notification IS 'Queues an email for delivery based on notification';
 COMMENT ON FUNCTION queue_push_notification IS 'Queues push notifications for all user devices';
@@ -1864,3 +1980,55 @@ COMMENT ON FUNCTION get_unread_notification_count IS 'Returns the count of unrea
 COMMENT ON FUNCTION create_default_notification_preferences IS 'Creates default notification preferences for a user with email enabled and push disabled';
 COMMENT ON FUNCTION create_default_preferences_on_profile_creation IS 'Trigger function to create default preferences when user profiles are created';
 COMMENT ON FUNCTION initialize_notification_preferences IS 'Initializes default notification preferences for the current authenticated user';
+
+-- ===========================================
+-- DEFAULT NOTIFICATION TEMPLATES
+-- ===========================================
+
+-- Insert default templates for all notification types
+INSERT INTO notification_templates (type, name, subject_template, message_template, description, placeholders) VALUES
+-- System notifications
+('system', 'default', 'System Notification', '%s', 'Default system notification template', ARRAY['message']),
+
+-- Organization membership
+('organization_added', 'default', 'Added to Organization', '%s added you to %s', 'User added to organization', ARRAY['admin_name', 'organization_name']),
+
+-- Project membership  
+('project_added', 'default', 'Added to Project', '%s added you to project: %s', 'User added to project', ARRAY['admin_name', 'project_name']),
+
+-- Task assignments
+('task_assigned', 'default', 'New Task Assignment', '%s assigned you to: %s', 'Task assigned to user', ARRAY['assigner_name', 'task_title']),
+('task_unassigned', 'default', 'Task Unassigned', 'You were removed from task: %s', 'Task unassigned from user', ARRAY['task_title']),
+
+-- Task updates
+('task_updated', 'default', 'Task Status Updated', 'Task "%s" status was updated by %s', 'Task status changed', ARRAY['task_title', 'updater_name']),
+
+-- Task comments
+('task_comment', 'default', 'New Comment on Your Task', '%s commented on "%s"', 'Comment added to task', ARRAY['commenter_name', 'task_title']),
+
+-- Comment mentions
+('comment_mention', 'default', 'You were mentioned', '%s mentioned you in "%s"', 'User mentioned in comment', ARRAY['commenter_name', 'task_title']),
+
+-- Form assignments
+('form_assigned', 'default', 'New Form Assignment', '%s assigned you to form: %s', 'Form assigned to user', ARRAY['assigner_name', 'form_name']),
+('form_unassigned', 'default', 'Form Unassigned', 'You were removed from form: %s', 'Form unassigned from user', ARRAY['form_name']),
+
+-- Approval requests
+('approval_requested', 'default', 'Approval Required', '%s requested approval for: %s', 'Approval request created', ARRAY['requester_name', 'entity_title']),
+('approval_requested', 'requester_confirmation', 'Approval Request Submitted', 'Your approval request for "%s" has been submitted and is pending review', 'Confirmation to requester', ARRAY['entity_title']),
+('approval_requested', 'comment_notification', '%s commented on your approval request for "%s"', '%s added a comment to your approval request', 'Comment on approval', ARRAY['commenter_name', 'entity_title']),
+('approval_requested', 'response_notification', '%s responded to your approval request for "%s"', '%s has responded to your approval request', 'Approver response notification', ARRAY['approver_name', 'entity_title']),
+
+-- Approval status changes
+('approval_status_changed', 'default', 'Approval %s', 'Your approval request "%s" has been %s by %s', 'Approval decision made', ARRAY['status', 'entity_title', 'status', 'approver_name']),
+('approval_status_changed', 'response_received', 'Approval Response Received', '%s responded to your approval request for "%s"', 'Response received notification', ARRAY['approver_name', 'entity_title']),
+
+-- Generic entity assignments
+('entity_assigned', 'default', 'New Assignment', '%s assigned you to: %s', 'Generic entity assignment', ARRAY['assigner_name', 'entity_title'])
+
+ON CONFLICT (type, name) DO UPDATE SET
+  subject_template = EXCLUDED.subject_template,
+  message_template = EXCLUDED.message_template,
+  description = EXCLUDED.description,
+  placeholders = EXCLUDED.placeholders,
+  updated_at = NOW();
