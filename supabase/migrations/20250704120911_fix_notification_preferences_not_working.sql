@@ -19,6 +19,9 @@ AS $$
 DECLARE
   user_prefs RECORD;
   type_enabled BOOLEAN;
+  current_time TIME;
+  start_time TIME;
+  end_time TIME;
 BEGIN
   -- Get user preferences
   SELECT * INTO user_prefs 
@@ -50,28 +53,24 @@ BEGIN
      AND user_prefs.quiet_hours_start IS NOT NULL 
      AND user_prefs.quiet_hours_end IS NOT NULL THEN
     
-    DECLARE
-      current_time TIME;
-      start_time TIME := user_prefs.quiet_hours_start;
-      end_time TIME := user_prefs.quiet_hours_end;
-    BEGIN
-      -- Get current time in user's timezone (default to UTC if not set)
-      current_time := (NOW() AT TIME ZONE COALESCE(user_prefs.timezone, 'UTC'))::TIME;
-      
-      -- Check if current time is within quiet hours
-      -- Handle cases where quiet hours span midnight
-      IF start_time <= end_time THEN
-        -- Normal case: 22:00 to 07:00 next day becomes false
-        IF current_time >= start_time AND current_time <= end_time THEN
-          RETURN FALSE;
-        END IF;
-      ELSE
-        -- Spans midnight: 22:00 to 07:00 next day
-        IF current_time >= start_time OR current_time <= end_time THEN
-          RETURN FALSE;
-        END IF;
+    -- Get current time in UTC (timezone conversion handled in UI)
+    SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::TIME INTO current_time;
+    SELECT user_prefs.quiet_hours_start INTO start_time;
+    SELECT user_prefs.quiet_hours_end INTO end_time;
+    
+    -- Check if current time is within quiet hours
+    -- Handle cases where quiet hours span midnight
+    IF start_time <= end_time THEN
+      -- Normal case: e.g., 09:00 to 17:00
+      IF current_time >= start_time AND current_time <= end_time THEN
+        RETURN FALSE;
       END IF;
-    END;
+    ELSE
+      -- Spans midnight: e.g., 22:00 to 07:00 next day
+      IF current_time >= start_time OR current_time <= end_time THEN
+        RETURN FALSE;
+      END IF;
+    END IF;
   END IF;
   
   RETURN type_enabled;
