@@ -20,6 +20,7 @@ DECLARE
   v_request_id UUID;
   v_result JSONB;
 BEGIN
+<<<<<<< HEAD
   -- Get vault secrets
   DECLARE
     v_supabase_url TEXT := get_vault_secret('notification_supabase_url');
@@ -36,12 +37,26 @@ BEGIN
     
     -- Construct function URL
     v_function_url := v_supabase_url || '/functions/v1/send-email-notification';
+=======
+  -- Get environment variables
+  DECLARE
+    v_supabase_url TEXT := current_setting('app.settings.supabase_url', true);
+    v_supabase_service_key TEXT := current_setting('app.settings.supabase_service_key', true);
+    v_function_url TEXT;
+  BEGIN
+    -- Construct function URL
+    v_function_url := COALESCE(v_supabase_url, 'https://your-project-ref.supabase.co') || '/functions/v1/send-email-notification';
+>>>>>>> 43fa066 (Implement edge function calls for email and push notifications)
     
     -- Make HTTP request to edge function
     SELECT net.http_post(
       url := v_function_url,
       headers := jsonb_build_object(
+<<<<<<< HEAD
         'Authorization', 'Bearer ' || v_supabase_service_key,
+=======
+        'Authorization', 'Bearer ' || COALESCE(v_supabase_service_key, ''),
+>>>>>>> 43fa066 (Implement edge function calls for email and push notifications)
         'Content-Type', 'application/json',
         'x-client-info', 'supabase-postgres'
       ),
@@ -72,6 +87,7 @@ DECLARE
   v_request_id UUID;
   v_result JSONB;
 BEGIN
+<<<<<<< HEAD
   -- Get vault secrets
   DECLARE
     v_supabase_url TEXT := get_vault_secret('notification_supabase_url');
@@ -88,12 +104,26 @@ BEGIN
     
     -- Construct function URL
     v_function_url := v_supabase_url || '/functions/v1/send-push-notification';
+=======
+  -- Get environment variables
+  DECLARE
+    v_supabase_url TEXT := current_setting('app.settings.supabase_url', true);
+    v_supabase_service_key TEXT := current_setting('app.settings.supabase_service_key', true);
+    v_function_url TEXT;
+  BEGIN
+    -- Construct function URL
+    v_function_url := COALESCE(v_supabase_url, 'https://your-project-ref.supabase.co') || '/functions/v1/send-push-notification';
+>>>>>>> 43fa066 (Implement edge function calls for email and push notifications)
     
     -- Make HTTP request to edge function
     SELECT net.http_post(
       url := v_function_url,
       headers := jsonb_build_object(
+<<<<<<< HEAD
         'Authorization', 'Bearer ' || v_supabase_service_key,
+=======
+        'Authorization', 'Bearer ' || COALESCE(v_supabase_service_key, ''),
+>>>>>>> 43fa066 (Implement edge function calls for email and push notifications)
         'Content-Type', 'application/json',
         'x-client-info', 'supabase-postgres'
       ),
@@ -325,6 +355,7 @@ GRANT EXECUTE ON FUNCTION call_send_push_notification TO service_role;
 GRANT EXECUTE ON FUNCTION call_edge_function_safe TO service_role;
 
 -- ===========================================
+<<<<<<< HEAD
 -- VAULT DEPENDENCIES
 -- ===========================================
 
@@ -368,6 +399,30 @@ BEGIN
     END;
   END IF;
 END $$;
+=======
+-- CONFIGURATION SETTINGS
+-- ===========================================
+
+-- Create function to set configuration settings
+CREATE OR REPLACE FUNCTION set_notification_config(
+  p_supabase_url TEXT DEFAULT NULL,
+  p_supabase_service_key TEXT DEFAULT NULL
+) RETURNS VOID AS $$
+BEGIN
+  -- Set configuration settings if provided
+  IF p_supabase_url IS NOT NULL THEN
+    PERFORM set_config('app.settings.supabase_url', p_supabase_url, false);
+  END IF;
+  
+  IF p_supabase_service_key IS NOT NULL THEN
+    PERFORM set_config('app.settings.supabase_service_key', p_supabase_service_key, false);
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION set_notification_config TO service_role;
+>>>>>>> 43fa066 (Implement edge function calls for email and push notifications)
 
 -- ===========================================
 -- WEBHOOK ALTERNATIVE (IF PG_NET IS NOT AVAILABLE)
@@ -432,9 +487,16 @@ GRANT ALL ON webhook_requests TO service_role;
 -- COMMENTS AND DOCUMENTATION
 -- ===========================================
 
+<<<<<<< HEAD
 COMMENT ON FUNCTION call_send_email_notification IS 'Calls the send-email-notification edge function via HTTP request using vault secrets';
 COMMENT ON FUNCTION call_send_push_notification IS 'Calls the send-push-notification edge function via HTTP request using vault secrets';
 COMMENT ON FUNCTION call_edge_function_safe IS 'Safely calls edge functions with error handling and fallback';
+=======
+COMMENT ON FUNCTION call_send_email_notification IS 'Calls the send-email-notification edge function via HTTP request';
+COMMENT ON FUNCTION call_send_push_notification IS 'Calls the send-push-notification edge function via HTTP request';
+COMMENT ON FUNCTION call_edge_function_safe IS 'Safely calls edge functions with error handling and fallback';
+COMMENT ON FUNCTION set_notification_config IS 'Sets configuration for notification edge function calls';
+>>>>>>> 43fa066 (Implement edge function calls for email and push notifications)
 COMMENT ON FUNCTION create_webhook_request IS 'Creates webhook requests as alternative to direct HTTP calls';
 
 COMMENT ON TABLE webhook_requests IS 'Optional table for webhook-based edge function calls when pg_net is not available';
@@ -452,6 +514,7 @@ COMMENT ON TABLE webhook_requests IS 'Optional table for webhook-based edge func
 -- The edge functions are called when there are pending items in the queue,
 -- and the functions handle the actual sending of emails and push notifications.
 --
+<<<<<<< HEAD
 -- PREREQUISITES:
 -- 1. Run scripts/setup-vault-secrets.sql to create vault secret functions
 -- 2. Configure vault secrets with actual values (not placeholders)
@@ -466,3 +529,7 @@ COMMENT ON TABLE webhook_requests IS 'Optional table for webhook-based edge func
 --
 -- To update secrets, use the update_vault_secret function:
 -- SELECT update_vault_secret('notification_supabase_url', 'https://your-project.supabase.co');
+=======
+-- To configure the edge function URLs, use the set_notification_config function:
+-- SELECT set_notification_config('https://your-project-ref.supabase.co', 'your-service-key');
+>>>>>>> 43fa066 (Implement edge function calls for email and push notifications)

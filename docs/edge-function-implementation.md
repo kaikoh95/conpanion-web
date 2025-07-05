@@ -43,6 +43,7 @@ This document describes the implementation of edge function calls for email and 
 
 ## Configuration
 
+<<<<<<< HEAD
 ### Setting Up Vault Secrets
 
 **Step 1: Run the vault secrets setup script**
@@ -89,6 +90,23 @@ SELECT notification_secrets_configured();
 ### Environment Variables (Edge Functions)
 
 The edge functions themselves still require these environment variables in Supabase:
+=======
+### Setting Up Edge Function URLs
+
+Use the `set_notification_config` function to configure your Supabase project details:
+
+```sql
+-- Configure for your Supabase project
+SELECT set_notification_config(
+  'https://your-project-ref.supabase.co',
+  'your-service-role-key'
+);
+```
+
+### Environment Variables
+
+The edge functions themselves require these environment variables:
+>>>>>>> 43fa066 (Implement edge function calls for email and push notifications)
 
 **For Email Notifications:**
 - `SUPABASE_URL`
