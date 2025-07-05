@@ -43,7 +43,7 @@ serve(async (req) => {
 
     // Get pending email notifications
     const { data: emailQueue, error: queueError } = await supabase
-      .from('notification_email_queue')
+      .from('email_queue')
       .select(
         `
         *,
@@ -55,7 +55,8 @@ serve(async (req) => {
           entity_type,
           entity_id,
           data,
-          user:auth.users!notifications_user_id_fkey(
+          user_id,
+          user:auth.users(
             email,
             raw_user_meta_data
           )
@@ -104,11 +105,11 @@ serve(async (req) => {
 
         // Update queue status
         await supabase
-          .from('notification_email_queue')
+          .from('email_queue')
           .update({
             status: 'sent',
             sent_at: new Date().toISOString(),
-            metadata: { resend_id: emailData?.id },
+            template_data: { resend_id: emailData?.id },
           })
           .eq('id', email.id);
 
@@ -116,11 +117,11 @@ serve(async (req) => {
         await supabase
           .from('notification_deliveries')
           .update({
-            email_sent_at: new Date().toISOString(),
-            email_status: 'sent',
+            delivered_at: new Date().toISOString(),
+            status: 'sent',
           })
           .eq('notification_id', email.notification_id)
-          .eq('user_id', email.user_id);
+          .eq('channel', 'email');
 
         results.push({
           id: email.id,
@@ -132,7 +133,7 @@ serve(async (req) => {
 
         // Update queue status to failed
         await supabase
-          .from('notification_email_queue')
+          .from('email_queue')
           .update({
             status: 'failed',
             error_message: error.message,
