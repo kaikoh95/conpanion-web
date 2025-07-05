@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Bell, BellOff } from 'lucide-react';
 import type { NotificationPreference, NotificationType } from '@/lib/types/notifications';
+import { useServiceWorker } from '@/hooks/useServiceWorker';
 
 const notificationTypes: { type: NotificationType; label: string; description: string }[] = [
   {
@@ -65,6 +66,13 @@ export default function NotificationPreferencesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const supabase = createClient();
+  const { 
+    isSupported: isPushSupported, 
+    isSubscribed, 
+    subscribeToPush, 
+    unsubscribeFromPush,
+    permissionState 
+  } = useServiceWorker();
 
   useEffect(() => {
     loadPreferences();
@@ -252,26 +260,79 @@ export default function NotificationPreferencesPage() {
             Enable browser notifications to receive alerts even when the app is not open
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button
-            onClick={() => {
-              if (window.Notification && window.Notification.permission === 'default') {
-                window.Notification.requestPermission().then((permission) => {
-                  if (permission === 'granted') {
-                    toast.success('Browser notifications enabled');
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label>Browser Notifications</Label>
+              <p className="text-sm text-muted-foreground">
+                {permissionState === 'granted' 
+                  ? 'Permission granted' 
+                  : permissionState === 'denied'
+                  ? 'Permission denied - please enable in browser settings'
+                  : 'Click to enable browser notifications'}
+              </p>
+            </div>
+            <Button
+              variant={permissionState === 'granted' ? 'secondary' : 'default'}
+              onClick={() => {
+                if (window.Notification && window.Notification.permission === 'default') {
+                  window.Notification.requestPermission().then((permission) => {
+                    if (permission === 'granted') {
+                      toast.success('Browser notifications enabled');
+                    } else {
+                      toast.error('Browser notifications were not enabled');
+                    }
+                  });
+                } else if (window.Notification && window.Notification.permission === 'granted') {
+                  toast.info('Browser notifications are already enabled');
+                } else {
+                  toast.error('Your browser does not support notifications');
+                }
+              }}
+              disabled={permissionState === 'denied'}
+            >
+              {permissionState === 'granted' ? (
+                <>
+                  <Bell className="h-4 w-4 mr-2" />
+                  Enabled
+                </>
+              ) : (
+                <>
+                  <BellOff className="h-4 w-4 mr-2" />
+                  Enable Notifications
+                </>
+              )}
+            </Button>
+          </div>
+
+          {isPushSupported && permissionState === 'granted' && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="space-y-1">
+                <Label>Push Notifications</Label>
+                <p className="text-sm text-muted-foreground">
+                  {isSubscribed 
+                    ? 'Receive notifications even when the browser is closed' 
+                    : 'Enable push notifications for this device'}
+                </p>
+              </div>
+              <Switch
+                checked={isSubscribed}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    subscribeToPush();
                   } else {
-                    toast.error('Browser notifications were not enabled');
+                    unsubscribeFromPush();
                   }
-                });
-              } else if (window.Notification && window.Notification.permission === 'granted') {
-                toast.info('Browser notifications are already enabled');
-              } else {
-                toast.error('Your browser does not support notifications');
-              }
-            }}
-          >
-            Enable Browser Notifications
-          </Button>
+                }}
+              />
+            </div>
+          )}
+
+          {!isPushSupported && (
+            <div className="text-sm text-muted-foreground">
+              Push notifications are not supported in your browser
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
