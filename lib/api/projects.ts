@@ -394,7 +394,124 @@ export class ProjectAPI {
   }
 
   /**
-   * Invite user to project by email
+   * Get organization members who can be invited to a project
+   */
+  async getOrganizationMembersForInvitation(projectId: number): Promise<any[]> {
+    try {
+      const { data: members, error } = await this.supabase.rpc(
+        'get_organization_members_for_project_invitation',
+        {
+          p_project_id: projectId,
+        },
+      );
+
+      if (error) {
+        throw new Error(`Failed to fetch organization members: ${error.message}`);
+      }
+
+      return members || [];
+    } catch (error: any) {
+      console.error('Error in getOrganizationMembersForInvitation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Invite user to project by email with organization membership validation
+   */
+  async inviteUserToProjectByEmail(
+    projectId: number,
+    userEmail: string,
+    role: string = 'member',
+  ): Promise<{ success: boolean; message: string; error?: string; error_code?: string }> {
+    try {
+      // Use the new organization-aware invitation function
+      const { data: result, error } = await this.supabase.rpc(
+        'invite_user_to_project_by_email',
+        {
+          p_project_id: projectId,
+          p_email: userEmail,
+          p_role: role,
+        },
+      );
+
+      if (error) {
+        throw new Error(`Failed to invite user: ${error.message}`);
+      }
+
+      return result || { success: false, message: 'Unknown error occurred' };
+    } catch (error: any) {
+      console.error('Error in inviteUserToProjectByEmail:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get project invitation by token
+   */
+  async getProjectInvitationByToken(token: string): Promise<any> {
+    try {
+      const { data: invitation, error } = await this.supabase.rpc(
+        'get_project_invitation_by_token',
+        {
+          p_token: token,
+        },
+      );
+
+      if (error) {
+        throw new Error(`Failed to fetch invitation: ${error.message}`);
+      }
+
+      return invitation?.[0] || null;
+    } catch (error: any) {
+      console.error('Error in getProjectInvitationByToken:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Accept project invitation by token
+   */
+  async acceptProjectInvitation(token: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const { data: result, error } = await this.supabase.rpc('accept_project_invitation', {
+        p_token: token,
+      });
+
+      if (error) {
+        throw new Error(`Failed to accept invitation: ${error.message}`);
+      }
+
+      return result || { success: false, message: 'Unknown error occurred' };
+    } catch (error: any) {
+      console.error('Error in acceptProjectInvitation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Decline project invitation by token
+   */
+  async declineProjectInvitation(token: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const { data: result, error } = await this.supabase.rpc('decline_project_invitation', {
+        p_token: token,
+      });
+
+      if (error) {
+        throw new Error(`Failed to decline invitation: ${error.message}`);
+      }
+
+      return result || { success: false, message: 'Unknown error occurred' };
+    } catch (error: any) {
+      console.error('Error in declineProjectInvitation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Legacy method - Invite user to project by email (direct invitation)
+   * @deprecated Use inviteUserToProjectByEmail instead
    */
   async inviteUserToProject(
     projectId: number,
