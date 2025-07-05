@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { pushNotificationService } from '@/lib/services/push-notifications';
 import {
   PushNotificationContextType,
@@ -55,11 +55,21 @@ export function usePushNotifications(): PushNotificationContextType {
           const subscriptionData = {
             endpoint: currentSubscription.endpoint,
             keys: {
-              p256dh: currentSubscription.getKey('p256dh') 
-                ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(currentSubscription.getKey('p256dh')!))))
+              p256dh: currentSubscription.getKey('p256dh')
+                ? btoa(
+                    String.fromCharCode.apply(
+                      null,
+                      Array.from(new Uint8Array(currentSubscription.getKey('p256dh')!)),
+                    ),
+                  )
                 : '',
               auth: currentSubscription.getKey('auth')
-                ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(currentSubscription.getKey('auth')!))))
+                ? btoa(
+                    String.fromCharCode.apply(
+                      null,
+                      Array.from(new Uint8Array(currentSubscription.getKey('auth')!)),
+                    ),
+                  )
                 : '',
             },
           };
@@ -79,7 +89,7 @@ export function usePushNotifications(): PushNotificationContextType {
   const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
     try {
       clearError();
-      
+
       if (!isSupported) {
         throw new Error('Push notifications are not supported in this browser');
       }
@@ -103,7 +113,7 @@ export function usePushNotifications(): PushNotificationContextType {
       }
 
       const result = await pushNotificationService.subscribe();
-      
+
       if (result.success) {
         setIsSubscribed(true);
         await checkSubscriptionStatus();
@@ -126,7 +136,7 @@ export function usePushNotifications(): PushNotificationContextType {
       clearError();
 
       const success = await pushNotificationService.unsubscribe();
-      
+
       if (success) {
         setIsSubscribed(false);
         setSubscription(null);
@@ -206,76 +216,82 @@ export function usePushNotificationPreferences() {
 export function usePushNotificationTesting() {
   const [isTesting, setIsTesting] = useState(false);
 
-  const sendTestNotification = useCallback(async (
-    type: string,
-    title: string,
-    body: string,
-    options?: {
-      actionUrl?: string;
-      data?: Record<string, any>;
-    }
-  ): Promise<boolean> => {
-    try {
-      setIsTesting(true);
+  const sendTestNotification = useCallback(
+    async (
+      type: string,
+      title: string,
+      body: string,
+      options?: {
+        actionUrl?: string;
+        data?: Record<string, any>;
+      },
+    ): Promise<boolean> => {
+      try {
+        setIsTesting(true);
 
-      const payload = pushNotificationService.createNotificationPayload(
-        type as any,
-        title,
-        body,
-        options
-      );
+        const payload = pushNotificationService.createNotificationPayload(
+          type as any,
+          title,
+          body,
+          options,
+        );
 
-      // Show local notification for testing
-      await pushNotificationService.showLocalNotification(payload);
-      return true;
-    } catch (error) {
-      console.error('Failed to send test notification:', error);
-      return false;
-    } finally {
-      setIsTesting(false);
-    }
-  }, []);
-
-  const sendTestPushNotification = useCallback(async (
-    type: string,
-    title: string,
-    body: string,
-    options?: {
-      actionUrl?: string;
-      data?: Record<string, any>;
-    }
-  ): Promise<boolean> => {
-    try {
-      setIsTesting(true);
-
-      const payload = pushNotificationService.createNotificationPayload(
-        type as any,
-        title,
-        body,
-        options
-      );
-
-      const response = await fetch('/api/notifications/push/test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ notification: payload }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send test push notification');
+        // Show local notification for testing
+        await pushNotificationService.showLocalNotification(payload);
+        return true;
+      } catch (error) {
+        console.error('Failed to send test notification:', error);
+        return false;
+      } finally {
+        setIsTesting(false);
       }
+    },
+    [],
+  );
 
-      const result = await response.json();
-      return result.success;
-    } catch (error) {
-      console.error('Failed to send test push notification:', error);
-      return false;
-    } finally {
-      setIsTesting(false);
-    }
-  }, []);
+  const sendTestPushNotification = useCallback(
+    async (
+      type: string,
+      title: string,
+      body: string,
+      options?: {
+        actionUrl?: string;
+        data?: Record<string, any>;
+      },
+    ): Promise<boolean> => {
+      try {
+        setIsTesting(true);
+
+        const payload = pushNotificationService.createNotificationPayload(
+          type as any,
+          title,
+          body,
+          options,
+        );
+
+        const response = await fetch('/api/notifications/push/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ notification: payload }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to send test push notification');
+        }
+
+        const result = await response.json();
+        return result.success;
+      } catch (error) {
+        console.error('Failed to send test push notification:', error);
+        return false;
+      } finally {
+        setIsTesting(false);
+      }
+    },
+    [],
+  );
 
   return {
     isTesting,
@@ -299,7 +315,7 @@ export function usePushNotificationStats() {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const data = await pushNotificationService.getStatistics();
       setStats(data);
     } catch (err) {

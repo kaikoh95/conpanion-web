@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+// import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -41,10 +41,8 @@ export function PushNotificationSetup({ className }: PushNotificationSetupProps)
       setError(null);
 
       // Check if push notifications are supported
-      const supported = 
-        'serviceWorker' in navigator &&
-        'PushManager' in window &&
-        'Notification' in window;
+      const supported =
+        'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
       setIsSupported(supported);
 
@@ -70,14 +68,14 @@ export function PushNotificationSetup({ className }: PushNotificationSetupProps)
   const requestPermission = async () => {
     try {
       setError(null);
-      
+
       if (!isSupported) {
         throw new Error('Push notifications are not supported in this browser');
       }
 
       const newPermission = await Notification.requestPermission();
       setPermission(newPermission);
-      
+
       if (newPermission !== 'granted') {
         throw new Error('Push notification permission denied');
       }
@@ -107,8 +105,18 @@ export function PushNotificationSetup({ className }: PushNotificationSetupProps)
         await navigator.serviceWorker.ready;
       }
 
-      // Get VAPID public key (this would come from your environment)
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      // Get VAPID public key from global config or API
+      let vapidPublicKey = '';
+      try {
+        const response = await fetch('/api/push/vapid-key');
+        if (response.ok) {
+          const data = await response.json();
+          vapidPublicKey = data.publicKey;
+        }
+      } catch (error) {
+        console.error('Failed to get VAPID key:', error);
+      }
+
       if (!vapidPublicKey) {
         throw new Error('VAPID public key not configured');
       }
@@ -233,51 +241,67 @@ export function PushNotificationSetup({ className }: PushNotificationSetupProps)
 
   // Helper functions
   const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    
+
     const rawData = window.atob(base64);
     const outputArray = new Uint8Array(rawData.length);
-    
+
     for (let i = 0; i < rawData.length; ++i) {
       outputArray[i] = rawData.charCodeAt(i);
     }
-    
+
     return outputArray;
   };
 
   const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
     const bytes = new Uint8Array(buffer);
     let binary = '';
-    bytes.forEach(byte => binary += String.fromCharCode(byte));
+    bytes.forEach((byte) => (binary += String.fromCharCode(byte)));
     return window.btoa(binary);
   };
 
   const getStatusBadge = () => {
     if (!isSupported) {
-      return <Badge variant="destructive">Not Supported</Badge>;
+      return (
+        <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
+          Not Supported
+        </span>
+      );
     }
-    
+
     if (permission === 'denied') {
-      return <Badge variant="destructive">Blocked</Badge>;
+      return (
+        <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
+          Blocked
+        </span>
+      );
     }
-    
+
     if (isSubscribed) {
-      return <Badge variant="default">Active</Badge>;
+      return (
+        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+          Active
+        </span>
+      );
     }
-    
-    return <Badge variant="secondary">Inactive</Badge>;
+
+    return (
+      <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+        Inactive
+      </span>
+    );
   };
 
   const getStatusIcon = () => {
     if (!isSupported || permission === 'denied') {
       return <BellOff className="h-5 w-5 text-red-600" />;
     }
-    
+
     if (isSubscribed) {
       return <Bell className="h-5 w-5 text-green-600" />;
     }
-    
+
     return <Bell className="h-5 w-5 text-gray-400" />;
   };
 
@@ -293,14 +317,12 @@ export function PushNotificationSetup({ className }: PushNotificationSetupProps)
               Push Notifications
               {getStatusBadge()}
             </CardTitle>
-            <CardDescription>
-              Receive notifications directly on your device
-            </CardDescription>
+            <CardDescription>Receive notifications directly on your device</CardDescription>
           </div>
           {getStatusIcon()}
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Error Alert */}
         {error && (
@@ -315,7 +337,8 @@ export function PushNotificationSetup({ className }: PushNotificationSetupProps)
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Push notifications are not supported in this browser. Please use a modern browser like Chrome, Firefox, or Safari.
+              Push notifications are not supported in this browser. Please use a modern browser like
+              Chrome, Firefox, or Safari.
             </AlertDescription>
           </Alert>
         )}
@@ -325,7 +348,8 @@ export function PushNotificationSetup({ className }: PushNotificationSetupProps)
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Push notifications have been blocked. Please enable them in your browser settings and refresh the page.
+              Push notifications have been blocked. Please enable them in your browser settings and
+              refresh the page.
             </AlertDescription>
           </Alert>
         )}
@@ -342,7 +366,9 @@ export function PushNotificationSetup({ className }: PushNotificationSetupProps)
               </div>
               <Switch
                 checked={isSubscribed}
-                onCheckedChange={isSubscribed ? unsubscribeFromPushNotifications : subscribeToPushNotifications}
+                onCheckedChange={
+                  isSubscribed ? unsubscribeFromPushNotifications : subscribeToPushNotifications
+                }
                 disabled={isLoading}
               />
             </div>
@@ -372,10 +398,12 @@ export function PushNotificationSetup({ className }: PushNotificationSetupProps)
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <span className="font-medium">Status:</span>
                 <span>
-                  {isSubscribed ? 'Push notifications are enabled' : 'Push notifications are disabled'}
+                  {isSubscribed
+                    ? 'Push notifications are enabled'
+                    : 'Push notifications are disabled'}
                 </span>
               </div>
-              
+
               {isSubscribed && (
                 <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                   <p>• Notifications will appear even when the app is closed</p>

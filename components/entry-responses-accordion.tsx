@@ -46,7 +46,7 @@ export function EntryResponsesAccordion({
             <div className="flex flex-col gap-2 text-sm">
               {item.options.map((option, index) => {
                 // Handle case when the answer items might be objects
-                let answerValues = answer.map((a: any) =>
+                const answerValues = answer.map((a: any) =>
                   typeof a === 'object' && a !== null
                     ? a.value !== undefined
                       ? a.value

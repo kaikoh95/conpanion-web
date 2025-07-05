@@ -220,7 +220,7 @@ export default function TasksPage() {
     const tasksInTargetStatus = tasksByStatus[newStatusId] || [];
 
     // Calculate position (place at the end by default)
-    let newPosition =
+    const newPosition =
       tasksInTargetStatus.length > 0
         ? Math.max(...tasksInTargetStatus.map((t) => t.position || 0)) + 1000
         : 1000;

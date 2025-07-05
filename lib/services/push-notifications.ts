@@ -25,9 +25,29 @@ export class PushNotificationService {
     // VAPID public key should be set via environment variable NEXT_PUBLIC_VAPID_PUBLIC_KEY
     this.vapidPublicKey = '';
     if (typeof window !== 'undefined') {
-      // @ts-ignore - process.env is available in Next.js client-side
-      this.vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
+      // Get VAPID key from window object or fetch from API endpoint
+      this.initVapidKey();
       this.initializeServiceWorker();
+    }
+  }
+
+  private async initVapidKey(): Promise<void> {
+    try {
+      // Try to get from global window object set by Next.js
+      const nextConfig = (window as any).__NEXT_DATA__?.env;
+      if (nextConfig?.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+        this.vapidPublicKey = nextConfig.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        return;
+      }
+
+      // Fallback: fetch from API endpoint
+      const response = await fetch('/api/push/vapid-key');
+      if (response.ok) {
+        const data = await response.json();
+        this.vapidPublicKey = data.publicKey;
+      }
+    } catch (error) {
+      console.warn('Failed to load VAPID key:', error);
     }
   }
 
@@ -66,7 +86,6 @@ export class PushNotificationService {
       navigator.serviceWorker.addEventListener('message', (event) => {
         this.handleServiceWorkerMessage(event);
       });
-
     } catch (error) {
       console.error('Service Worker registration failed:', error);
     }
@@ -153,7 +172,9 @@ export class PushNotificationService {
    */
   private async markNotificationAsRead(notificationId: number): Promise<void> {
     try {
-      const { data: { user } } = await this.supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await this.supabase.auth.getUser();
       if (!user) return;
 
       const { error } = await this.supabase.rpc('mark_notification_read', {
@@ -262,8 +283,12 @@ export class PushNotificationService {
   /**
    * Store push subscription in database
    */
-  private async storeSubscription(request: CreatePushSubscriptionRequest): Promise<PushSubscriptionResponse> {
-    const { data: { user } } = await this.supabase.auth.getUser();
+  private async storeSubscription(
+    request: CreatePushSubscriptionRequest,
+  ): Promise<PushSubscriptionResponse> {
+    const {
+      data: { user },
+    } = await this.supabase.auth.getUser();
     if (!user) {
       throw new Error('User not authenticated');
     }
@@ -304,7 +329,7 @@ export class PushNotificationService {
 
       // Unsubscribe from browser
       const success = await subscription.unsubscribe();
-      
+
       if (success) {
         // Remove from database
         await this.removeSubscription(subscription.endpoint);
@@ -321,7 +346,9 @@ export class PushNotificationService {
    * Remove push subscription from database
    */
   private async removeSubscription(endpoint: string): Promise<void> {
-    const { data: { user } } = await this.supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await this.supabase.auth.getUser();
     if (!user) {
       throw new Error('User not authenticated');
     }
@@ -357,7 +384,9 @@ export class PushNotificationService {
    * Get user's push subscriptions from database
    */
   async getUserSubscriptions(): Promise<PushSubscriptionRecord[]> {
-    const { data: { user } } = await this.supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await this.supabase.auth.getUser();
     if (!user) {
       throw new Error('User not authenticated');
     }
@@ -383,7 +412,9 @@ export class PushNotificationService {
    */
   async sendTestNotification(): Promise<boolean> {
     try {
-      const { data: { user } } = await this.supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await this.supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -395,7 +426,7 @@ export class PushNotificationService {
         {
           actionUrl: '/protected/settings/notifications',
           data: { test: true },
-        }
+        },
       );
 
       const response = await fetch('/api/notifications/push/test', {
@@ -421,7 +452,9 @@ export class PushNotificationService {
   /**
    * Send push notification to users
    */
-  async sendPushNotification(request: SendPushNotificationRequest): Promise<SendPushNotificationResponse> {
+  async sendPushNotification(
+    request: SendPushNotificationRequest,
+  ): Promise<SendPushNotificationResponse> {
     try {
       const response = await fetch('/api/notifications/push/send', {
         method: 'POST',
@@ -453,7 +486,7 @@ export class PushNotificationService {
       notificationId?: number;
       actionUrl?: string;
       data?: Record<string, any>;
-    }
+    },
   ): PushNotificationPayload {
     return createPushNotificationPayload(type, title, body, options);
   }
@@ -503,7 +536,7 @@ export class PushNotificationService {
 
     try {
       const notifications = await this.swRegistration.getNotifications();
-      notifications.forEach(notification => notification.close());
+      notifications.forEach((notification) => notification.close());
     } catch (error) {
       console.error('Failed to clear notifications:', error);
     }
