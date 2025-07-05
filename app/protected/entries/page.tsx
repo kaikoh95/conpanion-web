@@ -136,11 +136,11 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
           setFilteredEntries([]);
           return;
         }
-        
+
         // Use the project-specific API function to fetch entries for the current project
         const fetchedEntries = await fetchFormEntriesByProject(supabase, currentProject.id);
         console.log('Fetched Entries for project:', currentProject.id, fetchedEntries);
-        
+
         setAllEntries(fetchedEntries);
         // Apply initial filters immediately after fetching
         setFilteredEntries(filterEntries(fetchedEntries, searchTerm, selectedStatus));
@@ -293,12 +293,12 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
           if (formData) {
             setFormItems(formData.items);
             setFormName(formData.form.name);
-            
+
             // Log form items for debugging
             console.log('Form items:', formData.items);
-            
+
             // Check for photo-type items
-            const photoItems = formData.items.filter(item => item.item_type === 'photo');
+            const photoItems = formData.items.filter((item) => item.item_type === 'photo');
             console.log('Photo items:', photoItems);
           }
 
@@ -627,7 +627,7 @@ function EntriesPageContent({ entryId }: { entryId: string | null }) {
             <div className="flex flex-col gap-2 text-sm">
               {item.options.map((option, index) => {
                 // Handle case when the answer items might be objects
-                let answerValues = answer.map((a: any) =>
+                const answerValues = answer.map((a: any) =>
                   typeof a === 'object' && a !== null
                     ? a.value !== undefined
                       ? a.value
