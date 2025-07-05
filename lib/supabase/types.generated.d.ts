@@ -2002,6 +2002,8 @@ export type Database = {
         | "task_comment"
         | "comment_mention"
         | "task_unassigned"
+        | "form_assigned"
+        | "form_unassigned"
         | "approval_requested"
         | "approval_status_changed"
         | "entity_assigned"

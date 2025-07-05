@@ -11,7 +11,7 @@ CREATE TABLE notifications (
   message TEXT NOT NULL,
   data JSONB DEFAULT '{}' NOT NULL,
   entity_type TEXT,
-  entity_id UUID,
+  entity_id TEXT,
   is_read BOOLEAN DEFAULT false NOT NULL,
   read_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,

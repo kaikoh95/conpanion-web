@@ -1,124 +1,259 @@
 -- Migration: Create notification triggers
 -- Description: Database triggers that create notifications automatically
 
--- Task assignment trigger
-CREATE OR REPLACE FUNCTION notify_task_changes()
+-- Task assignment trigger (handles entity_assignees changes)
+CREATE OR REPLACE FUNCTION notify_task_assignment_changes()
 RETURNS TRIGGER AS $$
 DECLARE
+  v_task RECORD;
   v_project_name TEXT;
   v_assigner_name TEXT;
   v_notification_id UUID;
-  v_old_assignee_name TEXT;
-  v_new_assignee_name TEXT;
 BEGIN
-  -- Handle task assignment changes
-  IF TG_OP = 'UPDATE' AND 
-     NEW.assignee_id IS DISTINCT FROM OLD.assignee_id THEN
-    
-    -- Get project name
-    SELECT name INTO v_project_name 
-    FROM projects WHERE id = NEW.project_id;
+  -- Only handle task assignments
+  IF NEW.entity_type = 'task' THEN
+    -- Get task details
+    SELECT t.*, p.name as project_name 
+    INTO v_task
+    FROM tasks t
+    LEFT JOIN projects p ON t.project_id = p.id
+    WHERE t.id = NEW.entity_id;
     
     -- Get assigner name
     SELECT first_name || ' ' || last_name INTO v_assigner_name 
-    FROM user_profiles WHERE id = NEW.updated_by;
+    FROM user_profiles WHERE id = NEW.assigned_by;
     
     -- Notify new assignee
-    IF NEW.assignee_id IS NOT NULL THEN
-      v_notification_id := create_notification(
-        p_user_id => NEW.assignee_id,
-        p_type => 'task_assigned',
-        p_title => 'New Task Assignment',
-        p_message => format('%s assigned you to: %s', 
-          COALESCE(v_assigner_name, 'Someone'), NEW.title),
-        p_data => jsonb_build_object(
-          'task_id', NEW.id,
-          'task_title', NEW.title,
-          'project_id', NEW.project_id,
-          'project_name', v_project_name,
-          'assigned_by', NEW.updated_by,
-          'assigner_name', v_assigner_name,
-          'due_date', NEW.due_date,
-          'priority', NEW.priority
-        ),
-        p_entity_type => 'task',
-        p_entity_id => NEW.id,
-        p_priority => CASE 
-          WHEN NEW.priority = 'urgent' THEN 'high'
-          WHEN NEW.priority = 'high' THEN 'high'
-          ELSE 'medium'
-        END,
-        p_created_by => NEW.updated_by
-      );
-    END IF;
-    
-    -- Notify old assignee if they were removed
-    IF OLD.assignee_id IS NOT NULL AND NEW.assignee_id IS DISTINCT FROM OLD.assignee_id THEN
-      -- Get new assignee name
-      IF NEW.assignee_id IS NOT NULL THEN
-        SELECT first_name || ' ' || last_name INTO v_new_assignee_name 
-        FROM user_profiles WHERE id = NEW.assignee_id;
-      END IF;
-      
-      PERFORM create_notification(
-        p_user_id => OLD.assignee_id,
-        p_type => 'task_unassigned',
-        p_title => 'Task Reassigned',
-        p_message => format('You were removed from task: %s', NEW.title),
-        p_data => jsonb_build_object(
-          'task_id', NEW.id,
-          'task_title', NEW.title,
-          'project_id', NEW.project_id,
-          'project_name', v_project_name,
-          'new_assignee', NEW.assignee_id,
-          'new_assignee_name', v_new_assignee_name
-        ),
-        p_entity_type => 'task',
-        p_entity_id => NEW.id,
-        p_priority => 'low',
-        p_created_by => NEW.updated_by
-      );
-    END IF;
-  END IF;
-  
-  -- Handle task status changes
-  IF TG_OP = 'UPDATE' AND NEW.status IS DISTINCT FROM OLD.status THEN
-    -- Notify assignee of status change (if not changed by them)
-    IF NEW.assignee_id IS NOT NULL AND NEW.assignee_id != NEW.updated_by THEN
-      -- Get updater name
-      SELECT first_name || ' ' || last_name INTO v_assigner_name 
-      FROM user_profiles WHERE id = NEW.updated_by;
-      
-      PERFORM create_notification(
-        p_user_id => NEW.assignee_id,
-        p_type => 'task_updated',
-        p_title => 'Task Status Updated',
-        p_message => format('Task "%s" status changed from %s to %s', 
-          NEW.title, OLD.status, NEW.status),
-        p_data => jsonb_build_object(
-          'task_id', NEW.id,
-          'task_title', NEW.title,
-          'old_status', OLD.status,
-          'new_status', NEW.status,
-          'updated_by', NEW.updated_by,
-          'updater_name', v_assigner_name
-        ),
-        p_entity_type => 'task',
-        p_entity_id => NEW.id,
-        p_priority => 'medium'
-      );
-    END IF;
+    v_notification_id := create_notification(
+      p_user_id => NEW.user_id,
+      p_type => 'task_assigned',
+      p_title => 'New Task Assignment',
+      p_message => format('%s assigned you to: %s', 
+        COALESCE(v_assigner_name, 'Someone'), v_task.title),
+      p_data => jsonb_build_object(
+        'task_id', v_task.id,
+        'task_title', v_task.title,
+        'project_id', v_task.project_id,
+        'project_name', v_task.project_name,
+        'assigned_by', NEW.assigned_by,
+        'assigner_name', v_assigner_name,
+        'due_date', v_task.due_date,
+        'priority', (SELECT name FROM priorities WHERE id = v_task.priority_id)
+      ),
+      p_entity_type => 'task',
+      p_entity_id => v_task.id::TEXT,
+      p_priority => 'high',
+      p_created_by => NEW.assigned_by
+    );
   END IF;
   
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger for task changes
-CREATE TRIGGER task_notification_trigger
+-- Task unassignment trigger (handles entity_assignees deletions)
+CREATE OR REPLACE FUNCTION notify_task_unassignment()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_task RECORD;
+  v_project_name TEXT;
+BEGIN
+  -- Only handle task unassignments
+  IF OLD.entity_type = 'task' THEN
+    -- Get task details
+    SELECT t.*, p.name as project_name 
+    INTO v_task
+    FROM tasks t
+    LEFT JOIN projects p ON t.project_id = p.id
+    WHERE t.id = OLD.entity_id;
+    
+    -- Notify removed assignee
+    PERFORM create_notification(
+      p_user_id => OLD.user_id,
+      p_type => 'task_unassigned',
+      p_title => 'Task Unassigned',
+      p_message => format('You were removed from task: %s', v_task.title),
+      p_data => jsonb_build_object(
+        'task_id', v_task.id,
+        'task_title', v_task.title,
+        'project_id', v_task.project_id,
+        'project_name', v_task.project_name
+      ),
+      p_entity_type => 'task',
+      p_entity_id => v_task.id::TEXT,
+      p_priority => 'low'
+    );
+  END IF;
+  
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Form assignment trigger (handles entity_assignees changes for forms)
+CREATE OR REPLACE FUNCTION notify_form_assignment_changes()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_form RECORD;
+  v_project_name TEXT;
+  v_assigner_name TEXT;
+  v_notification_id UUID;
+BEGIN
+  -- Only handle form assignments
+  IF NEW.entity_type = 'form' THEN
+    -- Get form details
+    SELECT f.*, p.name as project_name 
+    INTO v_form
+    FROM forms f
+    LEFT JOIN projects p ON f.project_id = p.id
+    WHERE f.id = NEW.entity_id;
+    
+    -- Get assigner name
+    SELECT first_name || ' ' || last_name INTO v_assigner_name 
+    FROM user_profiles WHERE id = NEW.assigned_by;
+    
+    -- Notify new assignee
+    v_notification_id := create_notification(
+      p_user_id => NEW.user_id,
+      p_type => 'form_assigned',
+      p_title => 'New Form Assignment',
+      p_message => format('%s assigned you to form: %s', 
+        COALESCE(v_assigner_name, 'Someone'), v_form.title),
+      p_data => jsonb_build_object(
+        'form_id', v_form.id,
+        'form_title', v_form.title,
+        'project_id', v_form.project_id,
+        'project_name', v_form.project_name,
+        'assigned_by', NEW.assigned_by,
+        'assigner_name', v_assigner_name,
+        'due_date', v_form.due_date
+      ),
+      p_entity_type => 'form',
+      p_entity_id => v_form.id::TEXT,
+      p_priority => 'high',
+      p_created_by => NEW.assigned_by
+    );
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Form unassignment trigger (handles entity_assignees deletions for forms)
+CREATE OR REPLACE FUNCTION notify_form_unassignment()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_form RECORD;
+  v_project_name TEXT;
+BEGIN
+  -- Only handle form unassignments
+  IF OLD.entity_type = 'form' THEN
+    -- Get form details
+    SELECT f.*, p.name as project_name 
+    INTO v_form
+    FROM forms f
+    LEFT JOIN projects p ON f.project_id = p.id
+    WHERE f.id = OLD.entity_id;
+    
+    -- Notify removed assignee
+    PERFORM create_notification(
+      p_user_id => OLD.user_id,
+      p_type => 'form_unassigned',
+      p_title => 'Form Unassigned',
+      p_message => format('You were removed from form: %s', v_form.title),
+      p_data => jsonb_build_object(
+        'form_id', v_form.id,
+        'form_title', v_form.title,
+        'project_id', v_form.project_id,
+        'project_name', v_form.project_name
+      ),
+      p_entity_type => 'form',
+      p_entity_id => v_form.id::TEXT,
+      p_priority => 'low'
+    );
+  END IF;
+  
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Task status/update trigger (handles task table changes)
+CREATE OR REPLACE FUNCTION notify_task_updates()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_project_name TEXT;
+  v_updater_name TEXT;
+  v_assignee_id UUID;
+BEGIN
+  -- Get project name
+  SELECT name INTO v_project_name 
+  FROM projects WHERE id = NEW.project_id;
+  
+  -- Get updater name
+  SELECT first_name || ' ' || last_name INTO v_updater_name 
+  FROM user_profiles WHERE id = NEW.created_by;
+  
+  -- Handle task status changes
+  IF TG_OP = 'UPDATE' AND NEW.status_id IS DISTINCT FROM OLD.status_id THEN
+    -- Get current assignees and notify them (if not updated by them)
+    FOR v_assignee_id IN 
+      SELECT user_id 
+      FROM entity_assignees 
+      WHERE entity_type = 'task' AND entity_id = NEW.id
+    LOOP
+      -- Skip if assignee is the one who updated the task
+      IF v_assignee_id != NEW.created_by THEN
+        PERFORM create_notification(
+          p_user_id => v_assignee_id,
+          p_type => 'task_updated',
+          p_title => 'Task Status Updated',
+          p_message => format('Task "%s" status was updated', NEW.title),
+          p_data => jsonb_build_object(
+            'task_id', NEW.id,
+            'task_title', NEW.title,
+            'old_status_id', OLD.status_id,
+            'new_status_id', NEW.status_id,
+            'updated_by', NEW.created_by,
+            'updater_name', v_updater_name,
+            'project_name', v_project_name
+          ),
+          p_entity_type => 'task',
+          p_entity_id => NEW.id::TEXT,
+          p_priority => 'medium'
+        );
+      END IF;
+    END LOOP;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create triggers for entity assignments
+CREATE TRIGGER entity_assignment_notification_trigger
+AFTER INSERT ON entity_assignees
+FOR EACH ROW
+EXECUTE FUNCTION notify_task_assignment_changes();
+
+CREATE TRIGGER entity_assignment_notification_trigger2
+AFTER INSERT ON entity_assignees
+FOR EACH ROW
+EXECUTE FUNCTION notify_form_assignment_changes();
+
+CREATE TRIGGER entity_unassignment_notification_trigger
+AFTER DELETE ON entity_assignees
+FOR EACH ROW
+EXECUTE FUNCTION notify_task_unassignment();
+
+CREATE TRIGGER entity_unassignment_notification_trigger2
+AFTER DELETE ON entity_assignees
+FOR EACH ROW
+EXECUTE FUNCTION notify_form_unassignment();
+
+-- Create trigger for task updates
+CREATE TRIGGER task_update_notification_trigger
 AFTER UPDATE ON tasks
 FOR EACH ROW
-EXECUTE FUNCTION notify_task_changes();
+EXECUTE FUNCTION notify_task_updates();
 
 -- Task comment trigger
 CREATE OR REPLACE FUNCTION notify_task_comment()
@@ -128,41 +263,49 @@ DECLARE
   v_commenter_name TEXT;
   v_mentioned_users TEXT[];
   v_user_id UUID;
+  v_assignee_id UUID;
 BEGIN
   -- Get task details
   SELECT t.*, p.name as project_name 
   INTO v_task
   FROM tasks t
-  JOIN projects p ON t.project_id = p.id
+  LEFT JOIN projects p ON t.project_id = p.id
   WHERE t.id = NEW.task_id;
   
   -- Get commenter name
   SELECT first_name || ' ' || last_name INTO v_commenter_name
   FROM user_profiles WHERE id = NEW.user_id;
   
-  -- Notify task assignee (if not the commenter)
-  IF v_task.assignee_id IS NOT NULL AND v_task.assignee_id != NEW.user_id THEN
-    PERFORM create_notification(
-      p_user_id => v_task.assignee_id,
-      p_type => 'task_comment',
-      p_title => 'New Comment on Your Task',
-      p_message => format('%s commented on "%s"', 
-        COALESCE(v_commenter_name, 'Someone'), v_task.title),
-      p_data => jsonb_build_object(
-        'task_id', NEW.task_id,
-        'task_title', v_task.title,
-        'comment_id', NEW.id,
-        'comment_preview', LEFT(NEW.content, 100),
-        'project_name', v_task.project_name,
-        'commenter_id', NEW.user_id,
-        'commenter_name', v_commenter_name
-      ),
-      p_entity_type => 'task_comment',
-      p_entity_id => NEW.id,
-      p_priority => 'medium',
-      p_created_by => NEW.user_id
-    );
-  END IF;
+  -- Notify all task assignees (if not the commenter)
+  FOR v_assignee_id IN 
+    SELECT user_id 
+    FROM entity_assignees 
+    WHERE entity_type = 'task' AND entity_id = NEW.task_id
+  LOOP
+    -- Skip if assignee is the commenter
+    IF v_assignee_id != NEW.user_id THEN
+      PERFORM create_notification(
+        p_user_id => v_assignee_id,
+        p_type => 'task_comment',
+        p_title => 'New Comment on Your Task',
+        p_message => format('%s commented on "%s"', 
+          COALESCE(v_commenter_name, 'Someone'), v_task.title),
+        p_data => jsonb_build_object(
+          'task_id', NEW.task_id,
+          'task_title', v_task.title,
+          'comment_id', NEW.id,
+          'comment_preview', LEFT(NEW.content, 100),
+          'project_name', v_task.project_name,
+          'commenter_id', NEW.user_id,
+          'commenter_name', v_commenter_name
+        ),
+        p_entity_type => 'task_comment',
+        p_entity_id => NEW.id::TEXT,
+        p_priority => 'medium',
+        p_created_by => NEW.user_id
+      );
+    END IF;
+  END LOOP;
   
   -- Extract @mentions from comment (format: @[user_id])
   v_mentioned_users := ARRAY(
@@ -191,7 +334,7 @@ BEGIN
           'commenter_name', v_commenter_name
         ),
         p_entity_type => 'task_comment',
-        p_entity_id => NEW.id,
+        p_entity_id => NEW.id::TEXT,
         p_priority => 'high',
         p_created_by => NEW.user_id
       );
@@ -216,6 +359,11 @@ DECLARE
   v_added_by_name TEXT;
 BEGIN
   IF TG_OP = 'INSERT' THEN
+    -- Skip notification if user is adding themselves (during signup)
+    IF NEW.user_id = NEW.created_by THEN
+      RETURN NEW;
+    END IF;
+    
     -- Get project name
     SELECT name INTO v_project_name
     FROM projects WHERE id = NEW.project_id;
@@ -237,7 +385,7 @@ BEGIN
         'added_by_name', v_added_by_name
       ),
       p_entity_type => 'project',
-      p_entity_id => NEW.project_id,
+      p_entity_id => NEW.project_id::TEXT,
       p_priority => 'high',
       p_created_by => NEW.created_by
     );
@@ -261,13 +409,18 @@ DECLARE
   v_added_by_name TEXT;
 BEGIN
   IF TG_OP = 'INSERT' THEN
+    -- Skip notification if user is adding themselves (during signup)
+    IF NEW.user_id = COALESCE(NEW.created_by, NEW.invited_by) THEN
+      RETURN NEW;
+    END IF;
+    
     -- Get organization name
     SELECT name INTO v_org_name
     FROM organizations WHERE id = NEW.organization_id;
     
-    -- Get added by name
+    -- Get added by name (check both created_by and invited_by)
     SELECT first_name || ' ' || last_name INTO v_added_by_name
-    FROM user_profiles WHERE id = NEW.created_by;
+    FROM user_profiles WHERE id = COALESCE(NEW.created_by, NEW.invited_by);
     
     PERFORM create_notification(
       p_user_id => NEW.user_id,
@@ -278,13 +431,13 @@ BEGIN
         'organization_id', NEW.organization_id,
         'organization_name', v_org_name,
         'role', NEW.role,
-        'added_by', NEW.created_by,
+        'added_by', COALESCE(NEW.created_by, NEW.invited_by),
         'added_by_name', v_added_by_name
       ),
       p_entity_type => 'organization',
-      p_entity_id => NEW.organization_id,
+      p_entity_id => NEW.organization_id::TEXT,
       p_priority => 'high',
-      p_created_by => NEW.created_by
+      p_created_by => COALESCE(NEW.created_by, NEW.invited_by)
     );
   END IF;
   
@@ -332,7 +485,7 @@ BEGIN
           'description', NEW.description
         ),
         p_entity_type => 'approval',
-        p_entity_id => NEW.id,
+        p_entity_id => NEW.id::TEXT,
         p_priority => CASE 
           WHEN NEW.due_date <= CURRENT_DATE + INTERVAL '1 day' THEN 'critical'
           WHEN NEW.due_date <= CURRENT_DATE + INTERVAL '3 days' THEN 'high'
@@ -365,7 +518,7 @@ BEGIN
         'comments', NEW.notes
       ),
       p_entity_type => 'approval',
-      p_entity_id => NEW.id,
+      p_entity_id => NEW.id::TEXT,
       p_priority => 'high',
       p_created_by => NEW.approved_by
     );
@@ -384,8 +537,12 @@ EXECUTE FUNCTION notify_approval_changes();
 -- Enable realtime for notifications table
 ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 
--- Add comment
-COMMENT ON TRIGGER task_notification_trigger ON tasks IS 'Creates notifications for task assignment and status changes';
+-- Add comments
+COMMENT ON TRIGGER entity_assignment_notification_trigger ON entity_assignees IS 'Creates notifications for task assignments';
+COMMENT ON TRIGGER entity_assignment_notification_trigger2 ON entity_assignees IS 'Creates notifications for form assignments';
+COMMENT ON TRIGGER entity_unassignment_notification_trigger ON entity_assignees IS 'Creates notifications for task unassignments';
+COMMENT ON TRIGGER entity_unassignment_notification_trigger2 ON entity_assignees IS 'Creates notifications for form unassignments';
+COMMENT ON TRIGGER task_update_notification_trigger ON tasks IS 'Creates notifications for task status changes';
 COMMENT ON TRIGGER task_comment_notification_trigger ON task_comments IS 'Creates notifications for new comments and mentions';
 COMMENT ON TRIGGER project_member_notification_trigger ON projects_users IS 'Creates notifications when users are added to projects';
 COMMENT ON TRIGGER organization_user_notification_trigger ON organization_users IS 'Creates notifications when users are added to organizations';

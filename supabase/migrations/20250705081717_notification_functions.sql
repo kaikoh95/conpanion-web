@@ -119,7 +119,7 @@ CREATE OR REPLACE FUNCTION create_notification(
   p_message TEXT,
   p_data JSONB DEFAULT '{}',
   p_entity_type TEXT DEFAULT NULL,
-  p_entity_id UUID DEFAULT NULL,
+  p_entity_id TEXT DEFAULT NULL,
   p_priority notification_priority DEFAULT 'medium',
   p_created_by UUID DEFAULT NULL
 ) RETURNS UUID AS $$
