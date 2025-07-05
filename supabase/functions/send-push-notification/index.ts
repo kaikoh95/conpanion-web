@@ -34,7 +34,7 @@ serve(async (req) => {
 
     // Get pending push notifications
     const { data: pushQueue, error: queueError } = await supabase
-      .from('notification_push_queue')
+      .from('push_queue')
       .select(
         `
         *,
@@ -107,7 +107,7 @@ serve(async (req) => {
 
         // Update queue status
         await supabase
-          .from('notification_push_queue')
+          .from('push_queue')
           .update({
             status: 'sent',
             sent_at: new Date().toISOString(),
@@ -140,7 +140,7 @@ serve(async (req) => {
 
         // Update queue status to failed
         await supabase
-          .from('notification_push_queue')
+          .from('push_queue')
           .update({
             status: 'failed',
             error_message: error.message,
