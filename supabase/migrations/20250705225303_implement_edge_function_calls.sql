@@ -1,4 +1,4 @@
--- Migration: Implement edge function calls for email and push notifications
+THIS SHOULD BE A LINTER ERROR-- Migration: Implement edge function calls for email and push notifications
 -- Description: Replace commented edge function calls with actual HTTP requests using pg_net extension
 
 -- ===========================================
