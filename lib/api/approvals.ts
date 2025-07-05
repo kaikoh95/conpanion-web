@@ -444,7 +444,8 @@ export async function getPendingApprovalsForUser(): Promise<ApprovalWithDetails[
   // Get approvals where current user is an approver and hasn't responded yet
   const { data: approvals, error } = await supabase
     .from('approvals')
-    .select(`
+    .select(
+      `
       id,
       status,
       created_at,
@@ -453,7 +454,8 @@ export async function getPendingApprovalsForUser(): Promise<ApprovalWithDetails[
       last_updated,
       requester_id,
       approval_approvers!inner(approver_id)
-    `)
+    `,
+    )
     .eq('approval_approvers.approver_id', session.user.id)
     .in('status', ['submitted']) // Only show submitted approvals
     .order('created_at', { ascending: false });
@@ -464,7 +466,7 @@ export async function getPendingApprovalsForUser(): Promise<ApprovalWithDetails[
 
   // Filter out approvals where user has already responded
   const pendingApprovals = [];
-  
+
   for (const approval of approvals || []) {
     const { data: existingResponse } = await supabase
       .from('approval_approver_responses')
@@ -513,7 +515,8 @@ export async function getMyApprovalRequests(): Promise<ApprovalWithDetails[]> {
 
   const { data: approvals, error } = await supabase
     .from('approvals')
-    .select(`
+    .select(
+      `
       id,
       status,
       created_at,
@@ -521,7 +524,8 @@ export async function getMyApprovalRequests(): Promise<ApprovalWithDetails[]> {
       entity_id,
       last_updated,
       requester_id
-    `)
+    `,
+    )
     .eq('requester_id', session.user.id)
     .order('created_at', { ascending: false });
 
@@ -533,14 +537,14 @@ export async function getMyApprovalRequests(): Promise<ApprovalWithDetails[]> {
   const enhancedApprovals = await Promise.all(
     (approvals || []).map(async (approval) => {
       const entityTitle = await getEntityTitle(approval.entity_type, approval.entity_id);
-      
+
       return {
         ...approval,
         requester_name: 'You',
         entity_title: entityTitle,
         entity_summary: `${approval.entity_type} #${approval.entity_id}`,
       };
-    })
+    }),
   );
 
   return enhancedApprovals;
@@ -549,16 +553,20 @@ export async function getMyApprovalRequests(): Promise<ApprovalWithDetails[]> {
 /**
  * Get approval details with entity information
  */
-export async function getApprovalWithEntityDetails(approvalId: number): Promise<ApprovalWithEntityDetails> {
+export async function getApprovalWithEntityDetails(
+  approvalId: number,
+): Promise<ApprovalWithEntityDetails> {
   const supabase = createClient();
 
   // Get basic approval data
   const { data: approval, error: approvalError } = await supabase
     .from('approvals')
-    .select(`
+    .select(
+      `
       *,
       approval_approvers(approver_id)
-    `)
+    `,
+    )
     .eq('id', approvalId)
     .single();
 
@@ -611,7 +619,10 @@ export async function getApprovalWithEntityDetails(approvalId: number): Promise<
 /**
  * Add comment to approval
  */
-export async function addApprovalComment(approvalId: number, comment: string): Promise<ApprovalComment> {
+export async function addApprovalComment(
+  approvalId: number,
+  comment: string,
+): Promise<ApprovalComment> {
   const supabase = createClient();
 
   const {
@@ -656,14 +667,16 @@ export async function getApprovalComments(approvalId: number): Promise<ApprovalC
   }
 
   // Get user details for comments
-  const userIds = Array.from(new Set(comments?.map(c => c.user_id) || []));
+  const userIds = Array.from(new Set(comments?.map((c) => c.user_id) || []));
   const { data: usersData } = await supabase.rpc('get_user_details', {
     user_ids: userIds,
   });
 
-  const usersMap = new Map(usersData?.map((u: any) => [u.id, u.raw_user_meta_data?.email || 'Unknown']) || []);
+  const usersMap = new Map(
+    usersData?.map((u: any) => [u.id, u.raw_user_meta_data?.email || 'Unknown']) || [],
+  );
 
-  return (comments || []).map(comment => ({
+  return (comments || []).map((comment) => ({
     ...comment,
     user_name: usersMap.get(comment.user_id) || 'Unknown',
   }));
@@ -675,7 +688,7 @@ export async function getApprovalComments(approvalId: number): Promise<ApprovalC
 export async function submitApproverResponse(
   approvalId: number,
   action: 'approved' | 'declined' | 'revision_requested',
-  comment?: string
+  comment?: string,
 ): Promise<ApprovalApproverResponse> {
   const supabase = createClient();
 
@@ -723,7 +736,9 @@ export async function submitApproverResponse(
 /**
  * Get approver responses for an approval
  */
-export async function getApproverResponses(approvalId: number): Promise<ApprovalApproverResponseWithUser[]> {
+export async function getApproverResponses(
+  approvalId: number,
+): Promise<ApprovalApproverResponseWithUser[]> {
   const supabase = createClient();
 
   const { data: responses, error } = await supabase
@@ -737,16 +752,16 @@ export async function getApproverResponses(approvalId: number): Promise<Approval
   }
 
   // Get approver names
-  const approverIds = Array.from(new Set(responses?.map(r => r.approver_id) || []));
+  const approverIds = Array.from(new Set(responses?.map((r) => r.approver_id) || []));
   const { data: approversData } = await supabase.rpc('get_user_details', {
     user_ids: approverIds,
   });
 
   const approversMap = new Map(
-    approversData?.map((u: any) => [u.id, u.raw_user_meta_data?.email || 'Unknown']) || []
+    approversData?.map((u: any) => [u.id, u.raw_user_meta_data?.email || 'Unknown']) || [],
   );
 
-  return (responses || []).map(response => ({
+  return (responses || []).map((response) => ({
     ...response,
     approver_name: approversMap.get(response.approver_id) || 'Unknown',
   }));
@@ -857,11 +872,7 @@ async function getEntityData(entityType: string, entityId: number): Promise<any>
         return diaryData;
 
       case 'form':
-        const { data: form } = await supabase
-          .from('forms')
-          .select('*')
-          .eq('id', entityId)
-          .single();
+        const { data: form } = await supabase.from('forms').select('*').eq('id', entityId).single();
         return form;
 
       case 'entries':
@@ -873,11 +884,7 @@ async function getEntityData(entityType: string, entityId: number): Promise<any>
         return entry;
 
       case 'tasks':
-        const { data: task } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('id', entityId)
-          .single();
+        const { data: task } = await supabase.from('tasks').select('*').eq('id', entityId).single();
         return task;
 
       default:

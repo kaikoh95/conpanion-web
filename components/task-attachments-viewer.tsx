@@ -20,17 +20,17 @@ export function TaskAttachmentsViewer({ taskId, className }: TaskAttachmentsView
     const fetchAttachments = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         const { data, error } = await getTaskAttachments(taskId);
-        
+
         if (error) {
           throw error;
         }
-        
+
         if (data && data.length > 0) {
           // Get the IDs of all attachments
-          setAttachmentIds(data.map(attachment => attachment.id));
+          setAttachmentIds(data.map((attachment) => attachment.id));
         } else {
           setAttachmentIds([]);
         }
@@ -49,7 +49,7 @@ export function TaskAttachmentsViewer({ taskId, className }: TaskAttachmentsView
 
   if (loading) {
     return (
-      <div className={cn("grid grid-cols-2 gap-2 md:grid-cols-3", className)}>
+      <div className={cn('grid grid-cols-2 gap-2 md:grid-cols-3', className)}>
         {[...Array(3)].map((_, i) => (
           <Skeleton key={i} className="aspect-square w-full rounded-md" />
         ))}
@@ -66,4 +66,4 @@ export function TaskAttachmentsViewer({ taskId, className }: TaskAttachmentsView
   }
 
   return <FileViewer attachmentIds={attachmentIds} className={className} />;
-} 
+}

@@ -1,4 +1,14 @@
 {
+  "name": "conpanion-web",
+  "version": "0.0.1",
+  "description": "Companion Web",
+  "author": "Companion",
+  "license": "MIT",
+  "homepage": "https://conpanion-web.vercel.app/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sebapian/conpanion-web"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",

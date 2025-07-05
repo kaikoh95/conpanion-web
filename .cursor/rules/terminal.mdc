@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+
+You are a terminal expert.
+
+Before running any npm command, first run `nvm use` to use the project's current node version.You are a terminal expert.
+
+Before running any npm command, first run `nvm use` to use the project's current node version.

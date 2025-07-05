@@ -15,32 +15,29 @@ interface LoginProps {
 export default async function Login(props: LoginProps) {
   const searchParams = await props.searchParams;
   const invitationToken = searchParams.invitation;
-  
+
   return (
     <>
       {/* Client-side auth handler for automatic redirects */}
       <Suspense fallback={null}>
         <ClientAuthHandler />
       </Suspense>
-      
+
       <div className="flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-medium">Sign in</h1>
           <p className="text-sm text-foreground">
             Don't have an account?{' '}
-            <Link 
-              className="font-medium text-foreground underline" 
-              href={invitationToken ? `/sign-up?invitation=${invitationToken}` : "/sign-up"}
+            <Link
+              className="font-medium text-foreground underline"
+              href={invitationToken ? `/sign-up?invitation=${invitationToken}` : '/sign-up'}
             >
               Sign up
             </Link>
           </p>
         </div>
 
-        <SignInForm 
-          invitationToken={invitationToken} 
-          searchParams={searchParams} 
-        />
+        <SignInForm invitationToken={invitationToken} searchParams={searchParams} />
       </div>
     </>
   );

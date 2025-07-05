@@ -44,12 +44,12 @@ export default function SiteDiaryPhotoUploader({
 
   const validateFile = (file: File): boolean => {
     setError(null);
-    
+
     if (file.size > maxSize) {
       setError(`File is too large. Maximum size is ${formatFileSize(maxSize)}.`);
       return false;
     }
-    
+
     return true;
   };
 
@@ -62,34 +62,34 @@ export default function SiteDiaryPhotoUploader({
 
   const handleFileAdd = (file: File | null) => {
     if (!file) return;
-    
+
     if (!validateFile(file)) {
       return;
     }
-    
+
     // Make sure we have a current project
     if (!currentProject?.id) {
       console.error('No project selected for file upload');
       toast.error('No project selected. Please select a project to upload files.');
       return;
     }
-    
+
     console.log('Adding file to project:', currentProject.id);
-    
+
     // Add file to local state with preview if it's an image
     const newFile: FileState = {
       file,
-      previewUrl: createPreviewUrl(file)
+      previewUrl: createPreviewUrl(file),
     };
-    
+
     // Update local state
     const updatedFiles = [...files, newFile];
     setFiles(updatedFiles);
-    
+
     // Pass the raw files up to the parent component
     onUploadChange(
-      itemId, 
-      updatedFiles.map(f => f.file)
+      itemId,
+      updatedFiles.map((f) => f.file),
     );
   };
 
@@ -98,16 +98,13 @@ export default function SiteDiaryPhotoUploader({
     if (files[index].previewUrl) {
       URL.revokeObjectURL(files[index].previewUrl);
     }
-    
+
     // Remove file from local state
     const updatedFiles = files.filter((_, i) => i !== index);
     setFiles(updatedFiles);
-    
+
     // Update parent component
-    onUploadChange(
-      itemId, 
-      updatedFiles.length > 0 ? updatedFiles.map(f => f.file) : null
-    );
+    onUploadChange(itemId, updatedFiles.length > 0 ? updatedFiles.map((f) => f.file) : null);
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -136,9 +133,9 @@ export default function SiteDiaryPhotoUploader({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (isDisabled) return;
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFileAdd(e.dataTransfer.files[0]);
     }
@@ -147,7 +144,7 @@ export default function SiteDiaryPhotoUploader({
   const renderFilePreview = (fileState: FileState, index: number) => {
     const file = fileState.file;
     const isImage = file.type.startsWith('image/');
-    
+
     return (
       <div key={index} className="relative flex items-center rounded-md border p-2">
         <div className="mr-2 flex h-12 w-12 items-center justify-center overflow-hidden rounded-md bg-muted">
@@ -195,12 +192,12 @@ export default function SiteDiaryPhotoUploader({
           {files.map((file, index) => renderFilePreview(file, index))}
         </div>
       )}
-      
+
       {/* File upload area */}
       <div
         className={`relative flex min-h-[150px] w-full cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed transition-colors ${
-          dragActive 
-            ? 'border-primary bg-primary/5' 
+          dragActive
+            ? 'border-primary bg-primary/5'
             : 'border-muted-foreground/20 hover:border-primary/50'
         } ${isDisabled ? 'cursor-not-allowed opacity-60' : ''}`}
         onClick={() => {
@@ -220,22 +217,21 @@ export default function SiteDiaryPhotoUploader({
           onChange={handleInputChange}
           disabled={isDisabled}
         />
-        
+
         <div className="flex flex-col items-center justify-center space-y-2 p-4 text-center">
           <Upload className="h-8 w-8 text-muted-foreground" />
           <div className="mt-2 text-center">
             <p className="text-sm font-medium">
-              Drag & drop or click to upload {item.is_required && <span className="text-red-500">*</span>}
+              Drag & drop or click to upload{' '}
+              {item.is_required && <span className="text-red-500">*</span>}
             </p>
-            <p className="text-xs text-muted-foreground">
-              Max size: {formatFileSize(maxSize)}
-            </p>
+            <p className="text-xs text-muted-foreground">Max size: {formatFileSize(maxSize)}</p>
           </div>
         </div>
       </div>
-      
+
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
       {hasError && <p className="text-sm text-red-500">{errorMessage}</p>}
     </div>
   );
-} 
+}

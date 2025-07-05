@@ -285,7 +285,7 @@ function SortableQuestionCard({ id, question, onUpdate, onDelete }: SortableQues
             </div>
           </div>
         )}
-        
+
         {question.item_type === 'photo' && (
           <div className="space-y-2">
             <Label>Photo Upload Preview</Label>
@@ -299,7 +299,8 @@ function SortableQuestionCard({ id, question, onUpdate, onDelete }: SortableQues
               </p>
             </div>
             <p className="text-xs text-muted-foreground">
-              Note: This is just a preview. Actual photos will be uploaded when the site diary is created.
+              Note: This is just a preview. Actual photos will be uploaded when the site diary is
+              created.
             </p>
           </div>
         )}
@@ -317,12 +318,12 @@ export function CreateTemplateDialog({
 }: CreateTemplateDialogProps) {
   const { user } = useAuth();
   const { current: currentProject } = useProject();
-  
+
   // Log project information for debugging
   useEffect(() => {
     if (open) {
-      console.log("CreateTemplateDialog opened with projectId:", projectId);
-      console.log("Current project from context:", currentProject);
+      console.log('CreateTemplateDialog opened with projectId:', projectId);
+      console.log('Current project from context:', currentProject);
     }
   }, [open, projectId, currentProject]);
 
@@ -738,8 +739,8 @@ export function CreateTemplateDialog({
       } else {
         // Create new template - use current project ID from context if available
         const effectiveProjectId = currentProject?.id || projectId;
-        console.log("Creating template with project ID:", effectiveProjectId);
-        
+        console.log('Creating template with project ID:', effectiveProjectId);
+
         const response = await createSiteDiaryTemplate({
           name: templateName,
           description: templateDescription,

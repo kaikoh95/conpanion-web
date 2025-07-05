@@ -131,12 +131,12 @@ function SiteDiariesPageContent({
           setTemplates([]);
           return;
         }
-        
-        console.log("Loading site diary data for project ID:", currentProject.id);
+
+        console.log('Loading site diary data for project ID:', currentProject.id);
 
         // Fetch site diaries with approval status for the current project
         const fetchedDiaries = await getSiteDiariesWithStatus(currentProject.id);
-        console.log("Fetched diaries:", fetchedDiaries);
+        console.log('Fetched diaries:', fetchedDiaries);
         setDiaries(fetchedDiaries);
 
         // Apply initial filters
@@ -144,7 +144,7 @@ function SiteDiariesPageContent({
 
         // Fetch templates for the current project
         const fetchedTemplates = await getSiteDiaryTemplates(currentProject.id);
-        console.log("Fetched templates:", fetchedTemplates);
+        console.log('Fetched templates:', fetchedTemplates);
         setTemplates(fetchedTemplates);
 
         // Get unique user IDs from diaries

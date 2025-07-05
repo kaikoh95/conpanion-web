@@ -60,7 +60,7 @@ export default function TopBar({ isSidebarOpen, onSidebarToggle, toggleButtonRef
   const handleLogout = async () => {
     try {
       console.log('🔄 TopBar: Starting logout process...');
-      
+
       // 1. Sign out from client-side Supabase (this clears browser storage and triggers auth state change)
       const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) {
@@ -68,18 +68,18 @@ export default function TopBar({ isSidebarOpen, onSidebarToggle, toggleButtonRef
       } else {
         console.log('✅ TopBar: Client-side logout successful');
       }
-      
-             // 2. Create a fresh client to ensure clean state
-       const freshClient = createFreshSupabaseClient();
-       await freshClient.auth.signOut({ scope: 'global' });
-       
-       // 3. Give the auth state change a moment to propagate
-       await new Promise(resolve => setTimeout(resolve, 100));
-       
-       // 4. Force redirect to sign-in page with full page refresh
-       console.log('🔄 TopBar: Redirecting to sign-in page');
-       window.location.href = '/sign-in';
-      
+
+      // 2. Create a fresh client to ensure clean state
+      const freshClient = createFreshSupabaseClient();
+      await freshClient.auth.signOut({ scope: 'global' });
+
+      // 3. Give the auth state change a moment to propagate
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // 4. Force redirect to sign-in page with full page refresh
+      console.log('🔄 TopBar: Redirecting to sign-in page');
+      window.location.href = '/sign-in';
+
       console.log('✅ TopBar: Logout process completed');
     } catch (error) {
       console.error('❌ TopBar: Error during logout:', error);
