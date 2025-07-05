@@ -93,12 +93,12 @@ export function useServiceWorker() {
         .from('user_devices')
         .upsert({
           user_id: user.id,
-          device_token: JSON.stringify(sub.toJSON()),
-          device_type: 'web',
+          token: JSON.stringify(sub.toJSON()),
+          platform: 'web',
           device_name: navigator.userAgent.substring(0, 100),
           push_enabled: true,
         }, {
-          onConflict: 'user_id,device_token'
+          onConflict: 'user_id,token'
         });
 
       if (error) throw error;
@@ -115,7 +115,7 @@ export function useServiceWorker() {
         .from('user_devices')
         .delete()
         .eq('user_id', user.id)
-        .eq('device_token', JSON.stringify(subscription.toJSON()));
+        .eq('token', JSON.stringify(subscription.toJSON()));
 
       if (error) throw error;
     } catch (error) {
