@@ -113,7 +113,7 @@ WHERE name LIKE 'notification_%';
 SELECT validate_notification_secrets();
 
 -- Test secret retrieval (only works if you have proper permissions)
-SELECT get_vault_secret('notification_supabase_url') IS NOT NULL as url_configured;
+SELECT get_vault_secret('sb_url') IS NOT NULL as url_configured;
 ```
 
 ## Integration with Edge Functions
@@ -128,14 +128,14 @@ The actual Edge Functions still use environment variables, but these are fetched
 
 ## Environment Variable Mapping
 
-| Vault Secret                        | Edge Function Env Var       | Purpose                         |
-| ----------------------------------- | --------------------------- | ------------------------------- |
-| `notification_supabase_url`         | `SUPABASE_URL`              | Supabase project URL            |
-| `notification_supabase_service_key` | `SUPABASE_SERVICE_ROLE_KEY` | Service authentication          |
-| `notification_resend_api_key`       | `RESEND_API_KEY`            | Email service API key           |
-| `notification_vapid_public_key`     | `VAPID_PUBLIC_KEY`          | Push notification public key    |
-| `notification_vapid_private_key`    | `VAPID_PRIVATE_KEY`         | Push notification private key   |
-| `notification_vapid_email`          | `VAPID_EMAIL`               | Push notification contact email |
+| Vault Secret        | Edge Function Env Var       | Purpose                         |
+| ------------------- | --------------------------- | ------------------------------- |
+| `sb_url`            | `SUPABASE_URL`              | Supabase project URL            |
+| `sb_service_key`    | `SUPABASE_SERVICE_ROLE_KEY` | Service authentication          |
+| `resend_api_key`    | `RESEND_API_KEY`            | Email service API key           |
+| `vapid_public_key`  | `VAPID_PUBLIC_KEY`          | Push notification public key    |
+| `vapid_private_key` | `VAPID_PRIVATE_KEY`         | Push notification private key   |
+| `vapid_email`       | `VAPID_EMAIL`               | Push notification contact email |
 
 ## Next Steps
 

@@ -22,15 +22,15 @@ DECLARE
 BEGIN
   -- Get vault secrets
   DECLARE
-    v_supabase_url TEXT := get_vault_secret('notification_supabase_url');
-    v_supabase_service_key TEXT := get_vault_secret('notification_supabase_service_key');
+    v_supabase_url TEXT := get_vault_secret('sb_url');
+    v_supabase_service_key TEXT := get_vault_secret('sb_service_key');
     v_function_url TEXT;
   BEGIN
     -- Validate required secrets
     IF v_supabase_url IS NULL OR v_supabase_service_key IS NULL THEN
       RETURN jsonb_build_object(
         'error', 'Missing required vault secrets',
-        'details', 'notification_supabase_url or notification_supabase_service_key not configured'
+        'details', 'sb_url or sb_service_key not configured'
       );
     END IF;
     
@@ -82,7 +82,7 @@ BEGIN
     IF v_supabase_url IS NULL OR v_supabase_service_key IS NULL THEN
       RETURN jsonb_build_object(
         'error', 'Missing required vault secrets',
-        'details', 'notification_supabase_url or notification_supabase_service_key not configured'
+        'details', 'sb_url or sb_service_key not configured'
       );
     END IF;
     
