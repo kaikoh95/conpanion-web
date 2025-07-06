@@ -50,7 +50,7 @@ serve(async (req) => {
           user_id
         ),
         user_devices!inner(
-          device_token,
+          token,
           push_enabled
         )
       `,
@@ -81,7 +81,7 @@ serve(async (req) => {
         // Parse the subscription from device token
         let subscription;
         try {
-          subscription = JSON.parse(device.device_token);
+          subscription = JSON.parse(device.token);
         } catch (e) {
           throw new Error('Invalid device token format');
         }
