@@ -11,6 +11,29 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 -- ===========================================
 -- HELPER FUNCTIONS
 -- ===========================================
+-- Function to safely retrieve vault secrets
+CREATE OR REPLACE FUNCTION get_vault_secret(secret_name TEXT)
+RETURNS TEXT AS $$
+DECLARE
+  secret_value TEXT;
+BEGIN
+  -- Retrieve decrypted secret from vault
+  SELECT decrypted_secret INTO secret_value
+  FROM vault.decrypted_secrets
+  WHERE name = secret_name;
+  
+  -- Return secret or NULL if not found
+  RETURN secret_value;
+  
+EXCEPTION WHEN OTHERS THEN
+  -- Log error and return NULL
+  RAISE NOTICE 'Failed to retrieve vault secret %: %', secret_name, SQLERRM;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+GRANT EXECUTE ON FUNCTION get_vault_secret TO service_role;
+COMMENT ON FUNCTION get_vault_secret IS 'Safely retrieves decrypted secrets from vault';
+
 
 -- Function to call send-email-notification edge function
 CREATE OR REPLACE FUNCTION call_send_email_notification()
@@ -36,6 +59,7 @@ BEGIN
     
     -- Construct function URL
     v_function_url := v_supabase_url || '/functions/v1/send-email-notification';
+    RAISE NOTICE 'Function URL: %', v_function_url;
     
     -- Make HTTP request to edge function
     SELECT net.http_post(
@@ -88,7 +112,8 @@ BEGIN
     
     -- Construct function URL
     v_function_url := v_supabase_url || '/functions/v1/send-push-notification';
-    
+    RAISE NOTICE 'Function URL: %', v_function_url;
+
     -- Make HTTP request to edge function
     SELECT net.http_post(
       url := v_function_url,
@@ -123,6 +148,8 @@ DECLARE
   v_result JSONB;
   v_fallback_result JSONB;
 BEGIN
+  RAISE NOTICE 'Calling edge function: %', function_name;
+
   -- Try to call the edge function
   CASE function_name
     WHEN 'send-email-notification' THEN
@@ -197,34 +224,16 @@ BEGIN
         ORDER BY priority DESC, scheduled_for ASC
         LIMIT 10
       LOOP
-        BEGIN
-          -- Update status to processing
-          UPDATE email_queue 
-          SET status = 'processing', updated_at = NOW()
-          WHERE id = v_email.id;
-          
-          -- Mark as queued for edge function delivery (fallback)
-          UPDATE email_queue 
-          SET 
-            status = 'queued_for_delivery',
-            updated_at = NOW(),
-            error_message = 'Edge function unavailable, queued for retry'
-          WHERE id = v_email.id;
-          
-          v_processed := v_processed + 1;
-          
-        EXCEPTION WHEN OTHERS THEN
           -- Mark as failed and increment retry count
           UPDATE email_queue 
           SET 
             status = 'failed',
-            error_message = SQLERRM,
+            error_message = v_edge_function_result::TEXT,
             retry_count = retry_count + 1,
             updated_at = NOW()
           WHERE id = v_email.id;
           
           v_failed := v_failed + 1;
-        END;
       END LOOP;
     END IF;
   ELSE
@@ -278,33 +287,15 @@ BEGIN
         ORDER BY priority DESC, scheduled_for ASC
         LIMIT 10
       LOOP
-        BEGIN
-          -- Update status to processing
-          UPDATE push_queue 
-          SET status = 'processing', updated_at = NOW()
-          WHERE id = v_push.id;
-          
-          -- Mark as queued for edge function delivery (fallback)
-          UPDATE push_queue 
-          SET 
-            status = 'queued_for_delivery',
-            updated_at = NOW(),
-            error_message = 'Edge function unavailable, queued for retry'
-          WHERE id = v_push.id;
-          
-          v_processed := v_processed + 1;
-          
-        EXCEPTION WHEN OTHERS THEN
           -- Mark as failed
           UPDATE push_queue 
           SET 
             status = 'failed',
-            error_message = SQLERRM,
+            error_message = v_edge_function_result::TEXT,
             updated_at = NOW()
           WHERE id = v_push.id;
           
           v_failed := v_failed + 1;
-        END;
       END LOOP;
     END IF;
   ELSE

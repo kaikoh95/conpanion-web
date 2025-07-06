@@ -53,9 +53,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'delivery_status') THEN
     CREATE TYPE delivery_status AS ENUM (
       'pending',
-      'delivered',
+      'processing',
+      'sent',
       'failed',
-      'retry'
+      'queued_for_delivery'
     );
   END IF;
 END $$;
@@ -66,10 +67,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'email_status') THEN
     CREATE TYPE email_status AS ENUM (
       'pending',
-      'sending',
+      'processing',
       'sent',
       'failed',
-      'cancelled'
+      'queued_for_delivery'
     );
   END IF;
 END $$;
@@ -166,9 +167,11 @@ CREATE TABLE IF NOT EXISTS push_queue (
   scheduled_for TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   sent_at TIMESTAMPTZ,
   error_message TEXT,
+  retry_count INTEGER DEFAULT 0 NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  CONSTRAINT push_queue_platform_check CHECK (platform IN ('ios', 'android', 'web'))
+  CONSTRAINT push_queue_platform_check CHECK (platform IN ('ios', 'android', 'web')),
+  CONSTRAINT push_queue_retry_limit CHECK (retry_count >= 0 AND retry_count <= 5)
 );
 
 -- User devices for push notifications
@@ -1777,11 +1780,12 @@ BEGIN
       v_processed := v_processed + 1;
       
     EXCEPTION WHEN OTHERS THEN
-      -- Mark as failed
+      -- Mark as failed and increment retry count
       UPDATE push_queue 
       SET 
         status = 'failed',
         error_message = SQLERRM,
+        retry_count = retry_count + 1,
         updated_at = NOW()
       WHERE id = v_push.id;
       
@@ -1848,7 +1852,7 @@ BEGIN
   AND created_at > NOW() - INTERVAL '24 hours'; -- Only retry recent failures
   GET DIAGNOSTICS v_email_retries = ROW_COUNT;
   
-  -- Retry failed push notifications (max 2 retries)
+  -- Retry failed push notifications (max 5 retries)
   UPDATE push_queue 
   SET 
     status = 'pending',
@@ -1856,7 +1860,7 @@ BEGIN
     error_message = NULL,
     updated_at = NOW()
   WHERE status = 'failed' 
-  AND retry_count < 2
+  AND retry_count < 5
   AND created_at > NOW() - INTERVAL '6 hours'; -- Only retry recent failures
   GET DIAGNOSTICS v_push_retries = ROW_COUNT;
   
