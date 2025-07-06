@@ -52,7 +52,7 @@ jobs:
 
       - name: Link Supabase project
         run: |
-          echo "Linking to Supabase project..."
+          echo "Linking to Supabase project ${{ vars.SUPABASE_PROJECT_ID }}..."
           supabase link --project-ref ${{ vars.SUPABASE_PROJECT_ID }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
