@@ -8,6 +8,15 @@ import { toast } from 'sonner';
 // VAPID public key - you'll need to generate this and add to your environment
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 
+// Validate VAPID key is properly configured
+const isVapidKeyValid = () => {
+  if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.trim() === '') {
+    return false;
+  }
+  // Basic validation - VAPID keys should be base64url encoded and have a specific length
+  return VAPID_PUBLIC_KEY.length > 0 && /^[A-Za-z0-9_-]+$/.test(VAPID_PUBLIC_KEY);
+};
+
 export function useServiceWorker() {
   const { user } = useAuth();
   const [isSupported, setIsSupported] = useState(false);
@@ -45,6 +54,13 @@ export function useServiceWorker() {
   const subscribeToPush = useCallback(async () => {
     if (!registration || !user) {
       toast.error('Please log in to enable push notifications');
+      return;
+    }
+
+    // Validate VAPID key before attempting subscription
+    if (!isVapidKeyValid()) {
+      console.error('VAPID_PUBLIC_KEY is not properly configured');
+      toast.error('Push notifications are not properly configured. Please contact support.');
       return;
     }
 
@@ -136,16 +152,25 @@ export function useServiceWorker() {
 
 // Helper function to convert VAPID key
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  // Additional validation to prevent window.atob errors
+  if (!base64String || base64String.trim() === '') {
+    throw new Error('Invalid base64 string: empty or undefined');
+  }
+
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)
     .replace(/\-/g, '+')
     .replace(/_/g, '/');
 
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
+  try {
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
 
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  } catch (error) {
+    throw new Error(`Failed to decode base64 string: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-  return outputArray;
 }
