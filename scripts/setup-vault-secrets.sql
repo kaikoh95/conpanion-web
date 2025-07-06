@@ -45,38 +45,6 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to update vault secrets programmatically
-CREATE OR REPLACE FUNCTION update_vault_secret(
-  secret_name TEXT,
-  secret_value TEXT,
-  secret_description TEXT DEFAULT NULL
-)
-RETURNS BOOLEAN AS $$
-DECLARE
-  result BOOLEAN := FALSE;
-BEGIN
-  -- Update or insert vault secret
-  INSERT INTO vault.secrets (name, description, secret, key_id)
-  VALUES (
-    secret_name,
-    COALESCE(secret_description, 'Updated vault secret'),
-    secret_value,
-    (SELECT id FROM pgsodium.key WHERE name = 'default' LIMIT 1)
-  )
-  ON CONFLICT (name) DO UPDATE SET
-    secret = EXCLUDED.secret,
-    description = COALESCE(EXCLUDED.description, vault.secrets.description),
-    updated_at = NOW();
-  
-  result := TRUE;
-  RETURN result;
-  
-EXCEPTION WHEN OTHERS THEN
-  RAISE NOTICE 'Failed to update vault secret %: %', secret_name, SQLERRM;
-  RETURN FALSE;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- Function to validate all notification vault secrets
 CREATE OR REPLACE FUNCTION validate_notification_secrets()
 RETURNS JSONB AS $$
@@ -85,12 +53,12 @@ DECLARE
   secret_name TEXT;
   secret_value TEXT;
   required_secrets TEXT[] := ARRAY[
-    'notification_supabase_url',
-    'notification_supabase_service_key',
-    'notification_resend_api_key',
-    'notification_vapid_public_key',
-    'notification_vapid_private_key',
-    'notification_vapid_email'
+    'sb_url',
+    'sb_service_key',
+    'resend_api_key',
+    'vapid_public_key',
+    'vapid_private_key',
+    'vapid_email'
   ];
 BEGIN
   -- Check each required secret
@@ -143,7 +111,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant execute permissions to service role
 GRANT EXECUTE ON FUNCTION get_vault_secret TO service_role;
-GRANT EXECUTE ON FUNCTION update_vault_secret TO service_role;
 GRANT EXECUTE ON FUNCTION validate_notification_secrets TO service_role;
 GRANT EXECUTE ON FUNCTION notification_secrets_configured TO service_role;
 
@@ -162,120 +129,42 @@ GRANT EXECUTE ON FUNCTION notification_secrets_configured TO authenticated;
 -- Uncomment and modify these lines with your actual values:
 
 /*
-SELECT update_vault_secret(
-  'notification_supabase_url', 
+SELECT vault.create_secret(
+  'sb_url', 
   'https://your-actual-project-ref.supabase.co',
   'Supabase URL for notification edge function calls'
 );
 
-SELECT update_vault_secret(
-  'notification_supabase_service_key', 
+SELECT vault.create_secret(
+  'sb_service_key', 
   'your-actual-service-role-key-here',
   'Supabase service role key for notification edge function calls'
 );
 
-SELECT update_vault_secret(
-  'notification_resend_api_key', 
+SELECT vault.create_secret(
+  'resend_api_key', 
   'your-actual-resend-api-key-here',
   'Resend API key for email notifications'
 );
 
-SELECT update_vault_secret(
-  'notification_vapid_public_key', 
+SELECT vault.create_secret(
+  'vapid_public_key', 
   'your-actual-vapid-public-key-here',
   'VAPID public key for push notifications'
 );
 
-SELECT update_vault_secret(
-  'notification_vapid_private_key', 
+SELECT vault.create_secret(
+  'vapid_private_key', 
   'your-actual-vapid-private-key-here',
   'VAPID private key for push notifications'
 );
 
-SELECT update_vault_secret(
-  'notification_vapid_email', 
+SELECT vault.create_secret(
+  'vapid_email', 
   'mailto:your-actual-email@yourdomain.com',
   'VAPID email for push notifications'
 );
 */
-
--- Method 2: Environment-based setup (recommended for automation)
--- This method reads from environment variables if available
-DO $$
-DECLARE
-  env_supabase_url TEXT := current_setting('app.supabase_url', true);
-  env_service_key TEXT := current_setting('app.service_key', true);
-  env_resend_key TEXT := current_setting('app.resend_key', true);
-  env_vapid_public TEXT := current_setting('app.vapid_public', true);
-  env_vapid_private TEXT := current_setting('app.vapid_private', true);
-  env_vapid_email TEXT := current_setting('app.vapid_email', true);
-BEGIN
-  -- Set secrets from environment variables if available
-  IF env_supabase_url IS NOT NULL THEN
-    PERFORM update_vault_secret('notification_supabase_url', env_supabase_url, 'Supabase URL from environment');
-  END IF;
-  
-  IF env_service_key IS NOT NULL THEN
-    PERFORM update_vault_secret('notification_supabase_service_key', env_service_key, 'Service key from environment');
-  END IF;
-  
-  IF env_resend_key IS NOT NULL THEN
-    PERFORM update_vault_secret('notification_resend_api_key', env_resend_key, 'Resend key from environment');
-  END IF;
-  
-  IF env_vapid_public IS NOT NULL THEN
-    PERFORM update_vault_secret('notification_vapid_public_key', env_vapid_public, 'VAPID public key from environment');
-  END IF;
-  
-  IF env_vapid_private IS NOT NULL THEN
-    PERFORM update_vault_secret('notification_vapid_private_key', env_vapid_private, 'VAPID private key from environment');
-  END IF;
-  
-  IF env_vapid_email IS NOT NULL THEN
-    PERFORM update_vault_secret('notification_vapid_email', env_vapid_email, 'VAPID email from environment');
-  END IF;
-END $$;
-
--- Create placeholder secrets if they don't exist (for development)
-INSERT INTO vault.secrets (name, description, secret, key_id)
-VALUES 
-  (
-    'notification_supabase_url',
-    'Supabase URL for notification edge function calls',
-    'https://your-project-ref.supabase.co',
-    (SELECT id FROM pgsodium.key WHERE name = 'default' LIMIT 1)
-  ),
-  (
-    'notification_supabase_service_key',
-    'Supabase service role key for notification edge function calls',
-    'your-service-role-key-placeholder',
-    (SELECT id FROM pgsodium.key WHERE name = 'default' LIMIT 1)
-  ),
-  (
-    'notification_resend_api_key',
-    'Resend API key for email notifications',
-    'your-resend-api-key-placeholder',
-    (SELECT id FROM pgsodium.key WHERE name = 'default' LIMIT 1)
-  ),
-  (
-    'notification_vapid_public_key',
-    'VAPID public key for push notifications',
-    'your-vapid-public-key-placeholder',
-    (SELECT id FROM pgsodium.key WHERE name = 'default' LIMIT 1)
-  ),
-  (
-    'notification_vapid_private_key',
-    'VAPID private key for push notifications',
-    'your-vapid-private-key-placeholder',
-    (SELECT id FROM pgsodium.key WHERE name = 'default' LIMIT 1)
-  ),
-  (
-    'notification_vapid_email',
-    'VAPID email for push notifications',
-    'mailto:notifications@getconpanion.com',
-    (SELECT id FROM pgsodium.key WHERE name = 'default' LIMIT 1)
-  )
-ON CONFLICT (name) DO NOTHING; -- Don't overwrite existing secrets
 
 -- ===========================================
 -- VALIDATION AND REPORTING
@@ -298,7 +187,7 @@ BEGIN
     RAISE NOTICE '';
     RAISE NOTICE '⚠️  WARNING: Some secrets are not properly configured!';
     RAISE NOTICE '   Please update placeholder values with actual secrets.';
-    RAISE NOTICE '   Use the update_vault_secret function or uncomment the configuration section above.';
+    RAISE NOTICE '   Use the vault.create_secret function or uncomment the configuration section above.';
   ELSE
     RAISE NOTICE '✅ All notification secrets are properly configured.';
   END IF;
@@ -311,7 +200,6 @@ END $$;
 -- ===========================================
 
 COMMENT ON FUNCTION get_vault_secret IS 'Safely retrieves decrypted secrets from vault';
-COMMENT ON FUNCTION update_vault_secret IS 'Updates or inserts vault secrets programmatically';
 COMMENT ON FUNCTION validate_notification_secrets IS 'Validates all notification system vault secrets';
 COMMENT ON FUNCTION notification_secrets_configured IS 'Checks if all notification secrets are properly configured';
 
@@ -323,7 +211,7 @@ COMMENT ON FUNCTION notification_secrets_configured IS 'Checks if all notificati
 -- SELECT validate_notification_secrets();
 
 -- To update a specific secret:
--- SELECT update_vault_secret('notification_supabase_url', 'https://your-project.supabase.co');
+-- SELECT vault.create_secret('sb_url', 'https://your-project.supabase.co');
 
 -- To verify all secrets are configured:
 -- SELECT notification_secrets_configured();

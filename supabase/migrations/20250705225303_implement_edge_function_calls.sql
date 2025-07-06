@@ -74,8 +74,8 @@ DECLARE
 BEGIN
   -- Get vault secrets
   DECLARE
-    v_supabase_url TEXT := get_vault_secret('notification_supabase_url');
-    v_supabase_service_key TEXT := get_vault_secret('notification_supabase_service_key');
+    v_supabase_url TEXT := get_vault_secret('sb_url');
+    v_supabase_service_key TEXT := get_vault_secret('sb_service_key');
     v_function_url TEXT;
   BEGIN
     -- Validate required secrets
@@ -459,10 +459,11 @@ COMMENT ON TABLE webhook_requests IS 'Optional table for webhook-based edge func
 --
 -- CONFIGURATION:
 -- Edge function URLs are configured via vault secrets:
--- - notification_supabase_url: Your Supabase project URL
--- - notification_supabase_service_key: Your service role key
--- - notification_resend_api_key: Your Resend API key (for email edge function)
--- - notification_vapid_*: VAPID keys for push notifications (for push edge function)
+-- - sb_url: Your Supabase project URL
+-- - sb_service_key: Your service role key
+-- - resend_api_key: Your Resend API key (for email edge function)
+-- - vapid_public_key: VAPID public key for push notifications (for push edge function)
+-- - vapid_private_key: VAPID private key for push notifications (for push edge function)
 --
--- To update secrets, use the update_vault_secret function:
--- SELECT update_vault_secret('notification_supabase_url', 'https://your-project.supabase.co');
+-- To update secrets, use the vault.create_secret function:
+-- SELECT vault.create_secret('sb_url', 'https://your-project.supabase.co');
