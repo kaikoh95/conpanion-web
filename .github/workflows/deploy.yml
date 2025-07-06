@@ -15,7 +15,7 @@ on:
         default: 'staging'
         type: choice
         options:
-          - staging
+          - preview
           - production
 
 env:
@@ -25,7 +25,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+    environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'preview') }}
 
     steps:
       - name: Checkout code
