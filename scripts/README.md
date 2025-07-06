@@ -25,16 +25,16 @@ After running the setup script, update the placeholder values with your actual s
 
 ```sql
 -- Required: Supabase configuration
-SELECT update_vault_secret('notification_supabase_url', 'https://your-project-ref.supabase.co');
-SELECT update_vault_secret('notification_supabase_service_key', 'your-actual-service-role-key');
+SELECT vault.create_secret('sb_url', 'https://your-project-ref.supabase.co');
+SELECT vault.create_secret('sb_service_key', 'your-actual-service-role-key');
 
 -- Required: Email notifications
-SELECT update_vault_secret('notification_resend_api_key', 'your-actual-resend-api-key');
+SELECT vault.create_secret('resend_api_key', 'your-actual-resend-api-key');
 
 -- Required: Push notifications
-SELECT update_vault_secret('notification_vapid_public_key', 'your-actual-vapid-public-key');
-SELECT update_vault_secret('notification_vapid_private_key', 'your-actual-vapid-private-key');
-SELECT update_vault_secret('notification_vapid_email', 'mailto:your-actual-email@yourdomain.com');
+SELECT vault.create_secret('vapid_public_key', 'your-actual-vapid-public-key');
+SELECT vault.create_secret('vapid_private_key', 'your-actual-vapid-private-key');
+SELECT vault.create_secret('vapid_email', 'mailto:your-actual-email@yourdomain.com');
 ```
 
 ### 3. Validate Configuration
@@ -54,6 +54,7 @@ SELECT notification_secrets_configured();
 ### `setup-vault-secrets.sql`
 
 Main setup script that:
+
 - Enables the `supabase_vault` extension
 - Creates helper functions for managing vault secrets
 - Sets up placeholder secrets for development
@@ -63,13 +64,15 @@ Main setup script that:
 ## Security Best Practices
 
 ### ✅ Do This
+
 - Run the setup script in a secure environment
-- Use the `update_vault_secret` function to set real values
+- Use the `vault.create_secret` function to set real values
 - Regularly rotate secrets according to your security policy
 - Monitor secret access and usage
 - Use environment variables or secure deployment tools for automation
 
 ### ❌ Don't Do This
+
 - Never commit actual secrets to version control
 - Don't set secrets via direct SQL in scripts that might be versioned
 - Don't share service keys or API keys in plain text
@@ -87,20 +90,23 @@ Main setup script that:
 ### Common Issues
 
 **Error: "supabase_vault extension not available"**
+
 - Solution: Contact Supabase support or check if vault is enabled for your plan
 
 **Error: "get_vault_secret function not found"**
+
 - Solution: Run the setup script first
 
 **Warning: "Some secrets are not properly configured"**
+
 - Solution: Use `validate_notification_secrets()` to see which secrets need updating
 
 ### Debug Commands
 
 ```sql
 -- See all notification secret names (values are encrypted)
-SELECT name, description, created_at, updated_at 
-FROM vault.secrets 
+SELECT name, description, created_at, updated_at
+FROM vault.secrets
 WHERE name LIKE 'notification_%';
 
 -- Check specific secret status
@@ -122,14 +128,14 @@ The actual Edge Functions still use environment variables, but these are fetched
 
 ## Environment Variable Mapping
 
-| Vault Secret | Edge Function Env Var | Purpose |
-|--------------|----------------------|---------|
-| `notification_supabase_url` | `SUPABASE_URL` | Supabase project URL |
-| `notification_supabase_service_key` | `SUPABASE_SERVICE_ROLE_KEY` | Service authentication |
-| `notification_resend_api_key` | `RESEND_API_KEY` | Email service API key |
-| `notification_vapid_public_key` | `VAPID_PUBLIC_KEY` | Push notification public key |
-| `notification_vapid_private_key` | `VAPID_PRIVATE_KEY` | Push notification private key |
-| `notification_vapid_email` | `VAPID_EMAIL` | Push notification contact email |
+| Vault Secret                        | Edge Function Env Var       | Purpose                         |
+| ----------------------------------- | --------------------------- | ------------------------------- |
+| `notification_supabase_url`         | `SUPABASE_URL`              | Supabase project URL            |
+| `notification_supabase_service_key` | `SUPABASE_SERVICE_ROLE_KEY` | Service authentication          |
+| `notification_resend_api_key`       | `RESEND_API_KEY`            | Email service API key           |
+| `notification_vapid_public_key`     | `VAPID_PUBLIC_KEY`          | Push notification public key    |
+| `notification_vapid_private_key`    | `VAPID_PRIVATE_KEY`         | Push notification private key   |
+| `notification_vapid_email`          | `VAPID_EMAIL`               | Push notification contact email |
 
 ## Next Steps
 
@@ -143,6 +149,7 @@ After setting up vault secrets:
 ## Support
 
 For issues with:
+
 - **Vault setup**: Check Supabase documentation or contact support
 - **Secret configuration**: Use the validation functions provided
 - **Edge function integration**: Check the main notification system documentation

@@ -7,22 +7,26 @@ This document describes the implementation of edge function calls for email and 
 ## What Was Implemented
 
 ### 1. Edge Function Calls
+
 - **Email Notifications**: Calls the `send-email-notification` edge function
 - **Push Notifications**: Calls the `send-push-notification` edge function
 
 ### 2. Multiple Fallback Mechanisms
 
 #### Primary: pg_net Extension
+
 - Uses PostgreSQL's `pg_net` extension for HTTP requests
 - Makes direct HTTP calls to Supabase Edge Functions
 - Includes proper authorization headers and timeout handling
 
 #### Secondary: Webhook Requests
+
 - Creates webhook request records for external processing
 - Useful when `pg_net` is not available or preferred
 - Provides a `webhook_requests` table for queue management
 
 #### Tertiary: Local Fallback
+
 - Falls back to local processing if edge functions fail
 - Marks items as `queued_for_delivery` for retry
 - Prevents complete failure of the notification system
@@ -30,12 +34,14 @@ This document describes the implementation of edge function calls for email and 
 ### 3. Updated Processing Functions
 
 #### `process_email_queue()`
+
 - Checks for pending emails before calling edge function
 - Calls `call_edge_function_safe('send-email-notification')`
 - Parses results to track sent/failed emails
 - Includes fallback processing for resilience
 
 #### `process_push_queue()`
+
 - Checks for pending push notifications before calling edge function
 - Calls `call_edge_function_safe('send-push-notification')`
 - Parses results to track sent/failed push notifications
@@ -56,12 +62,12 @@ This document describes the implementation of edge function calls for email and 
 
 ```sql
 -- Update vault secrets with your actual values
-SELECT update_vault_secret('notification_supabase_url', 'https://your-project-ref.supabase.co');
-SELECT update_vault_secret('notification_supabase_service_key', 'your-service-role-key');
-SELECT update_vault_secret('notification_resend_api_key', 'your-resend-api-key');
-SELECT update_vault_secret('notification_vapid_public_key', 'your-vapid-public-key');
-SELECT update_vault_secret('notification_vapid_private_key', 'your-vapid-private-key');
-SELECT update_vault_secret('notification_vapid_email', 'mailto:your-email@domain.com');
+SELECT vault.create_secret('sb_url', 'https://your-project-ref.supabase.co');
+SELECT vault.create_secret('sb_service_key', 'your-service-role-key');
+SELECT vault.create_secret('resend_api_key', 'your-resend-api-key');
+SELECT vault.create_secret('vapid_public_key', 'your-vapid-public-key');
+SELECT vault.create_secret('vapid_private_key', 'your-vapid-private-key');
+SELECT vault.create_secret('vapid_email', 'mailto:your-email@domain.com');
 ```
 
 **Step 3: Validate configuration**
@@ -75,27 +81,32 @@ SELECT notification_secrets_configured();
 ### Required Vault Secrets
 
 **For System Configuration:**
-- `notification_supabase_url` - Your Supabase project URL
-- `notification_supabase_service_key` - Your service role key
+
+- `sb_url` - Your Supabase project URL
+- `sb_service_key` - Your service role key
 
 **For Email Notifications:**
-- `notification_resend_api_key` - Your Resend API key
+
+- `resend_api_key` - Your Resend API key
 
 **For Push Notifications:**
-- `notification_vapid_public_key` - VAPID public key
-- `notification_vapid_private_key` - VAPID private key
-- `notification_vapid_email` - VAPID email address
+
+- `vapid_public_key` - VAPID public key
+- `vapid_private_key` - VAPID private key
+- `vapid_email` - VAPID email address
 
 ### Environment Variables (Edge Functions)
 
 The edge functions themselves still require these environment variables in Supabase:
 
 **For Email Notifications:**
+
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `RESEND_API_KEY`
 
 **For Push Notifications:**
+
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `VAPID_PUBLIC_KEY`
@@ -105,6 +116,7 @@ The edge functions themselves still require these environment variables in Supab
 ## How It Works
 
 ### Email Flow
+
 1. **Trigger**: Notification is created via `create_notification()` function
 2. **Queue**: Email is added to `email_queue` table
 3. **Processing**: Cron job runs `process_email_queue()` every 5 minutes
@@ -113,6 +125,7 @@ The edge functions themselves still require these environment variables in Supab
 6. **Status Update**: Edge function updates `email_queue` status to 'sent' or 'failed'
 
 ### Push Flow
+
 1. **Trigger**: Notification is created via `create_notification()` function
 2. **Queue**: Push notification is added to `push_queue` table
 3. **Processing**: Cron job runs `process_push_queue()` every 2 minutes
@@ -123,23 +136,27 @@ The edge functions themselves still require these environment variables in Supab
 ## New Functions Added
 
 ### Core Functions
+
 - `call_send_email_notification()` - Makes HTTP request to email edge function
 - `call_send_push_notification()` - Makes HTTP request to push edge function
 - `call_edge_function_safe()` - Safely calls edge functions with error handling
 
 ### Configuration Functions
+
 - `set_notification_config()` - Sets Supabase URL and service key
 - `create_webhook_request()` - Creates webhook requests as alternative
 
 ## Error Handling
 
 ### Graceful Degradation
+
 1. **Primary Failure**: If edge function call fails, items remain in queue
 2. **Retry Logic**: Failed items are retried with exponential backoff
 3. **Fallback Processing**: Critical functionality continues even if edge functions are unavailable
 4. **Logging**: All failures are logged with detailed error messages
 
 ### Status Tracking
+
 - `pending` - Item is waiting to be processed
 - `processing` - Item is currently being processed
 - `sent` - Item was successfully sent
@@ -149,14 +166,18 @@ The edge functions themselves still require these environment variables in Supab
 ## Monitoring
 
 ### Cron Jobs
+
 The following cron jobs are configured to run automatically:
+
 - **Email Processing**: Every 5 minutes
 - **Push Processing**: Every 2 minutes
 - **Cleanup**: Daily at 2 AM
 - **Retry Failed**: Every 30 minutes
 
 ### Logs
+
 Monitor PostgreSQL logs for:
+
 - `NOTICE` messages about edge function results
 - Error messages from failed edge function calls
 - Processing statistics from cron jobs
@@ -164,6 +185,7 @@ Monitor PostgreSQL logs for:
 ## Testing
 
 ### Manual Testing
+
 ```sql
 -- Test email processing
 SELECT process_email_queue();
@@ -180,6 +202,7 @@ SELECT name, description FROM vault.secrets WHERE name LIKE 'notification_%';
 ```
 
 ### Create Test Notifications
+
 ```sql
 -- Create test notification (will trigger email/push if configured)
 SELECT create_notification(
@@ -196,14 +219,17 @@ SELECT create_notification(
 ### Common Issues
 
 1. **pg_net Extension Not Available**
+
    - Symptom: Edge functions are not called
    - Solution: Enable pg_net extension or use webhook alternative
 
 2. **Invalid Configuration**
+
    - Symptom: HTTP requests fail with authentication errors
    - Solution: Check Supabase URL and service key configuration
 
 3. **Edge Function Errors**
+
    - Symptom: Items remain in `pending` status
    - Solution: Check edge function logs in Supabase dashboard
 
@@ -212,6 +238,7 @@ SELECT create_notification(
    - Solution: Set required environment variables in Supabase project settings
 
 ### Debug Commands
+
 ```sql
 -- Check pending items
 SELECT COUNT(*) FROM email_queue WHERE status = 'pending';
