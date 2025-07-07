@@ -33,6 +33,11 @@ const notificationTypes: { type: NotificationType; label: string; description: s
     description: 'When a task is assigned to you',
   },
   {
+    type: 'task_unassigned',
+    label: 'Task Unassignments',
+    description: 'When you are removed from a task',
+  },
+  {
     type: 'task_updated',
     label: 'Task Updates',
     description: 'When a task you are assigned to is updated',
@@ -48,6 +53,16 @@ const notificationTypes: { type: NotificationType; label: string; description: s
     description: 'When you are mentioned in a comment',
   },
   {
+    type: 'form_assigned',
+    label: 'Form Assignments',
+    description: 'When a form is assigned to you',
+  },
+  {
+    type: 'form_unassigned',
+    label: 'Form Unassignments',
+    description: 'When you are removed from a form',
+  },
+  {
     type: 'approval_requested',
     label: 'Approval Requests',
     description: 'When someone requests your approval',
@@ -56,6 +71,11 @@ const notificationTypes: { type: NotificationType; label: string; description: s
     type: 'approval_status_changed',
     label: 'Approval Status Updates',
     description: 'When your approval requests are updated',
+  },
+  {
+    type: 'entity_assigned',
+    label: 'General Assignments',
+    description: 'When you are assigned to other items',
   },
 ];
 

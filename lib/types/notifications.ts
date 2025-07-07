@@ -2,15 +2,18 @@
 
 export type NotificationType =
   | 'system'
+  | 'organization_added'
+  | 'project_added'
   | 'task_assigned'
   | 'task_updated'
-  | 'task_unassigned'
   | 'task_comment'
   | 'comment_mention'
-  | 'project_added'
-  | 'organization_added'
+  | 'task_unassigned'
+  | 'form_assigned'
+  | 'form_unassigned'
   | 'approval_requested'
-  | 'approval_status_changed';
+  | 'approval_status_changed'
+  | 'entity_assigned';
 
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'critical';
 
@@ -59,15 +62,18 @@ export interface NotificationDelivery {
 // Notification icons mapping
 export const notificationIcons: Record<NotificationType, string> = {
   system: '🔔',
+  organization_added: '🏢',
+  project_added: '�',
   task_assigned: '📝',
   task_updated: '🔄',
-  task_unassigned: '❌',
   task_comment: '💬',
   comment_mention: '👤',
-  project_added: '📁',
-  organization_added: '🏢',
+  task_unassigned: '❌',
+  form_assigned: '�',
+  form_unassigned: '📄',
   approval_requested: '✋',
   approval_status_changed: '✅',
+  entity_assigned: '📌',
 };
 
 // Priority colors
