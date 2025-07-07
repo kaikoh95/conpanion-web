@@ -415,5 +415,27 @@ Implemented database-driven invitation linking system to make invitation flow mo
 4. **Automatic redirect** → User is taken to their pending invitation(s)
 5. **Reliable flow** → Works regardless of how user accesses the app (direct login, browser refresh, etc.)
 
-### 🎯 Next Priority: Apply Migration & Test
-Ready to apply the database migration and test the enhanced invitation system. 
+### 🎯 Recently Fixed: Previously Removed Users Issue ✅
+**Fixed critical bug where previously removed users couldn't be re-invited**
+
+#### ✅ **Issue Resolved**
+- **Problem**: Users with `status = 'deactivated'` (previously removed) couldn't be re-invited
+- **Root Cause**: Database functions only checked for `status = 'active'` memberships
+- **Impact**: Invitation flow would fail silently or cause constraint violations
+
+#### ✅ **Solution Implemented**
+- **Migration**: `20250707091451_fix_organization_invite_previously_removed_users.sql`
+- **Enhanced Functions**:
+  - `invite_user_to_organization_by_email()` - Now handles deactivated memberships
+  - `accept_organization_invitation()` - Reactivates deactivated memberships instead of creating duplicates
+- **Better UX**: Enhanced messaging for previously removed users
+- **Data Integrity**: Preserves audit trail while enabling reactivation
+
+#### ✅ **New Features Added**
+- **Enhanced return values** with `was_previously_member` and `was_reactivated` flags
+- **Contextual messaging** ("Invitation sent to previously removed user")
+- **Proper reactivation** instead of creating duplicate memberships
+- **Comprehensive error handling** for all membership states
+
+### 🎯 Next Priority: Apply Migration & Test Enhanced System
+Ready to apply the database migration and test the complete invitation system with the previously removed users fix. 
