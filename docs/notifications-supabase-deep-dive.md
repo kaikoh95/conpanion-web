@@ -58,12 +58,12 @@ const setupRealtimeNotifications = (userId: string) => {
         event: 'INSERT',
         schema: 'public',
         table: 'notifications',
-        filter: `user_id=eq.${userId}`
+        filter: `user_id=eq.${userId}`,
       },
       (payload) => {
         // New notification received
         handleNewNotification(payload.new);
-      }
+      },
     )
     .on(
       'postgres_changes',
@@ -71,15 +71,15 @@ const setupRealtimeNotifications = (userId: string) => {
         event: 'UPDATE',
         schema: 'public',
         table: 'notifications',
-        filter: `user_id=eq.${userId}`
+        filter: `user_id=eq.${userId}`,
       },
       (payload) => {
         // Notification updated (e.g., marked as read)
         handleNotificationUpdate(payload.new, payload.old);
-      }
+      },
     )
     .subscribe();
-    
+
   return channel;
 };
 ```
@@ -97,17 +97,15 @@ const systemChannel = supabase
   .subscribe();
 
 // Server-side broadcast
-await supabase
-  .channel('system-notifications')
-  .send({
-    type: 'broadcast',
-    event: 'system-alert',
-    payload: {
-      title: 'Scheduled Maintenance',
-      message: 'System will be down for maintenance at 10 PM',
-      priority: 'critical'
-    }
-  });
+await supabase.channel('system-notifications').send({
+  type: 'broadcast',
+  event: 'system-alert',
+  payload: {
+    title: 'Scheduled Maintenance',
+    message: 'System will be down for maintenance at 10 PM',
+    priority: 'critical',
+  },
+});
 ```
 
 ## Core Database Triggers
@@ -133,28 +131,28 @@ DECLARE
 BEGIN
   -- Insert the notification
   INSERT INTO notifications (
-    user_id, type, title, message, data, 
+    user_id, type, title, message, data,
     entity_type, entity_id, priority, created_by
   ) VALUES (
     p_user_id, p_type, p_title, p_message, p_data,
     p_entity_type, p_entity_id, p_priority, COALESCE(p_created_by, auth.uid())
   ) RETURNING id INTO v_notification_id;
-  
+
   -- Check user preferences for this notification type
   SELECT * INTO v_user_preferences
   FROM notification_preferences
   WHERE user_id = p_user_id AND type = p_type;
-  
+
   -- Queue email if enabled (or if system notification)
   IF p_type = 'system' OR COALESCE(v_user_preferences.email_enabled, true) THEN
     PERFORM queue_email_notification(v_notification_id);
   END IF;
-  
+
   -- Queue push if enabled
   IF COALESCE(v_user_preferences.push_enabled, true) THEN
     PERFORM queue_push_notification(v_notification_id);
   END IF;
-  
+
   RETURN v_notification_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -171,18 +169,18 @@ DECLARE
   v_notification_id UUID;
 BEGIN
   -- Task Assignment
-  IF TG_OP = 'UPDATE' AND 
-     NEW.assignee_id IS DISTINCT FROM OLD.assignee_id AND 
+  IF TG_OP = 'UPDATE' AND
+     NEW.assignee_id IS DISTINCT FROM OLD.assignee_id AND
      NEW.assignee_id IS NOT NULL THEN
-    
+
     -- Get project name
-    SELECT name INTO v_project_name 
+    SELECT name INTO v_project_name
     FROM projects WHERE id = NEW.project_id;
-    
+
     -- Get assigner name
-    SELECT full_name INTO v_assigner_name 
+    SELECT full_name INTO v_assigner_name
     FROM profiles WHERE id = NEW.updated_by;
-    
+
     -- Create notification
     v_notification_id := create_notification(
       p_user_id => NEW.assignee_id,
@@ -200,14 +198,14 @@ BEGIN
       ),
       p_entity_type => 'task',
       p_entity_id => NEW.id,
-      p_priority => CASE 
+      p_priority => CASE
         WHEN NEW.priority = 'urgent' THEN 'high'
         WHEN NEW.priority = 'high' THEN 'high'
         ELSE 'medium'
       END,
       p_created_by => NEW.updated_by
     );
-    
+
     -- If previously assigned, notify the old assignee
     IF OLD.assignee_id IS NOT NULL THEN
       PERFORM create_notification(
@@ -227,7 +225,7 @@ BEGIN
       );
     END IF;
   END IF;
-  
+
   -- Task Status Change
   IF TG_OP = 'UPDATE' AND NEW.status IS DISTINCT FROM OLD.status THEN
     -- Notify assignee of status change (if not changed by them)
@@ -236,7 +234,7 @@ BEGIN
         p_user_id => NEW.assignee_id,
         p_type => 'task_updated',
         p_title => 'Task Status Updated',
-        p_message => format('Task "%s" status changed from %s to %s', 
+        p_message => format('Task "%s" status changed from %s to %s',
           NEW.title, OLD.status, NEW.status),
         p_data => jsonb_build_object(
           'task_id', NEW.id,
@@ -250,7 +248,7 @@ BEGIN
       );
     END IF;
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -273,16 +271,16 @@ DECLARE
   v_user_id UUID;
 BEGIN
   -- Get task details
-  SELECT t.*, p.name as project_name 
+  SELECT t.*, p.name as project_name
   INTO v_task
   FROM tasks t
   JOIN projects p ON t.project_id = p.id
   WHERE t.id = NEW.task_id;
-  
+
   -- Get commenter name
   SELECT full_name INTO v_commenter_name
   FROM profiles WHERE id = NEW.user_id;
-  
+
   -- Notify task assignee (if not the commenter)
   IF v_task.assignee_id IS NOT NULL AND v_task.assignee_id != NEW.user_id THEN
     PERFORM create_notification(
@@ -304,12 +302,12 @@ BEGIN
       p_created_by => NEW.user_id
     );
   END IF;
-  
+
   -- Extract @mentions from comment
   v_mentioned_users := ARRAY(
     SELECT DISTINCT (regexp_matches(NEW.content, '@([a-f0-9-]{36})', 'g'))[1]::UUID
   );
-  
+
   -- Notify mentioned users
   FOREACH v_user_id IN ARRAY v_mentioned_users LOOP
     IF v_user_id != NEW.user_id THEN  -- Don't notify self
@@ -333,7 +331,7 @@ BEGIN
       );
     END IF;
   END LOOP;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -356,16 +354,16 @@ DECLARE
 BEGIN
   -- Determine entity type
   v_entity_type := TG_TABLE_NAME;
-  
+
   IF TG_OP = 'INSERT' THEN
     -- Get entity name and added by name
     IF v_entity_type = 'organization_members' THEN
-      SELECT o.name, p.full_name 
+      SELECT o.name, p.full_name
       INTO v_entity_name, v_added_by_name
       FROM organizations o
       LEFT JOIN profiles p ON p.id = NEW.added_by
       WHERE o.id = NEW.organization_id;
-      
+
       PERFORM create_notification(
         p_user_id => NEW.user_id,
         p_type => 'organization_added',
@@ -383,14 +381,14 @@ BEGIN
         p_priority => 'high',
         p_created_by => NEW.added_by
       );
-      
+
     ELSIF v_entity_type = 'project_members' THEN
-      SELECT p.name, pr.full_name 
+      SELECT p.name, pr.full_name
       INTO v_entity_name, v_added_by_name
       FROM projects p
       LEFT JOIN profiles pr ON pr.id = NEW.added_by
       WHERE p.id = NEW.project_id;
-      
+
       PERFORM create_notification(
         p_user_id => NEW.user_id,
         p_type => 'project_added',
@@ -410,7 +408,7 @@ BEGIN
       );
     END IF;
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -439,17 +437,17 @@ BEGIN
     -- Get requester name
     SELECT full_name INTO v_requester_name
     FROM profiles WHERE id = NEW.requested_by;
-    
+
     -- Notify all approvers
-    FOR v_approver IN 
-      SELECT * FROM approval_approvers 
+    FOR v_approver IN
+      SELECT * FROM approval_approvers
       WHERE approval_id = NEW.id
     LOOP
       PERFORM create_notification(
         p_user_id => v_approver.user_id,
         p_type => 'approval_requested',
         p_title => 'Approval Required',
-        p_message => format('%s requested approval for: %s', 
+        p_message => format('%s requested approval for: %s',
           v_requester_name, NEW.title),
         p_data => jsonb_build_object(
           'approval_id', NEW.id,
@@ -462,7 +460,7 @@ BEGIN
         ),
         p_entity_type => 'approval',
         p_entity_id => NEW.id,
-        p_priority => CASE 
+        p_priority => CASE
           WHEN NEW.due_date <= CURRENT_DATE + INTERVAL '1 day' THEN 'critical'
           WHEN NEW.due_date <= CURRENT_DATE + INTERVAL '3 days' THEN 'high'
           ELSE 'medium'
@@ -470,14 +468,14 @@ BEGIN
         p_created_by => NEW.requested_by
       );
     END LOOP;
-    
+
   ELSIF TG_OP = 'UPDATE' AND NEW.status IS DISTINCT FROM OLD.status THEN
     -- Notify requester of status change
     PERFORM create_notification(
       p_user_id => NEW.requested_by,
       p_type => 'approval_status_changed',
       p_title => format('Approval %s', INITCAP(NEW.status)),
-      p_message => format('Your approval request "%s" has been %s', 
+      p_message => format('Your approval request "%s" has been %s',
         NEW.title, NEW.status),
       p_data => jsonb_build_object(
         'approval_id', NEW.id,
@@ -492,7 +490,7 @@ BEGIN
       p_created_by => NEW.approved_by
     );
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -521,7 +519,7 @@ BEGIN
   JOIN auth.users u ON n.user_id = u.id
   JOIN profiles p ON p.id = u.id
   WHERE n.id = p_notification_id;
-  
+
   -- Only queue if user has verified email
   IF v_notification.email_verified THEN
     -- Insert into email queue
@@ -545,21 +543,21 @@ BEGIN
         'notification_title', v_notification.title,
         'notification_message', v_notification.message,
         'notification_data', v_notification.data,
-        'action_url', format('%s/notifications/%s', 
+        'action_url', format('%s/notifications/%s',
           current_setting('app.base_url'), p_notification_id)
       ),
       v_notification.priority,
-      CASE 
+      CASE
         WHEN v_notification.priority = 'critical' THEN NOW()
         WHEN v_notification.priority = 'high' THEN NOW() + INTERVAL '5 minutes'
         ELSE NOW() + INTERVAL '15 minutes'
       END
     );
-    
+
     -- Trigger edge function for critical emails
     IF v_notification.priority = 'critical' THEN
       PERFORM net.http_post(
-        url := current_setting('app.supabase_url') || 
+        url := current_setting('app.supabase_url') ||
                '/functions/v1/send-email-notification',
         headers := jsonb_build_object(
           'Authorization', 'Bearer ' || current_setting('app.service_key'),
@@ -580,35 +578,35 @@ $$ LANGUAGE plpgsql;
 
 ```typescript
 // supabase/functions/send-email-notification/index.ts
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Resend } from 'https://esm.sh/resend@2.0.0'
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Resend } from 'https://esm.sh/resend@2.0.0';
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY')!)
+const resend = new Resend(Deno.env.get('RESEND_API_KEY')!);
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-)
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+);
 
 serve(async (req) => {
   try {
-    const { notification_id, priority } = await req.json()
-    
+    const { notification_id, priority } = await req.json();
+
     // Fetch email from queue
     const { data: emailData, error } = await supabase
       .from('email_queue')
       .select('*')
       .eq('notification_id', notification_id)
-      .single()
-    
+      .single();
+
     if (error || !emailData) {
-      throw new Error('Email not found in queue')
+      throw new Error('Email not found in queue');
     }
-    
+
     // Get email template
-    const template = await getEmailTemplate(emailData.template_id)
-    const html = await renderTemplate(template, emailData.template_data)
-    
+    const template = await getEmailTemplate(emailData.template_id);
+    const html = await renderTemplate(template, emailData.template_data);
+
     // Send email via Resend
     const { data, error: sendError } = await resend.emails.send({
       from: 'notifications@construction-pm.com',
@@ -617,46 +615,43 @@ serve(async (req) => {
       html: html,
       headers: {
         'X-Notification-ID': notification_id,
-        'X-Priority': emailData.priority
-      }
-    })
-    
+        'X-Priority': emailData.priority,
+      },
+    });
+
     // Update delivery status
-    await supabase
-      .from('notification_deliveries')
-      .insert({
-        notification_id,
-        channel: 'email',
-        status: sendError ? 'failed' : 'delivered',
-        delivered_at: new Date().toISOString(),
-        metadata: {
-          email_id: data?.id,
-          error: sendError?.message
-        }
-      })
-    
+    await supabase.from('notification_deliveries').insert({
+      notification_id,
+      channel: 'email',
+      status: sendError ? 'failed' : 'delivered',
+      delivered_at: new Date().toISOString(),
+      metadata: {
+        email_id: data?.id,
+        error: sendError?.message,
+      },
+    });
+
     // Update queue status
     await supabase
       .from('email_queue')
       .update({
         status: sendError ? 'failed' : 'sent',
         sent_at: new Date().toISOString(),
-        error_message: sendError?.message
+        error_message: sendError?.message,
       })
-      .eq('id', emailData.id)
-    
+      .eq('id', emailData.id);
+
     return new Response(JSON.stringify({ success: !sendError }), {
-      headers: { 'Content-Type': 'application/json' }
-    })
-    
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    console.error('Email sending error:', error)
+    console.error('Email sending error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    })
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
-})
+});
 
 // Email template renderer
 async function renderTemplate(template: string, data: any): Promise<string> {
@@ -701,16 +696,16 @@ async function renderTemplate(template: string, data: any): Promise<string> {
       </div>
     </body>
     </html>
-  `
-  
+  `;
+
   // Render specific template content
-  let content = template
+  let content = template;
   for (const [key, value] of Object.entries(data)) {
-    content = content.replace(new RegExp(`{{${key}}}`, 'g'), value)
+    content = content.replace(new RegExp(`{{${key}}}`, 'g'), value);
   }
-  
+
   // Insert content into base template
-  return baseTemplate.replace('{{content}}', content)
+  return baseTemplate.replace('{{content}}', content);
 }
 ```
 
@@ -726,7 +721,7 @@ DECLARE
   v_email RECORD;
 BEGIN
   -- Process pending emails in batches
-  FOR v_email IN 
+  FOR v_email IN
     SELECT * FROM email_queue
     WHERE status = 'pending'
     AND scheduled_for <= NOW()
@@ -735,7 +730,7 @@ BEGIN
   LOOP
     -- Call edge function for each email
     PERFORM net.http_post(
-      url := current_setting('app.supabase_url') || 
+      url := current_setting('app.supabase_url') ||
              '/functions/v1/send-email-notification',
       headers := jsonb_build_object(
         'Authorization', 'Bearer ' || current_setting('app.service_key'),
@@ -747,10 +742,10 @@ BEGIN
       ),
       timeout_milliseconds := 30000
     );
-    
+
     v_processed := v_processed + 1;
   END LOOP;
-  
+
   RETURN v_processed;
 END;
 $$ LANGUAGE plpgsql;
@@ -778,9 +773,9 @@ BEGIN
   SELECT * INTO v_notification
   FROM notifications
   WHERE id = p_notification_id;
-  
+
   -- Queue push for each user device
-  FOR v_devices IN 
+  FOR v_devices IN
     SELECT * FROM user_devices
     WHERE user_id = v_notification.user_id
     AND push_enabled = true
@@ -811,11 +806,11 @@ BEGIN
       NOW()  -- Push notifications are sent immediately
     );
   END LOOP;
-  
+
   -- Trigger edge function for immediate push
   IF EXISTS (SELECT 1 FROM user_devices WHERE user_id = v_notification.user_id) THEN
     PERFORM net.http_post(
-      url := current_setting('app.supabase_url') || 
+      url := current_setting('app.supabase_url') ||
              '/functions/v1/send-push-notification',
       headers := jsonb_build_object(
         'Authorization', 'Bearer ' || current_setting('app.service_key'),
@@ -832,141 +827,142 @@ $$ LANGUAGE plpgsql;
 
 ```typescript
 // supabase/functions/send-push-notification/index.ts
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import * as fcm from 'https://esm.sh/firebase-admin@12.0.0/messaging'
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import * as fcm from 'https://esm.sh/firebase-admin@12.0.0/messaging';
 
 // Initialize Firebase Admin
-const serviceAccount = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT')!)
+const serviceAccount = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT')!);
 fcm.initializeApp({
-  credential: fcm.credential.cert(serviceAccount)
-})
+  credential: fcm.credential.cert(serviceAccount),
+});
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-)
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+);
 
 serve(async (req) => {
   try {
-    const { notification_id } = await req.json()
-    
+    const { notification_id } = await req.json();
+
     // Fetch push notifications from queue
     const { data: pushNotifications, error } = await supabase
       .from('push_queue')
       .select('*')
       .eq('notification_id', notification_id)
-      .eq('status', 'pending')
-    
+      .eq('status', 'pending');
+
     if (error || !pushNotifications?.length) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        message: 'No pending push notifications' 
-      }))
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'No pending push notifications',
+        }),
+      );
     }
-    
+
     const results = await Promise.allSettled(
       pushNotifications.map(async (push) => {
         if (push.platform === 'ios' || push.platform === 'android') {
-          return sendFCMNotification(push)
+          return sendFCMNotification(push);
         } else if (push.platform === 'web') {
-          return sendWebPush(push)
+          return sendWebPush(push);
         }
-      })
-    )
-    
+      }),
+    );
+
     // Update delivery status for each result
     for (let i = 0; i < results.length; i++) {
-      const result = results[i]
-      const push = pushNotifications[i]
-      
+      const result = results[i];
+      const push = pushNotifications[i];
+
       await supabase
         .from('push_queue')
         .update({
           status: result.status === 'fulfilled' ? 'sent' : 'failed',
           sent_at: new Date().toISOString(),
-          error_message: result.status === 'rejected' ? result.reason : null
+          error_message: result.status === 'rejected' ? result.reason : null,
         })
-        .eq('id', push.id)
-      
-      await supabase
-        .from('notification_deliveries')
-        .insert({
-          notification_id,
-          channel: 'push',
-          status: result.status === 'fulfilled' ? 'delivered' : 'failed',
-          delivered_at: new Date().toISOString(),
-          metadata: {
-            device_id: push.device_id,
-            platform: push.platform,
-            error: result.status === 'rejected' ? result.reason : null
-          }
-        })
+        .eq('id', push.id);
+
+      await supabase.from('notification_deliveries').insert({
+        notification_id,
+        channel: 'push',
+        status: result.status === 'fulfilled' ? 'delivered' : 'failed',
+        delivered_at: new Date().toISOString(),
+        metadata: {
+          device_id: push.device_id,
+          platform: push.platform,
+          error: result.status === 'rejected' ? result.reason : null,
+        },
+      });
     }
-    
-    const successCount = results.filter(r => r.status === 'fulfilled').length
-    
-    return new Response(JSON.stringify({ 
-      success: true,
-      delivered: successCount,
-      total: results.length
-    }))
-    
+
+    const successCount = results.filter((r) => r.status === 'fulfilled').length;
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        delivered: successCount,
+        total: results.length,
+      }),
+    );
   } catch (error) {
-    console.error('Push notification error:', error)
+    console.error('Push notification error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 500
-    })
+      status: 500,
+    });
   }
-})
+});
 
 async function sendFCMNotification(push: any) {
   const message = {
     token: push.token,
     notification: {
       title: push.payload.title,
-      body: push.payload.body
+      body: push.payload.body,
     },
     data: push.payload.data,
     android: {
       priority: push.priority === 'critical' ? 'high' : 'normal',
       notification: {
         sound: 'default',
-        clickAction: push.payload.click_action
-      }
+        clickAction: push.payload.click_action,
+      },
     },
     apns: {
       payload: {
         aps: {
           alert: {
             title: push.payload.title,
-            body: push.payload.body
+            body: push.payload.body,
           },
           badge: push.payload.badge,
-          sound: push.payload.sound
-        }
-      }
-    }
-  }
-  
-  return fcm.messaging().send(message)
+          sound: push.payload.sound,
+        },
+      },
+    },
+  };
+
+  return fcm.messaging().send(message);
 }
 
 async function sendWebPush(push: any) {
   // Web push implementation using Web Push Protocol
   // This would integrate with service workers on the web app
-  const subscription = JSON.parse(push.token)
-  
+  const subscription = JSON.parse(push.token);
+
   const payload = JSON.stringify({
     title: push.payload.title,
     body: push.payload.body,
     icon: '/icon-192x192.png',
     badge: '/badge-72x72.png',
-    data: push.payload.data
-  })
-  
+    data: push.payload.data,
+  });
+
   // Send via web push library
-  return webpush.sendNotification(subscription, payload)
+  return webpush.sendNotification(subscription, payload);
 }
 ```
 
@@ -983,7 +979,7 @@ BEGIN
     SET push_enabled = false,
         updated_at = NOW()
     WHERE id = NEW.device_id;
-    
+
     -- Notify user their device needs re-registration
     PERFORM create_notification(
       p_user_id => (SELECT user_id FROM user_devices WHERE id = NEW.device_id),
@@ -993,7 +989,7 @@ BEGIN
       p_priority => 'low'
     );
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -1020,40 +1016,40 @@ const setupAdminDashboard = () => {
       {
         event: '*',
         schema: 'public',
-        table: 'notifications'
+        table: 'notifications',
       },
       async () => {
         // Update dashboard metrics
-        await updateNotificationMetrics()
-      }
+        await updateNotificationMetrics();
+      },
     )
     .on(
       'postgres_changes',
       {
         event: '*',
         schema: 'public',
-        table: 'notification_deliveries'
+        table: 'notification_deliveries',
       },
       async () => {
         // Update delivery metrics
-        await updateDeliveryMetrics()
-      }
+        await updateDeliveryMetrics();
+      },
     )
-    .subscribe()
-    
-  return statsChannel
-}
+    .subscribe();
+
+  return statsChannel;
+};
 
 // Broadcast system-wide alerts
 const broadcastSystemAlert = async (alert: SystemAlert) => {
-  const channel = supabase.channel('system-alerts')
-  
+  const channel = supabase.channel('system-alerts');
+
   await channel.send({
     type: 'broadcast',
     event: 'system-alert',
-    payload: alert
-  })
-}
+    payload: alert,
+  });
+};
 ```
 
 ## Performance Optimization
@@ -1079,29 +1075,29 @@ BEGIN
     AND created_at > NOW() - v_aggregation_window
   ORDER BY created_at DESC
   LIMIT 1;
-  
+
   IF FOUND AND NEW.type IN ('task_comment', 'task_updated') THEN
     -- Update existing notification to aggregate
     UPDATE notifications
-    SET title = CASE 
-          WHEN v_existing_notification.data->>'count' IS NULL 
+    SET title = CASE
+          WHEN v_existing_notification.data->>'count' IS NULL
           THEN format('%s and 1 other', v_existing_notification.title)
-          ELSE format('%s and %s others', 
+          ELSE format('%s and %s others',
             SPLIT_PART(v_existing_notification.title, ' and', 1),
             (v_existing_notification.data->>'count')::int + 1)
         END,
-        data = v_existing_notification.data || 
+        data = v_existing_notification.data ||
                jsonb_build_object(
                  'count', COALESCE((v_existing_notification.data->>'count')::int, 1) + 1,
                  'latest_id', NEW.entity_id
                ),
         updated_at = NOW()
     WHERE id = v_existing_notification.id;
-    
+
     -- Cancel the new notification
     RETURN NULL;
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -1117,16 +1113,19 @@ EXECUTE FUNCTION aggregate_notifications();
 This deep dive shows how the notification system leverages:
 
 1. **Database Triggers as the Core Engine**
+
    - All business logic lives in PostgreSQL
    - Triggers automatically create notifications on data changes
    - No application code needed for basic notifications
 
 2. **Supabase Realtime for Instant Updates**
+
    - WebSocket connections for each user
    - Automatic UI updates when notifications are created
    - Broadcast channels for system-wide alerts
 
 3. **Edge Functions for External Delivery**
+
    - Email delivery via Resend/SendGrid
    - Push notifications via FCM
    - Async processing with retry logic

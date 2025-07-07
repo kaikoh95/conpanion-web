@@ -75,7 +75,7 @@ export function useServiceWorker() {
       // Subscribe to push notifications
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
 
       setSubscription(sub);
@@ -105,17 +105,18 @@ export function useServiceWorker() {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('user_devices')
-        .upsert({
+      const { error } = await supabase.from('user_devices').upsert(
+        {
           user_id: user.id,
           token: JSON.stringify(sub.toJSON()),
           platform: 'web',
           device_name: navigator.userAgent.substring(0, 100),
           push_enabled: true,
-        }, {
-          onConflict: 'user_id,token'
-        });
+        },
+        {
+          onConflict: 'user_id,token',
+        },
+      );
 
       if (error) throw error;
     } catch (error) {
@@ -146,7 +147,7 @@ export function useServiceWorker() {
     subscribeToPush,
     unsubscribeFromPush,
     isSubscribed: !!subscription,
-    permissionState: typeof window !== 'undefined' ? Notification.permission : 'default'
+    permissionState: typeof window !== 'undefined' ? Notification.permission : 'default',
   };
 }
 
@@ -157,10 +158,8 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
     throw new Error('Invalid base64 string: empty or undefined');
   }
 
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
-    .replace(/_/g, '/');
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
 
   try {
     const rawData = window.atob(base64);
@@ -171,6 +170,8 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
     }
     return outputArray;
   } catch (error) {
-    throw new Error(`Failed to decode base64 string: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to decode base64 string: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
   }
 }
