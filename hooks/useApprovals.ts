@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { 
-  getPendingApprovalsForUser, 
+import {
+  getPendingApprovalsForUser,
   getMyApprovalRequests,
-  ApprovalWithDetails 
+  ApprovalWithDetails,
 } from '@/lib/api/approvals';
 
 /**
@@ -71,4 +71,4 @@ export function useMyApprovalRequests() {
     error,
     refresh: fetchRequests,
   };
-} 
+}

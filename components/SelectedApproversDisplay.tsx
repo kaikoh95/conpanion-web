@@ -45,11 +45,11 @@ export function SelectedApproversDisplay({
 
   const fetchUserDetails = async () => {
     if (!projectId || selectedApprovers.length === 0) return;
-    
+
     setLoading(true);
     try {
       const supabase = createClient();
-      
+
       // Get user details for selected approvers
       const { data: userData, error: userError } = await supabase.rpc('get_user_details', {
         user_ids: selectedApprovers,
@@ -119,21 +119,19 @@ export function SelectedApproversDisplay({
     <div className={`space-y-3 ${className}`}>
       <div className="flex items-center gap-2">
         <Users className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">
-          Selected Approvers ({selectedApprovers.length})
-        </span>
+        <span className="text-sm font-medium">Selected Approvers ({selectedApprovers.length})</span>
       </div>
-      
+
       <div className="space-y-2">
         {selectedApprovers.map((approverId) => {
           const user = getUserById(approverId);
           const userName = getUserName(user);
           const userEmail = getUserEmail(user);
-          
+
           return (
             <div
               key={approverId}
-              className="flex items-center justify-between rounded-md border p-3 bg-muted/30"
+              className="flex items-center justify-between rounded-md border bg-muted/30 p-3"
             >
               <div className="flex items-center gap-3">
                 <UserIcon className="h-4 w-4 text-muted-foreground" />
@@ -144,7 +142,7 @@ export function SelectedApproversDisplay({
                   )}
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-xs">
                   Pending
@@ -164,10 +162,10 @@ export function SelectedApproversDisplay({
           );
         })}
       </div>
-      
+
       <div className="text-xs text-muted-foreground">
         These team members will be notified when the site diary is submitted for approval.
       </div>
     </div>
   );
-} 
+}

@@ -48,17 +48,17 @@ export default function SiteDiaryTemplatesPage() {
 
       try {
         if (!currentProject?.id) {
-          console.log("No current project selected");
+          console.log('No current project selected');
           setTemplates([]);
           setFilteredTemplates([]);
           return;
         }
-        
-        console.log("Loading site diary templates for project ID:", currentProject.id);
-        
+
+        console.log('Loading site diary templates for project ID:', currentProject.id);
+
         // Fetch templates
         const fetchedTemplates = await getSiteDiaryTemplates(currentProject.id);
-        console.log("Fetched templates:", fetchedTemplates);
+        console.log('Fetched templates:', fetchedTemplates);
         setTemplates(fetchedTemplates);
         setFilteredTemplates(filterTemplates(fetchedTemplates, searchTerm));
       } catch (err: any) {
@@ -246,13 +246,13 @@ export default function SiteDiaryTemplatesPage() {
       )}
 
       {/* Create/Edit Template Dialog */}
-        <CreateTemplateDialog
-            open={isCreateDialogOpen}
-            onOpenChange={setIsCreateDialogOpen}
-            templateId={selectedTemplateId}
-            projectId={currentProject?.id || 0}
-            onTemplateChange={handleTemplateChange}
-          />
+      <CreateTemplateDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        templateId={selectedTemplateId}
+        projectId={currentProject?.id || 0}
+        onTemplateChange={handleTemplateChange}
+      />
     </div>
   );
 }

@@ -33,9 +33,9 @@ function FileAnswerViewer({ diaryId, itemId }: FileAnswerViewerProps) {
         const attachmentData = await getAttachments('site_diary', diaryId.toString());
 
         // Filter attachments for this specific item
-        const itemAttachments = attachmentData.data?.filter(
-          (att: any) => att.metadata?.itemId === itemId.toString()
-        ) || [];
+        const itemAttachments =
+          attachmentData.data?.filter((att: any) => att.metadata?.itemId === itemId.toString()) ||
+          [];
 
         setAttachments(itemAttachments);
       } catch (err) {
@@ -97,12 +97,7 @@ function FileAnswerViewer({ diaryId, itemId }: FileAnswerViewerProps) {
         <DialogContent className="max-w-4xl">
           {selectedImage && (
             <div className="relative h-[80vh]">
-              <Image
-                src={selectedImage}
-                alt="Preview"
-                fill
-                className="object-contain"
-              />
+              <Image src={selectedImage} alt="Preview" fill className="object-contain" />
             </div>
           )}
         </DialogContent>
@@ -111,7 +106,7 @@ function FileAnswerViewer({ diaryId, itemId }: FileAnswerViewerProps) {
   );
 }
 
-export function SiteDiaryResponses({ diaryData, className = "" }: SiteDiaryResponsesProps) {
+export function SiteDiaryResponses({ diaryData, className = '' }: SiteDiaryResponsesProps) {
   // Helper function to get answer for a specific item
   const getAnswerForItem = (itemId: number | undefined): any => {
     if (!itemId) return null;
@@ -154,68 +149,72 @@ export function SiteDiaryResponses({ diaryData, className = "" }: SiteDiaryRespo
   return (
     <div className={className}>
       {/* Site Conditions */}
-      {diaryData.template?.metadata && 
-        (diaryData.template.metadata.enableWeather || 
-         diaryData.template.metadata.enableTemperature || 
-         diaryData.template.metadata.enableConditions) && (
-        <div className="mb-6">
-          <h3 className="mb-2 text-lg font-semibold">Site Conditions</h3>
-          <div className="space-y-2 rounded-md bg-muted p-4">
-            {diaryData.template.metadata.enableWeather && diaryData.diary.metadata?.weather && (
-              <div>
-                <span className="font-medium">Weather: </span>
-                <span>{diaryData.diary.metadata.weather}</span>
-              </div>
-            )}
-            {diaryData.template.metadata.enableTemperature && diaryData.diary.metadata?.temperature && (
-              <div>
-                <span className="font-medium">Temperature: </span>
-                <span>{diaryData.diary.metadata.temperature}°C</span>
-              </div>
-            )}
-            {diaryData.template.metadata.enableConditions && diaryData.diary.metadata?.conditions && (
-              <div>
-                <span className="font-medium">Conditions: </span>
-                <span>{diaryData.diary.metadata.conditions}</span>
-              </div>
-            )}
+      {diaryData.template?.metadata &&
+        (diaryData.template.metadata.enableWeather ||
+          diaryData.template.metadata.enableTemperature ||
+          diaryData.template.metadata.enableConditions) && (
+          <div className="mb-6">
+            <h3 className="mb-2 text-lg font-semibold">Site Conditions</h3>
+            <div className="space-y-2 rounded-md bg-muted p-4">
+              {diaryData.template.metadata.enableWeather && diaryData.diary.metadata?.weather && (
+                <div>
+                  <span className="font-medium">Weather: </span>
+                  <span>{diaryData.diary.metadata.weather}</span>
+                </div>
+              )}
+              {diaryData.template.metadata.enableTemperature &&
+                diaryData.diary.metadata?.temperature && (
+                  <div>
+                    <span className="font-medium">Temperature: </span>
+                    <span>{diaryData.diary.metadata.temperature}°C</span>
+                  </div>
+                )}
+              {diaryData.template.metadata.enableConditions &&
+                diaryData.diary.metadata?.conditions && (
+                  <div>
+                    <span className="font-medium">Conditions: </span>
+                    <span>{diaryData.diary.metadata.conditions}</span>
+                  </div>
+                )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Resources */}
       {diaryData.template?.metadata &&
         (diaryData.template.metadata.enableManpower ||
-         diaryData.template.metadata.enableEquipment ||
-         diaryData.template.metadata.enableMaterials) && (
-        <div className="mb-6">
-          <h3 className="mb-2 text-lg font-semibold">Resources</h3>
-          <div className="space-y-2 rounded-md bg-muted p-4">
-            {diaryData.template.metadata.enableManpower && diaryData.diary.metadata?.manpower && (
-              <div>
-                <span className="font-medium">Manpower: </span>
-                <span>{diaryData.diary.metadata.manpower} people</span>
-              </div>
-            )}
-            {diaryData.template.metadata.enableEquipment && diaryData.diary.metadata?.equipment && (
-              <div>
-                <span className="font-medium">Equipment: </span>
-                <span>
-                  {Array.isArray(diaryData.diary.metadata.equipment)
-                    ? diaryData.diary.metadata.equipment.join(', ')
-                    : diaryData.diary.metadata.equipment}
-                </span>
-              </div>
-            )}
-            {diaryData.template.metadata.enableMaterials && diaryData.diary.metadata?.materials && (
-              <div>
-                <span className="font-medium">Materials: </span>
-                <span>{diaryData.diary.metadata.materials}</span>
-              </div>
-            )}
+          diaryData.template.metadata.enableEquipment ||
+          diaryData.template.metadata.enableMaterials) && (
+          <div className="mb-6">
+            <h3 className="mb-2 text-lg font-semibold">Resources</h3>
+            <div className="space-y-2 rounded-md bg-muted p-4">
+              {diaryData.template.metadata.enableManpower && diaryData.diary.metadata?.manpower && (
+                <div>
+                  <span className="font-medium">Manpower: </span>
+                  <span>{diaryData.diary.metadata.manpower} people</span>
+                </div>
+              )}
+              {diaryData.template.metadata.enableEquipment &&
+                diaryData.diary.metadata?.equipment && (
+                  <div>
+                    <span className="font-medium">Equipment: </span>
+                    <span>
+                      {Array.isArray(diaryData.diary.metadata.equipment)
+                        ? diaryData.diary.metadata.equipment.join(', ')
+                        : diaryData.diary.metadata.equipment}
+                    </span>
+                  </div>
+                )}
+              {diaryData.template.metadata.enableMaterials &&
+                diaryData.diary.metadata?.materials && (
+                  <div>
+                    <span className="font-medium">Materials: </span>
+                    <span>{diaryData.diary.metadata.materials}</span>
+                  </div>
+                )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Safety Observations */}
       {diaryData.template?.metadata?.enableSafety && diaryData.diary.metadata?.safety && (
@@ -233,13 +232,11 @@ export function SiteDiaryResponses({ diaryData, className = "" }: SiteDiaryRespo
           {diaryData.template_items.map((item) => (
             <div key={item.id} className="rounded-md border p-4">
               <p className="mb-2 font-medium">{item.question_value}</p>
-              <div className="ml-2">
-                {renderAnswerValue(item, getAnswerForItem(item.id))}
-              </div>
+              <div className="ml-2">{renderAnswerValue(item, getAnswerForItem(item.id))}</div>
             </div>
           ))}
         </div>
       </div>
     </div>
   );
-} 
+}

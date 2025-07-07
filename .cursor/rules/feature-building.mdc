@@ -1,0 +1,39 @@
+---
+alwaysApply: true
+---
+
+Whenever you need to implement a feature, always plan and strategise, using all the tools and resources you have, and come up with a solid and robust implementation plan first. 
+
+Start by doing the system design and architecture.
+
+You must always design a scalable feature.
+
+Create the implementation plan in the `docs` folder and constantly refer back to the plan as you go along. 
+
+This implementation plan will be transformed to a living documentation at the end of building this feature so that it provides context for future iterations. 
+
+This allows you to refer back to this documentation in the future as well when you are iterating on the same feature or to use it as reference for other features.
+
+Before you actually start building out the solution, let the user review it first.
+
+Your solution must be clean and tidy, reusing components and existing code as much as possible rather than re-creating stuff.
+
+Your solution must also be bug-free and robust, use modern UI UX design principles, visually-pleasing, both mobile and desktop responsive and efficient.
+
+Your solution should not create new types or interfaces unnecessarily. When requiring types from the database, use the generated types. This means doing a `npm run db:reset` first to apply any local migrations as needed.Whenever you need to implement a feature, always plan and strategise, using all the tools and resources you have, and come up with a solid and robust implementation plan first. 
+
+Start by doing the system design and architecture.
+
+You must always design a scalable feature.
+
+Create the implementation plan in the `docs` folder and constantly refer back to the plan as you go along. 
+
+This implementation plan will be transformed to a living documentation at the end of building this feature so that it provides context for future iterations. 
+
+This allows you to refer back to this documentation in the future as well when you are iterating on the same feature or to use it as reference for other features.
+
+Your solution must be clean and tidy, reusing components and existing code as much as possible rather than re-creating stuff.
+
+Your solution must also be bug-free and robust, use modern UI UX design principles, visually-pleasing, both mobile and desktop responsive and efficient.
+
+Your solution should not create new types or interfaces unnecessarily. When requiring types from the database, use the generated types. This means doing a `npm run db:reset` first to apply any local migrations as needed.

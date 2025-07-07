@@ -21,16 +21,19 @@ export async function GET(request: Request) {
     console.log('🔄 auth/callback: Exchanging code for session...');
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    
+
     if (error) {
       console.error('❌ auth/callback: Error exchanging code for session:', error);
     } else {
       console.log('✅ auth/callback: Successfully exchanged code for session');
     }
-    
+
     // After successful auth, link user to pending invitations
-    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error: getUserError,
+    } = await supabase.auth.getUser();
+
     if (getUserError) {
       console.error('❌ auth/callback: Error getting user after session exchange:', getUserError);
     } else if (user && user.email) {
@@ -63,20 +66,25 @@ export async function GET(request: Request) {
   try {
     console.log('🔄 auth/callback: Checking for pending invitations...');
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (user) {
       console.log('🔄 auth/callback: User found, checking pending invitations for:', user.email);
       const hasPending = await organizationAPI.userHasPendingInvitations(user.id);
       console.log('🔄 auth/callback: Has pending invitations:', hasPending);
-      
+
       if (hasPending) {
         const pendingInvitations = await organizationAPI.getUserPendingInvitations(user.id);
         console.log('🔄 auth/callback: Pending invitations result:', pendingInvitations);
-        
+
         if (pendingInvitations.success && pendingInvitations.invitations.length > 0) {
           const firstInvitation = pendingInvitations.invitations[0];
-          console.log('🔄 auth/callback: Redirecting to first pending invitation:', firstInvitation.token);
+          console.log(
+            '🔄 auth/callback: Redirecting to first pending invitation:',
+            firstInvitation.token,
+          );
           return NextResponse.redirect(`${origin}/invitation/${firstInvitation.token}`);
         }
       }

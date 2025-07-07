@@ -17,38 +17,40 @@ export const isValidUUID = (str: string): boolean => {
  */
 export const extractInvitationToken = (pathname: string): string | null => {
   const pathParts = pathname.split('/');
-  
+
   // Handle /invitation/[token] routes
   if (pathParts[1] === 'invitation' && pathParts[2]) {
     return pathParts[2];
   }
-  
+
   // Handle /api/invitations/[token] routes
   if (pathParts[1] === 'api' && pathParts[2] === 'invitations' && pathParts[3]) {
     return pathParts[3];
   }
-  
+
   return null;
 };
 
 /**
  * Validates invitation route and returns validation result
  */
-export const validateInvitationRoute = (pathname: string): {
+export const validateInvitationRoute = (
+  pathname: string,
+): {
   isValid: boolean;
   token: string | null;
   error?: string;
 } => {
   const token = extractInvitationToken(pathname);
-  
+
   if (!token) {
     return {
       isValid: false,
       token: null,
-      error: 'No invitation token found in URL'
+      error: 'No invitation token found in URL',
     };
   }
-  
+
   // Allow 'invalid' as a special case for error pages
   if (token === 'invalid') {
     return {
@@ -56,15 +58,15 @@ export const validateInvitationRoute = (pathname: string): {
       token: token,
     };
   }
-  
+
   if (!isValidUUID(token)) {
     return {
       isValid: false,
       token: token,
-      error: 'Invalid invitation token format'
+      error: 'Invalid invitation token format',
     };
   }
-  
+
   return {
     isValid: true,
     token: token,
@@ -83,4 +85,4 @@ export const isInvitationRoute = (pathname: string): boolean => {
  */
 export const getInvalidInvitationRedirect = (baseUrl: string): string => {
   return `${baseUrl}/invitation/invalid`;
-}; 
+};

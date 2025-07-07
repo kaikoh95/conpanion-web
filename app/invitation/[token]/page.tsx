@@ -3,7 +3,14 @@ import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { OrganizationAPI } from '@/lib/api/organizations';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Mail, User, Calendar } from 'lucide-react';
 import Link from 'next/link';
@@ -15,16 +22,18 @@ interface InvitationPageProps {
 
 async function InvitationContent({ token, error }: { token: string; error?: string }) {
   const supabase = await createClient();
-  
+
   // Check if user is already authenticated
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   let invitation;
-  
+
   try {
     const orgApi = new OrganizationAPI();
     invitation = await orgApi.getInvitationByToken(token);
-    
+
     if (!invitation) {
       notFound();
     }
@@ -39,9 +48,7 @@ async function InvitationContent({ token, error }: { token: string; error?: stri
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-red-600">Invitation Expired</CardTitle>
-          <CardDescription>
-            This invitation has expired and is no longer valid.
-          </CardDescription>
+          <CardDescription>This invitation has expired and is no longer valid.</CardDescription>
         </CardHeader>
         <CardContent className="text-center">
           <p className="text-sm text-muted-foreground">
@@ -66,11 +73,9 @@ async function InvitationContent({ token, error }: { token: string; error?: stri
             <Building2 className="h-6 w-6 text-blue-600" />
           </div>
           <CardTitle>Organization Invitation</CardTitle>
-          <CardDescription>
-            You've been invited to join an organization
-          </CardDescription>
+          <CardDescription>You've been invited to join an organization</CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-4">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
@@ -80,7 +85,7 @@ async function InvitationContent({ token, error }: { token: string; error?: stri
                 <p className="text-sm text-muted-foreground">Organization</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <User className="h-4 w-4 text-muted-foreground" />
               <div>
@@ -88,7 +93,7 @@ async function InvitationContent({ token, error }: { token: string; error?: stri
                 <p className="text-sm text-muted-foreground">Invited by</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <Mail className="h-4 w-4 text-muted-foreground" />
               <div>
@@ -96,7 +101,7 @@ async function InvitationContent({ token, error }: { token: string; error?: stri
                 <p className="text-sm text-muted-foreground">Invitation email</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <div>
@@ -110,19 +115,20 @@ async function InvitationContent({ token, error }: { token: string; error?: stri
 
           <div className="rounded-lg bg-blue-50 p-3">
             <p className="text-sm text-blue-800">
-              <strong>Role:</strong> {invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}
+              <strong>Role:</strong>{' '}
+              {invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}
             </p>
           </div>
         </CardContent>
-        
+
         <CardFooter className="flex flex-col gap-3">
           {error && (
             <div className="w-full rounded-lg bg-red-50 p-3 text-center">
               <p className="text-sm text-red-800">{decodeURIComponent(error)}</p>
             </div>
           )}
-          
-          <div className="flex gap-3 w-full">
+
+          <div className="flex w-full gap-3">
             <form action={`/api/invitations/${token}/accept`} method="POST" className="flex-1">
               <Button type="submit" className="w-full">
                 Accept Invitation
@@ -149,11 +155,9 @@ async function InvitationContent({ token, error }: { token: string; error?: stri
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <CardTitle className="text-amber-600">Email Mismatch</CardTitle>
-        <CardDescription>
-          This invitation was sent to a different email address
-        </CardDescription>
+        <CardDescription>This invitation was sent to a different email address</CardDescription>
       </CardHeader>
-      <CardContent className="text-center space-y-4">
+      <CardContent className="space-y-4 text-center">
         <div className="rounded-lg bg-amber-50 p-3">
           <p className="text-sm text-amber-800">
             <strong>Invitation email:</strong> {invitation.invited_email}
@@ -184,32 +188,34 @@ export default async function InvitationPage({ params, searchParams }: Invitatio
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center p-4">
-      <Suspense fallback={
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <div className="animate-pulse">
-              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-gray-200"></div>
-              <div className="h-6 w-3/4 mx-auto bg-gray-200 rounded"></div>
-              <div className="h-4 w-1/2 mx-auto bg-gray-200 rounded mt-2"></div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="animate-pulse space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                  <div className="flex-1">
-                    <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
-                    <div className="h-3 w-1/2 bg-gray-200 rounded mt-1"></div>
+      <Suspense
+        fallback={
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <div className="animate-pulse">
+                <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-gray-200"></div>
+                <div className="mx-auto h-6 w-3/4 rounded bg-gray-200"></div>
+                <div className="mx-auto mt-2 h-4 w-1/2 rounded bg-gray-200"></div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="animate-pulse space-y-3">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="h-4 w-4 rounded bg-gray-200"></div>
+                    <div className="flex-1">
+                      <div className="h-4 w-3/4 rounded bg-gray-200"></div>
+                      <div className="mt-1 h-3 w-1/2 rounded bg-gray-200"></div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      }>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        }
+      >
         <InvitationContent token={token} error={error} />
       </Suspense>
     </div>
   );
-} 
+}

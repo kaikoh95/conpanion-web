@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '../../components/ui/separator';
 import { ScrollArea } from '../../components/ui/scroll-area';
-import { 
-  ArrowLeft, 
-  Book, 
-  FileText, 
-  List, 
-  CheckSquare, 
-  Clock, 
+import {
+  ArrowLeft,
+  Book,
+  FileText,
+  List,
+  CheckSquare,
+  Clock,
   User,
   Users,
   MessageSquare,
@@ -20,10 +20,14 @@ import {
   CheckCircle,
   XCircle,
   RotateCcw,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
-import { ApprovalWithEntityDetails, getApprovalWithEntityDetails, canUserApprove } from '@/lib/api/approvals';
+import {
+  ApprovalWithEntityDetails,
+  getApprovalWithEntityDetails,
+  canUserApprove,
+} from '@/lib/api/approvals';
 import { ApprovalActions } from './ApprovalActions';
 import { ApprovalComments } from './ApprovalComments';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -62,13 +66,13 @@ export function ApprovalDetailDrawer({
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch approval details and user permissions in parallel
       const [data, canApprove] = await Promise.all([
         getApprovalWithEntityDetails(approvalId),
-        canUserApprove(approvalId)
+        canUserApprove(approvalId),
       ]);
-      
+
       setApproval(data);
       setUserCanApproveState(canApprove);
     } catch (err) {
@@ -184,23 +188,23 @@ export function ApprovalDetailDrawer({
           </div>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(100vh-120px)] mt-6">
+        <ScrollArea className="mt-6 h-[calc(100vh-120px)]">
           {loading ? (
             // Loading state
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin" />
                 <p className="text-sm text-muted-foreground">Loading approval details...</p>
               </div>
             </div>
           ) : error ? (
             // Error state
             <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="mb-2 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-destructive" />
                 <h3 className="font-medium text-destructive">Error</h3>
               </div>
-              <p className="text-sm text-destructive/80 mb-3">{error}</p>
+              <p className="mb-3 text-sm text-destructive/80">{error}</p>
               <Button variant="outline" size="sm" onClick={fetchApprovalDetails}>
                 Try Again
               </Button>
@@ -215,8 +219,8 @@ export function ApprovalDetailDrawer({
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-muted">
                     <EntityIcon className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="font-semibold text-lg leading-tight">{approval.entity_title}</h2>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-lg font-semibold leading-tight">{approval.entity_title}</h2>
                     <p className="text-sm text-muted-foreground">
                       {formatEntityType(approval.entity_type)} #{approval.entity_id}
                     </p>
@@ -232,7 +236,7 @@ export function ApprovalDetailDrawer({
                 </div>
 
                 {/* Requester Info */}
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-3 rounded-lg bg-muted/50 p-3">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
                       <User className="h-4 w-4" />
@@ -267,23 +271,20 @@ export function ApprovalDetailDrawer({
                 </div>
               </div>
 
-                            <Separator />
+              <Separator />
 
               {/* Entity Preview Section */}
               <div className="space-y-3">
                 <h3 className="font-medium">Responses</h3>
                 <div className="rounded-lg bg-muted/50">
                   {approval.entity_type === 'site_diary' && approval.entity_data ? (
-                    <SiteDiaryResponses 
-                      diaryData={approval.entity_data} 
-                      className="p-4"
-                    />
+                    <SiteDiaryResponses diaryData={approval.entity_data} className="p-4" />
                   ) : approval.entity_data ? (
                     <div className="p-4">
-                      <p className="text-sm text-muted-foreground mb-2">
+                      <p className="mb-2 text-sm text-muted-foreground">
                         {formatEntityType(approval.entity_type)} Data
                       </p>
-                      <pre className="text-xs bg-background p-3 rounded border overflow-auto max-h-32">
+                      <pre className="max-h-32 overflow-auto rounded border bg-background p-3 text-xs">
                         {JSON.stringify(approval.entity_data, null, 2)}
                       </pre>
                     </div>
@@ -303,15 +304,18 @@ export function ApprovalDetailDrawer({
                   <Users className="h-4 w-4" />
                   <h3 className="font-medium">Approvers ({approval.approvers.length})</h3>
                 </div>
-                
+
                 <div className="space-y-2">
                   {approval.approvers.map((approver: any) => {
                     const response = approval.approver_responses.find(
-                      (r: any) => r.approver_id === approver.id
+                      (r: any) => r.approver_id === approver.id,
                     );
-                    
+
                     return (
-                      <div key={approver.id} className="flex items-center justify-between p-3 rounded-lg border">
+                      <div
+                        key={approver.id}
+                        className="flex items-center justify-between rounded-lg border p-3"
+                      >
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
                             <AvatarFallback>
@@ -323,16 +327,16 @@ export function ApprovalDetailDrawer({
                               {approver.raw_user_meta_data?.email || 'Unknown'}
                             </p>
                             {response?.comment && (
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="mt-1 text-xs text-muted-foreground">
                                 "{response.comment}"
                               </p>
                             )}
                           </div>
                         </div>
-                        
+
                         {response ? (
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={`${getStatusInfo(response.status).textColor} border-current`}
                           >
                             {formatStatus(response.status)}
@@ -361,13 +365,17 @@ export function ApprovalDetailDrawer({
               />
 
               {/* Action Buttons Section */}
-              <div className="pt-4 border-t">
+              <div className="border-t pt-4">
                 <ApprovalActions
                   approvalId={approval.id}
                   currentStatus={approval.status}
                   userCanApprove={userCanApproveState}
-                  userHasResponded={!!approval.approver_responses.find((r: any) => r.approver_id === user?.id)}
-                  userResponse={approval.approver_responses.find((r: any) => r.approver_id === user?.id)?.status}
+                  userHasResponded={
+                    !!approval.approver_responses.find((r: any) => r.approver_id === user?.id)
+                  }
+                  userResponse={
+                    approval.approver_responses.find((r: any) => r.approver_id === user?.id)?.status
+                  }
                   onActionComplete={() => {
                     fetchApprovalDetails();
                     onApprovalUpdate?.();
@@ -380,4 +388,4 @@ export function ApprovalDetailDrawer({
       </SheetContent>
     </Sheet>
   );
-} 
+}

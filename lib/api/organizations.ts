@@ -666,18 +666,21 @@ export class OrganizationAPI {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-organization-invitation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.session.access_token}`,
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-organization-invitation`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.session.access_token}`,
+          },
+          body: JSON.stringify({
+            organizationId: orgId,
+            email: email,
+            role: role,
+          }),
         },
-        body: JSON.stringify({
-          organizationId: orgId,
-          email: email,
-          role: role,
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -926,7 +929,10 @@ export class OrganizationAPI {
   /**
    * Link user to their email-based invitations after signup/signin
    */
-  async linkUserToPendingInvitations(userId: string, email: string): Promise<{
+  async linkUserToPendingInvitations(
+    userId: string,
+    email: string,
+  ): Promise<{
     success: boolean;
     linkedCount: number;
     error?: string;
@@ -973,11 +979,13 @@ export class OrganizationAPI {
   }> {
     try {
       let targetUserId = userId;
-      
+
       // If no userId provided, get from current session
       if (!targetUserId) {
         await this.ensureValidSession();
-        const { data: { user } } = await this.supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await this.supabase.auth.getUser();
         if (!user) {
           return {
             success: false,
@@ -1022,11 +1030,13 @@ export class OrganizationAPI {
   async userHasPendingInvitations(userId?: string): Promise<boolean> {
     try {
       let targetUserId = userId;
-      
+
       // If no userId provided, get from current session
       if (!targetUserId) {
         await this.ensureValidSession();
-        const { data: { user } } = await this.supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await this.supabase.auth.getUser();
         if (!user) {
           return false;
         }
@@ -1056,7 +1066,9 @@ export class OrganizationAPI {
     try {
       await this.ensureValidSession();
 
-      const { data: { user } } = await this.supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await this.supabase.auth.getUser();
       if (!user) {
         return {
           success: false,

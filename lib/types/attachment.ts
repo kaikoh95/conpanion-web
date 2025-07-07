@@ -1,7 +1,17 @@
 import { Database } from '../supabase/types.generated';
 
 export type AttachmentType = 'form' | 'form_entry' | 'site_diary';
-export type AttachmentFileType = 'image' | 'document' | 'spreadsheet' | 'presentation' | 'pdf' | 'video' | 'audio' | 'archive' | 'text' | 'other';
+export type AttachmentFileType =
+  | 'image'
+  | 'document'
+  | 'spreadsheet'
+  | 'presentation'
+  | 'pdf'
+  | 'video'
+  | 'audio'
+  | 'archive'
+  | 'text'
+  | 'other';
 
 export interface Attachment {
   id: string;
@@ -44,10 +54,10 @@ export interface AttachmentsResponse {
 // Utility type for file size formatting
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}; 
+};
