@@ -102,31 +102,45 @@ serve(async (req) => {
           },
         };
 
-        // Send push notification
-        await webpush.sendNotification(subscription, JSON.stringify(payload));
-
         // Update queue status
         await supabase
           .from('push_queue')
           .update({
-            status: 'sent',
+            status: 'queued_for_delivery',
             sent_at: new Date().toISOString(),
+            payload: { ...pushItem.payload, payload },
           })
           .eq('id', pushItem.id);
 
-        // Update delivery status
-        await supabase
-          .from('notification_deliveries')
-          .update({
-            delivered_at: new Date().toISOString(),
-            status: 'sent',
-          })
-          .eq('notification_id', pushItem.notification_id)
-          .eq('user_id', notification.user_id);
+        const sendPushNotification = async () => {
+          // Send push notification
+          await webpush.sendNotification(subscription, JSON.stringify(payload));
+
+          // Update queue status
+          await supabase
+            .from('push_queue')
+            .update({
+              status: 'sent',
+              sent_at: new Date().toISOString(),
+            })
+            .eq('id', pushItem.id);
+
+          // Update delivery status
+          await supabase
+            .from('notification_deliveries')
+            .update({
+              delivered_at: new Date().toISOString(),
+              status: 'sent',
+            })
+            .eq('notification_id', pushItem.notification_id)
+            .eq('user_id', notification.user_id);
+        };
+
+        EdgeRuntime.waitUntil(sendPushNotification());
 
         results.push({
           id: pushItem.id,
-          status: 'sent',
+          status: 'queued_for_delivery',
         });
       } catch (error) {
         console.error(`Failed to send push notification ${pushItem.id}:`, error);

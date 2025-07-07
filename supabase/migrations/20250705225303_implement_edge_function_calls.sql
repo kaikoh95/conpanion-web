@@ -40,8 +40,10 @@ CREATE OR REPLACE FUNCTION call_send_email_notification()
 RETURNS JSONB AS $$
 DECLARE
   v_response JSONB;
-  v_request_id UUID;
+  v_request_id BIGINT;
   v_result JSONB;
+  v_http_response RECORD;
+  v_headers JSONB;
 BEGIN
   -- Get vault secrets
   DECLARE
@@ -60,23 +62,46 @@ BEGIN
     -- Construct function URL
     v_function_url := v_supabase_url || '/functions/v1/send-email-notification';
     RAISE NOTICE 'Function URL: %', v_function_url;
-    
-    -- Make HTTP request to edge function
-    SELECT net.http_post(
-      url := v_function_url,
-      headers := jsonb_build_object(
+
+    -- Construct headers
+    v_headers := jsonb_build_object(
         'Authorization', 'Bearer ' || v_supabase_service_key,
         'Content-Type', 'application/json',
         'x-client-info', 'supabase-postgres'
-      ),
-      body := '{}'::jsonb
+      );
+    
+    -- Make HTTP request to edge function with timeout
+    SELECT net.http_post(
+      v_function_url,
+      '{}'::jsonb,
+      '{}'::jsonb,
+      v_headers,
+      10000
     ) INTO v_request_id;
     
-    -- Wait for response (with timeout)
-    SELECT content INTO v_result
-    FROM net.http_collect_response(v_request_id, timeout_milliseconds => 30000);
+    -- Set statement timeout for the collection call
+    SET LOCAL statement_timeout = '15s';
     
-    RETURN COALESCE(v_result, '{"status": "timeout"}'::jsonb);
+    -- Wait for response (synchronous call)
+    SELECT * INTO v_http_response
+    FROM net.http_collect_response(v_request_id, async => false);
+    
+    -- Check if request was successful
+    IF v_http_response.status = 'SUCCESS' THEN
+      v_result := (v_http_response.response).content::jsonb;
+    ELSIF v_http_response.status = 'ERROR' THEN
+      RETURN jsonb_build_object(
+        'error', 'HTTP request failed',
+        'details', v_http_response.message
+      );
+    ELSE
+      RETURN jsonb_build_object(
+        'error', 'Request timeout or unknown status',
+        'details', 'Status: ' || COALESCE(v_http_response.status, 'NULL')
+      );
+    END IF;
+    
+    RETURN COALESCE(v_result, '{"status": "no_content"}'::jsonb);
     
   EXCEPTION WHEN OTHERS THEN
     -- If pg_net is not available or request fails, return error
@@ -93,8 +118,10 @@ CREATE OR REPLACE FUNCTION call_send_push_notification()
 RETURNS JSONB AS $$
 DECLARE
   v_response JSONB;
-  v_request_id UUID;
+  v_request_id BIGINT;
   v_result JSONB;
+  v_http_response RECORD;
+  v_headers JSONB;
 BEGIN
   -- Get vault secrets
   DECLARE
@@ -114,22 +141,44 @@ BEGIN
     v_function_url := v_supabase_url || '/functions/v1/send-push-notification';
     RAISE NOTICE 'Function URL: %', v_function_url;
 
-    -- Make HTTP request to edge function
-    SELECT net.http_post(
-      url := v_function_url,
-      headers := jsonb_build_object(
+    -- Construct headers
+    v_headers := jsonb_build_object(
         'Authorization', 'Bearer ' || v_supabase_service_key,
         'Content-Type', 'application/json',
         'x-client-info', 'supabase-postgres'
-      ),
-      body := '{}'::jsonb
+      );
+    -- Make HTTP request to edge function with timeout
+    SELECT net.http_post(
+      v_function_url,
+      '{}'::jsonb,
+      '{}'::jsonb,
+      v_headers,
+      10000
     ) INTO v_request_id;
     
-    -- Wait for response (with timeout)
-    SELECT content INTO v_result
-    FROM net.http_collect_response(v_request_id, timeout_milliseconds => 30000);
+    -- Set statement timeout for the collection call
+    SET LOCAL statement_timeout = '15s';
     
-    RETURN COALESCE(v_result, '{"status": "timeout"}'::jsonb);
+    -- Wait for response (synchronous call)
+    SELECT * INTO v_http_response
+    FROM net.http_collect_response(v_request_id, async => false);
+    
+    -- Check if request was successful
+    IF v_http_response.status = 'SUCCESS' THEN
+      v_result := (v_http_response.response).content::jsonb;
+    ELSIF v_http_response.status = 'ERROR' THEN
+      RETURN jsonb_build_object(
+        'error', 'HTTP request failed',
+        'details', v_http_response.message
+      );
+    ELSE
+      RETURN jsonb_build_object(
+        'error', 'Request timeout or unknown status',
+        'details', 'Status: ' || COALESCE(v_http_response.status, 'NULL')
+      );
+    END IF;
+    
+    RETURN COALESCE(v_result, '{"status": "no_content"}'::jsonb);
     
   EXCEPTION WHEN OTHERS THEN
     -- If pg_net is not available or request fails, return error
@@ -169,7 +218,7 @@ BEGIN
     RETURN jsonb_build_object(
       'status', 'fallback',
       'message', 'Edge function call failed, items remain in queue for retry',
-      'error', v_result ->> 'error'
+      'error', v_result
     );
   END IF;
   
@@ -210,7 +259,7 @@ BEGIN
     IF v_edge_function_result ? 'results' THEN
       SELECT COUNT(*) INTO v_processed
       FROM jsonb_array_elements(v_edge_function_result -> 'results') AS result
-      WHERE result ->> 'status' = 'sent';
+      WHERE result ->> 'status' = 'queued_for_delivery';
       
       SELECT COUNT(*) INTO v_failed
       FROM jsonb_array_elements(v_edge_function_result -> 'results') AS result
@@ -273,7 +322,7 @@ BEGIN
     IF v_edge_function_result ? 'results' THEN
       SELECT COUNT(*) INTO v_processed
       FROM jsonb_array_elements(v_edge_function_result -> 'results') AS result
-      WHERE result ->> 'status' = 'sent';
+      WHERE result ->> 'status' = 'queued_for_delivery';
       
       SELECT COUNT(*) INTO v_failed
       FROM jsonb_array_elements(v_edge_function_result -> 'results') AS result
@@ -307,6 +356,69 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ===========================================
+-- DEBUGGING FUNCTIONS
+-- ===========================================
+
+-- Function to test pg_net connectivity and configuration
+CREATE OR REPLACE FUNCTION debug_pg_net_setup()
+RETURNS JSONB AS $$
+DECLARE
+  v_test_request_id BIGINT;
+  v_test_response RECORD;
+  v_result JSONB := '{}'::jsonb;
+BEGIN
+  -- Check if pg_net extension is available
+  BEGIN
+    SELECT 1 FROM pg_extension WHERE extname = 'pg_net';
+    v_result := jsonb_set(v_result, '{pg_net_installed}', 'true'::jsonb);
+  EXCEPTION WHEN OTHERS THEN
+    v_result := jsonb_set(v_result, '{pg_net_installed}', 'false'::jsonb);
+    v_result := jsonb_set(v_result, '{pg_net_error}', to_jsonb(SQLERRM));
+    RETURN v_result;
+  END;
+  
+  -- Test basic HTTP request
+  BEGIN
+    SELECT net.http_get('https://httpbin.org/get', timeout_milliseconds => 10000) 
+    INTO v_test_request_id;
+    
+    v_result := jsonb_set(v_result, '{test_request_id}', to_jsonb(v_test_request_id));
+    
+    -- Try to collect response
+    SET LOCAL statement_timeout = '15s';
+    SELECT * INTO v_test_response
+    FROM net.http_collect_response(v_test_request_id, async => false);
+    
+    v_result := jsonb_set(v_result, '{test_status}', to_jsonb(v_test_response.status));
+    v_result := jsonb_set(v_result, '{test_message}', to_jsonb(v_test_response.message));
+    
+    IF v_test_response.status = 'SUCCESS' THEN
+      v_result := jsonb_set(v_result, '{test_http_success}', 'true'::jsonb);
+      v_result := jsonb_set(v_result, '{test_status_code}', to_jsonb((v_test_response.response).status_code));
+    ELSE
+      v_result := jsonb_set(v_result, '{test_http_success}', 'false'::jsonb);
+    END IF;
+    
+  EXCEPTION WHEN OTHERS THEN
+    v_result := jsonb_set(v_result, '{test_http_success}', 'false'::jsonb);
+    v_result := jsonb_set(v_result, '{test_error}', to_jsonb(SQLERRM));
+  END;
+  
+  -- Check vault secrets
+  BEGIN
+    v_result := jsonb_set(v_result, '{sb_url_configured}', 
+      CASE WHEN get_vault_secret('sb_url') IS NOT NULL THEN 'true'::jsonb ELSE 'false'::jsonb END);
+    v_result := jsonb_set(v_result, '{sb_service_key_configured}', 
+      CASE WHEN get_vault_secret('sb_service_key') IS NOT NULL THEN 'true'::jsonb ELSE 'false'::jsonb END);
+  EXCEPTION WHEN OTHERS THEN
+    v_result := jsonb_set(v_result, '{vault_error}', to_jsonb(SQLERRM));
+  END;
+  
+  RETURN v_result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ===========================================
 -- GRANT PERMISSIONS
 -- ===========================================
 
@@ -314,6 +426,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 GRANT EXECUTE ON FUNCTION call_send_email_notification TO service_role;
 GRANT EXECUTE ON FUNCTION call_send_push_notification TO service_role;
 GRANT EXECUTE ON FUNCTION call_edge_function_safe TO service_role;
+GRANT EXECUTE ON FUNCTION debug_pg_net_setup TO service_role;
 
 -- ===========================================
 -- VAULT DEPENDENCIES
@@ -423,10 +536,11 @@ GRANT ALL ON webhook_requests TO service_role;
 -- COMMENTS AND DOCUMENTATION
 -- ===========================================
 
-COMMENT ON FUNCTION call_send_email_notification IS 'Calls the send-email-notification edge function via HTTP request using vault secrets';
-COMMENT ON FUNCTION call_send_push_notification IS 'Calls the send-push-notification edge function via HTTP request using vault secrets';
+COMMENT ON FUNCTION call_send_email_notification IS 'Calls the send-email-notification edge function via HTTP request using vault secrets - FIXED: corrected pg_net function syntax';
+COMMENT ON FUNCTION call_send_push_notification IS 'Calls the send-push-notification edge function via HTTP request using vault secrets - FIXED: corrected pg_net function syntax';
 COMMENT ON FUNCTION call_edge_function_safe IS 'Safely calls edge functions with error handling and fallback';
 COMMENT ON FUNCTION create_webhook_request IS 'Creates webhook requests as alternative to direct HTTP calls';
+COMMENT ON FUNCTION debug_pg_net_setup IS 'Debug function to test pg_net configuration and connectivity';
 
 COMMENT ON TABLE webhook_requests IS 'Optional table for webhook-based edge function calls when pg_net is not available';
 
@@ -443,10 +557,18 @@ COMMENT ON TABLE webhook_requests IS 'Optional table for webhook-based edge func
 -- The edge functions are called when there are pending items in the queue,
 -- and the functions handle the actual sending of emails and push notifications.
 --
+-- FIXES APPLIED:
+-- 1. Fixed pg_net function call syntax - net.http_collect_response now uses correct parameters
+-- 2. Changed v_request_id from INTEGER to BIGINT to match pg_net return type
+-- 3. Added proper timeout handling with statement_timeout
+-- 4. Improved error handling and response parsing
+-- 5. Added debug function to troubleshoot pg_net issues
+--
 -- PREREQUISITES:
 -- 1. Run scripts/setup-vault-secrets.sql to create vault secret functions
 -- 2. Configure vault secrets with actual values (not placeholders)
 -- 3. Ensure pg_net extension is enabled for HTTP requests
+-- 4. Ensure pg_net version 0.10.0 or higher is installed
 --
 -- CONFIGURATION:
 -- Edge function URLs are configured via vault secrets:
@@ -458,3 +580,12 @@ COMMENT ON TABLE webhook_requests IS 'Optional table for webhook-based edge func
 --
 -- To update secrets, use the vault.create_secret function:
 -- SELECT vault.create_secret('sb_url', 'https://your-project.supabase.co');
+--
+-- DEBUGGING:
+-- Use the debug_pg_net_setup() function to test your configuration:
+-- SELECT debug_pg_net_setup();
+--
+-- This will check:
+-- - pg_net extension installation
+-- - Basic HTTP connectivity
+-- - Vault secret configuration

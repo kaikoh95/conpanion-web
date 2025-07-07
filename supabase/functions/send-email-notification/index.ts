@@ -90,42 +90,56 @@ serve(async (req) => {
         // Generate email content based on notification type
         const { subject, html, text } = generateEmailContent(notification, userName);
 
-        // Send email using Resend
-        const { data: emailData, error: sendError } = await resend.emails.send({
-          from: 'Conpanion <notifications@getconpanion.com>',
-          to: userEmail,
-          subject,
-          html,
-          text,
-        });
-
-        if (sendError) {
-          throw sendError;
-        }
-
         // Update queue status
         await supabase
           .from('email_queue')
           .update({
-            status: 'sent',
+            status: 'queued_for_delivery',
             sent_at: new Date().toISOString(),
-            template_data: { resend_id: emailData?.id },
+            template_data: { ...email.template_data, email_content: { subject, html, text } },
           })
           .eq('id', email.id);
 
-        // Update delivery status
-        await supabase
-          .from('notification_deliveries')
-          .update({
-            delivered_at: new Date().toISOString(),
-            status: 'sent',
-          })
-          .eq('notification_id', email.notification_id)
-          .eq('channel', 'email');
+        // Send email using Resend
+        const sendEmail = async () => {
+          const { data: emailData, error: sendError } = await resend.emails.send({
+            from: 'Conpanion <notifications@getconpanion.com>',
+            to: userEmail,
+            subject,
+            html,
+            text,
+          });
+
+          if (sendError) {
+            throw sendError;
+          }
+
+          // Update queue status
+          await supabase
+            .from('email_queue')
+            .update({
+              status: 'sent',
+              sent_at: new Date().toISOString(),
+              template_data: { ...email.template_data, resend_id: emailData?.id },
+            })
+            .eq('id', email.id);
+
+          // Update delivery status
+          await supabase
+            .from('notification_deliveries')
+            .update({
+              delivered_at: new Date().toISOString(),
+              status: 'sent',
+            })
+            .eq('notification_id', email.notification_id)
+            .eq('channel', 'email');
+        };
+
+        EdgeRuntime.waitUntil(sendEmail());
 
         results.push({
           id: email.id,
-          status: 'sent',
+          status: 'queued_for_delivery',
           resend_id: emailData?.id,
         });
       } catch (error) {

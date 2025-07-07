@@ -708,7 +708,7 @@ BEGIN
   ) VALUES (
     v_notification_id,
     'realtime',
-    'delivered',
+    'sent',
     NOW()
   );
   
@@ -1860,7 +1860,7 @@ BEGIN
     error_message = NULL,
     updated_at = NOW()
   WHERE status = 'failed' 
-  AND retry_count < 5
+  AND retry_count < 3
   AND created_at > NOW() - INTERVAL '6 hours'; -- Only retry recent failures
   GET DIAGNOSTICS v_push_retries = ROW_COUNT;
   
