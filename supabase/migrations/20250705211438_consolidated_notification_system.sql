@@ -254,7 +254,7 @@ ON notification_deliveries(notification_id);
 DROP INDEX IF EXISTS idx_notification_deliveries_status;
 CREATE INDEX idx_notification_deliveries_status 
 ON notification_deliveries(status) 
-WHERE status IN ('pending', 'retry');
+WHERE status IN ('pending');
 
 DROP INDEX IF EXISTS idx_notification_deliveries_channel_status;
 CREATE INDEX idx_notification_deliveries_channel_status 

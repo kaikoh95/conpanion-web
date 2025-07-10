@@ -9,6 +9,7 @@
 -- ===========================================
 
 -- Enhanced email queue function with better error handling
+DROP FUNCTION IF EXISTS queue_email_notification;
 CREATE OR REPLACE FUNCTION queue_email_notification(p_notification_id UUID)
 RETURNS JSONB AS $$
 DECLARE
@@ -130,6 +131,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ===========================================
 
 -- Enhanced push queue function with better error handling
+DROP FUNCTION IF EXISTS queue_push_notification;
 CREATE OR REPLACE FUNCTION queue_push_notification(p_notification_id UUID)
 RETURNS JSONB AS $$
 DECLARE
@@ -296,6 +298,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to retry failed notifications
+DROP FUNCTION IF EXISTS retry_failed_notifications;
 CREATE OR REPLACE FUNCTION retry_failed_notifications(p_max_retries INTEGER DEFAULT 3)
 RETURNS JSONB AS $$
 DECLARE
