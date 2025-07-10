@@ -26,11 +26,11 @@ type Query {
     offset: Int = 0
     filter: NotificationFilter
   ): NotificationConnection!
-  
+
   notification(id: ID!): Notification
-  
+
   unreadNotificationCount: Int!
-  
+
   notificationPreferences: [NotificationPreference!]!
 }
 
@@ -55,11 +55,11 @@ type Subscription {
 ```typescript
 // Task Service Integration
 interface TaskNotificationHooks {
-  onTaskCreated: (task: Task) => Promise<void>
-  onTaskAssigned: (task: Task, assigneeId: string) => Promise<void>
-  onTaskUpdated: (task: Task, updatedFields: string[]) => Promise<void>
-  onTaskCommented: (task: Task, comment: Comment) => Promise<void>
-  onTaskStatusChanged: (task: Task, oldStatus: string, newStatus: string) => Promise<void>
+  onTaskCreated: (task: Task) => Promise<void>;
+  onTaskAssigned: (task: Task, assigneeId: string) => Promise<void>;
+  onTaskUpdated: (task: Task, updatedFields: string[]) => Promise<void>;
+  onTaskCommented: (task: Task, comment: Comment) => Promise<void>;
+  onTaskStatusChanged: (task: Task, oldStatus: string, newStatus: string) => Promise<void>;
 }
 
 // Implementation Example
@@ -73,13 +73,13 @@ export const taskNotificationHooks: TaskNotificationHooks = {
       data: {
         taskId: task.id,
         projectId: task.projectId,
-        assignedBy: task.updatedBy
+        assignedBy: task.updatedBy,
       },
       entityType: 'task',
       entityId: task.id,
-      priority: task.priority === 'urgent' ? 'high' : 'medium'
+      priority: task.priority === 'urgent' ? 'high' : 'medium',
     });
-  }
+  },
 };
 ```
 
@@ -88,16 +88,16 @@ export const taskNotificationHooks: TaskNotificationHooks = {
 ```typescript
 // Organization Service Integration
 interface OrgNotificationHooks {
-  onUserAddedToOrganization: (userId: string, orgId: string, addedBy: string) => Promise<void>
-  onUserRemovedFromOrganization: (userId: string, orgId: string) => Promise<void>
-  onOrganizationRoleChanged: (userId: string, orgId: string, newRole: string) => Promise<void>
+  onUserAddedToOrganization: (userId: string, orgId: string, addedBy: string) => Promise<void>;
+  onUserRemovedFromOrganization: (userId: string, orgId: string) => Promise<void>;
+  onOrganizationRoleChanged: (userId: string, orgId: string, newRole: string) => Promise<void>;
 }
 
 // Project Service Integration
 interface ProjectNotificationHooks {
-  onUserAddedToProject: (userId: string, projectId: string, role: string) => Promise<void>
-  onProjectMilestoneReached: (projectId: string, milestone: Milestone) => Promise<void>
-  onProjectDeadlineApproaching: (project: Project, daysUntilDeadline: number) => Promise<void>
+  onUserAddedToProject: (userId: string, projectId: string, role: string) => Promise<void>;
+  onProjectMilestoneReached: (projectId: string, milestone: Milestone) => Promise<void>;
+  onProjectDeadlineApproaching: (project: Project, daysUntilDeadline: number) => Promise<void>;
 }
 ```
 
@@ -106,16 +106,16 @@ interface ProjectNotificationHooks {
 ```typescript
 // Approval Service Integration
 interface ApprovalNotificationHooks {
-  onApprovalRequested: (approval: Approval) => Promise<void>
-  onApprovalStatusChanged: (approval: Approval, newStatus: string) => Promise<void>
-  onApprovalReminder: (approval: Approval) => Promise<void>
+  onApprovalRequested: (approval: Approval) => Promise<void>;
+  onApprovalStatusChanged: (approval: Approval, newStatus: string) => Promise<void>;
+  onApprovalReminder: (approval: Approval) => Promise<void>;
 }
 
 // Implementation
 export const approvalNotificationHooks: ApprovalNotificationHooks = {
   async onApprovalRequested(approval: Approval) {
     // Notify all approvers
-    const notifications = approval.approvers.map(approverId => ({
+    const notifications = approval.approvers.map((approverId) => ({
       userId: approverId,
       type: 'approval_requested' as const,
       title: 'Approval Required',
@@ -123,15 +123,15 @@ export const approvalNotificationHooks: ApprovalNotificationHooks = {
       data: {
         approvalId: approval.id,
         requestorId: approval.requestorId,
-        dueDate: approval.dueDate
+        dueDate: approval.dueDate,
       },
       entityType: 'approval',
       entityId: approval.id,
-      priority: 'high' as const
+      priority: 'high' as const,
     }));
-    
+
     await notificationService.createBulkNotifications(notifications);
-  }
+  },
 };
 ```
 
@@ -142,39 +142,42 @@ export const approvalNotificationHooks: ApprovalNotificationHooks = {
 class NotificationWebSocket {
   private socket: WebSocket;
   private reconnectAttempts = 0;
-  
+
   constructor(private userId: string) {
     this.connect();
   }
-  
+
   private connect() {
     this.socket = new WebSocket(`wss://api.example.com/ws/notifications/${this.userId}`);
-    
+
     this.socket.onmessage = (event) => {
       const notification = JSON.parse(event.data);
       this.handleNotification(notification);
     };
-    
+
     this.socket.onclose = () => {
       this.handleReconnect();
     };
   }
-  
+
   private handleNotification(notification: Notification) {
     // Update UI
     updateNotificationBadge();
     showNotificationToast(notification);
-    
+
     // Update local state
     notificationStore.addNotification(notification);
   }
-  
+
   private handleReconnect() {
     if (this.reconnectAttempts < 5) {
-      setTimeout(() => {
-        this.reconnectAttempts++;
-        this.connect();
-      }, Math.pow(2, this.reconnectAttempts) * 1000);
+      setTimeout(
+        () => {
+          this.reconnectAttempts++;
+          this.connect();
+        },
+        Math.pow(2, this.reconnectAttempts) * 1000,
+      );
     }
   }
 }
@@ -186,79 +189,77 @@ class NotificationWebSocket {
 
 ```typescript
 // supabase/functions/send-email-notification/index.ts
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 serve(async (req) => {
-  const { notificationId } = await req.json()
-  
+  const { notificationId } = await req.json();
+
   // Fetch notification details
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
-  
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
+
   const { data: notification } = await supabase
     .from('notifications')
     .select('*, users!user_id(*)')
     .eq('id', notificationId)
-    .single()
-  
+    .single();
+
   // Send email using your preferred service
   const emailResponse = await sendEmail({
     to: notification.users.email,
     subject: notification.title,
     html: generateEmailTemplate(notification),
-    category: notification.type
-  })
-  
+    category: notification.type,
+  });
+
   // Update delivery status
-  await supabase
-    .from('notification_deliveries')
-    .insert({
-      notification_id: notificationId,
-      channel: 'email',
-      status: emailResponse.success ? 'delivered' : 'failed',
-      delivered_at: new Date().toISOString(),
-      error_message: emailResponse.error
-    })
-  
-  return new Response(JSON.stringify({ success: true }))
-})
+  await supabase.from('notification_deliveries').insert({
+    notification_id: notificationId,
+    channel: 'email',
+    status: emailResponse.success ? 'delivered' : 'failed',
+    delivered_at: new Date().toISOString(),
+    error_message: emailResponse.error,
+  });
+
+  return new Response(JSON.stringify({ success: true }));
+});
 ```
 
 ### 2. Push Notification Function
 
 ```typescript
 // supabase/functions/send-push-notification/index.ts
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
 serve(async (req) => {
-  const { notificationId, deviceTokens } = await req.json()
-  
+  const { notificationId, deviceTokens } = await req.json();
+
   // Send to FCM/APNS
   const results = await Promise.allSettled(
-    deviceTokens.map(token => sendPushNotification(token, notification))
-  )
-  
+    deviceTokens.map((token) => sendPushNotification(token, notification)),
+  );
+
   // Process results and update delivery status
   const deliveries = results.map((result, index) => ({
     notification_id: notificationId,
     channel: 'push',
     status: result.status === 'fulfilled' ? 'delivered' : 'failed',
     device_token: deviceTokens[index],
-    error_message: result.status === 'rejected' ? result.reason : null
-  }))
-  
-  await supabase
-    .from('notification_deliveries')
-    .insert(deliveries)
-  
-  return new Response(JSON.stringify({ 
-    success: true,
-    delivered: results.filter(r => r.status === 'fulfilled').length 
-  }))
-})
+    error_message: result.status === 'rejected' ? result.reason : null,
+  }));
+
+  await supabase.from('notification_deliveries').insert(deliveries);
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      delivered: results.filter((r) => r.status === 'fulfilled').length,
+    }),
+  );
+});
 ```
 
 ## Database Triggers
@@ -297,7 +298,7 @@ BEGIN
       CASE WHEN NEW.priority = 'urgent' THEN 'high' ELSE 'medium' END,
       NEW.updated_by
     );
-    
+
     -- Trigger email function
     PERFORM net.http_post(
       url := 'https://your-project.supabase.co/functions/v1/send-email-notification',
@@ -305,7 +306,7 @@ BEGIN
       body := jsonb_build_object('notification_id', lastval())
     );
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -328,12 +329,12 @@ BEGIN
   SELECT * FROM notifications
   WHERE created_at < NOW() - INTERVAL '30 days'
   AND is_read = true;
-  
+
   -- Delete archived notifications from main table
   DELETE FROM notifications
   WHERE created_at < NOW() - INTERVAL '30 days'
   AND is_read = true;
-  
+
   -- Delete unread notifications older than 90 days
   DELETE FROM notifications
   WHERE created_at < NOW() - INTERVAL '90 days';
@@ -359,17 +360,17 @@ export function useNotifications(userId: string) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
-  
+
   // Fetch initial notifications
   useEffect(() => {
     fetchNotifications();
     fetchUnreadCount();
-    
+
     // Subscribe to real-time updates
     const subscription = supabase
       .channel(`notifications:${userId}`)
@@ -379,28 +380,28 @@ export function useNotifications(userId: string) {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${userId}`
+          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          setNotifications(prev => [payload.new as Notification, ...prev]);
-          setUnreadCount(prev => prev + 1);
-          
+          setNotifications((prev) => [payload.new as Notification, ...prev]);
+          setUnreadCount((prev) => prev + 1);
+
           // Show browser notification if permitted
           if (Notification.permission === 'granted') {
             new Notification(payload.new.title, {
               body: payload.new.message,
-              icon: '/notification-icon.png'
+              icon: '/notification-icon.png',
             });
           }
-        }
+        },
       )
       .subscribe();
-    
+
     return () => {
       subscription.unsubscribe();
     };
   }, [userId]);
-  
+
   const fetchNotifications = async () => {
     const { data, error } = await supabase
       .from('notifications')
@@ -408,53 +409,53 @@ export function useNotifications(userId: string) {
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(20);
-    
+
     if (!error && data) {
       setNotifications(data);
     }
     setIsLoading(false);
   };
-  
+
   const fetchUnreadCount = async () => {
     const { count } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('is_read', false);
-    
+
     setUnreadCount(count || 0);
   };
-  
+
   const markAsRead = useCallback(async (notificationId: string) => {
     await supabase
       .from('notifications')
       .update({ is_read: true, read_at: new Date().toISOString() })
       .eq('id', notificationId);
-    
-    setNotifications(prev => 
-      prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n)),
     );
-    setUnreadCount(prev => Math.max(0, prev - 1));
+    setUnreadCount((prev) => Math.max(0, prev - 1));
   }, []);
-  
+
   const markAllAsRead = useCallback(async () => {
     await supabase
       .from('notifications')
       .update({ is_read: true, read_at: new Date().toISOString() })
       .eq('user_id', userId)
       .eq('is_read', false);
-    
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     setUnreadCount(0);
   }, [userId]);
-  
+
   return {
     notifications,
     unreadCount,
     isLoading,
     markAsRead,
     markAllAsRead,
-    refetch: fetchNotifications
+    refetch: fetchNotifications,
   };
 }
 ```
@@ -472,25 +473,27 @@ describe('NotificationService', () => {
       type: 'task_assigned',
       title: 'Test Task',
       message: 'Test message',
-      priority: 'high'
+      priority: 'high',
     });
-    
+
     expect(notification.priority).toBe('high');
     expect(notification.type).toBe('task_assigned');
   });
-  
+
   it('should handle bulk notifications efficiently', async () => {
-    const notifications = Array(100).fill(null).map((_, i) => ({
-      userId: `user${i}`,
-      type: 'system' as const,
-      title: 'System Update',
-      message: 'Test bulk notification'
-    }));
-    
+    const notifications = Array(100)
+      .fill(null)
+      .map((_, i) => ({
+        userId: `user${i}`,
+        type: 'system' as const,
+        title: 'System Update',
+        message: 'Test bulk notification',
+      }));
+
     const start = Date.now();
     await notificationService.createBulkNotifications(notifications);
     const duration = Date.now() - start;
-    
+
     expect(duration).toBeLessThan(1000); // Should complete in under 1 second
   });
 });
@@ -504,9 +507,9 @@ describe('Notification Integration', () => {
   it('should trigger notification on task assignment', async () => {
     const task = await createTask({
       title: 'Test Task',
-      assignee_id: 'user123'
+      assignee_id: 'user123',
     });
-    
+
     // Wait for async notification
     await waitFor(() => {
       const notification = getLatestNotification('user123');
@@ -548,7 +551,7 @@ export function NotificationsDashboard() {
         trend="+8%"
         icon={<Users />}
       />
-      
+
       <div className="col-span-full">
         <NotificationTypeChart />
         <DeliveryChannelBreakdown />

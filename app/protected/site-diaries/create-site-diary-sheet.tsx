@@ -172,15 +172,13 @@ export function CreateSiteDiarySheet({
     }
   }, [diaryDate, template]);
 
-
-
   // Handle approver selection
   const handleApproversChange = (approverIds: string[]) => {
     setSelectedApprovers(approverIds);
   };
 
   const handleRemoveApprover = (approverId: string) => {
-    setSelectedApprovers(prev => prev.filter(id => id !== approverId));
+    setSelectedApprovers((prev) => prev.filter((id) => id !== approverId));
   };
 
   // Handle metadata changes
@@ -240,7 +238,7 @@ export function CreateSiteDiarySheet({
         ...prev,
         [itemId]: files,
       }));
-      
+
       // Also update answers to track that this field has a value
       setAnswers((prev) => ({
         ...prev,
@@ -253,14 +251,14 @@ export function CreateSiteDiarySheet({
         delete updated[itemId];
         return updated;
       });
-      
+
       // Clear the answer
       setAnswers((prev) => ({
         ...prev,
         [itemId]: '',
       }));
     }
-    
+
     // Clear error for this item if exists
     if (formErrors[`item_${itemId}`]) {
       setFormErrors((prev) => {
@@ -374,7 +372,6 @@ export function CreateSiteDiarySheet({
 
       // If we have file uploads, handle those separately
       if (Object.keys(fileUploads).length > 0 && response.diary.id) {
-        
         // Upload each file
         for (const [itemId, files] of Object.entries(fileUploads)) {
           for (const file of files) {
@@ -384,15 +381,15 @@ export function CreateSiteDiarySheet({
                 projectId: projectId.toString(),
                 entityType: 'site_diary',
                 entityId: response.diary.id.toString(),
-                file: file
+                file: file,
               });
-                
+
               if (uploadError) {
                 console.error('Error uploading file:', uploadError);
                 toast.error(`Failed to upload ${file.name}`);
                 continue;
-              } 
-              
+              }
+
               console.log('File uploaded successfully:', file.name);
               console.log('Attachment record created with ID:', attachment?.id);
             } catch (err) {
@@ -421,7 +418,7 @@ export function CreateSiteDiarySheet({
       // Success
       toast.success('Site diary created successfully');
       onDiaryCreated();
-      
+
       // Close the sheet after successful creation
       onOpenChange(false);
       onClose(); // Call onClose to clean up any state
@@ -621,7 +618,7 @@ export function CreateSiteDiarySheet({
                   projectId={projectId}
                 />
               </div>
-              
+
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   Select team members who need to approve this site diary. If no approvers are

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -15,13 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { 
-  CheckCircle, 
-  XCircle, 
-  RotateCcw, 
-  Loader2,
-  AlertCircle 
-} from 'lucide-react';
+import { CheckCircle, XCircle, RotateCcw, Loader2, AlertCircle } from 'lucide-react';
 import { submitApproverResponse, canUserApprove } from '@/lib/api/approvals';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -49,8 +43,8 @@ export function ApprovalActions({
   const [error, setError] = useState<string | null>(null);
 
   // Don't show actions if user can't approve or approval is already finalized
-  const shouldShowActions = userCanApprove && !disabled && 
-    ['submitted', 'revision_requested'].includes(currentStatus);
+  const shouldShowActions =
+    userCanApprove && !disabled && ['submitted', 'revision_requested'].includes(currentStatus);
 
   const handleAction = async (action: 'approved' | 'declined' | 'revision_requested') => {
     if (!approvalId || loading) return;
@@ -60,10 +54,10 @@ export function ApprovalActions({
       setError(null);
 
       await submitApproverResponse(approvalId, action, actionComment.trim() || undefined);
-      
+
       // Clear comment after successful submission
       setActionComment('');
-      
+
       // Notify parent component
       onActionComplete?.();
     } catch (err) {
@@ -84,7 +78,8 @@ export function ApprovalActions({
           variant: 'default' as const,
           className: 'bg-green-600 hover:bg-green-700 text-white',
           dialogTitle: 'Approve Request',
-          dialogDescription: 'Are you sure you want to approve this request? This action cannot be undone.',
+          dialogDescription:
+            'Are you sure you want to approve this request? This action cannot be undone.',
           confirmText: 'Approve',
         };
       case 'declined':
@@ -94,7 +89,8 @@ export function ApprovalActions({
           variant: 'destructive' as const,
           className: '',
           dialogTitle: 'Decline Request',
-          dialogDescription: 'Are you sure you want to decline this request? Please provide a reason for declining.',
+          dialogDescription:
+            'Are you sure you want to decline this request? Please provide a reason for declining.',
           confirmText: 'Decline',
         };
       case 'revision_requested':
@@ -104,7 +100,8 @@ export function ApprovalActions({
           variant: 'outline' as const,
           className: 'border-yellow-500 text-yellow-600 hover:bg-yellow-50',
           dialogTitle: 'Request Revision',
-          dialogDescription: 'Request changes to this submission. Please provide specific feedback.',
+          dialogDescription:
+            'Request changes to this submission. Please provide specific feedback.',
           confirmText: 'Request Revision',
         };
     }
@@ -128,16 +125,14 @@ export function ApprovalActions({
             {config.label}
           </Button>
         </AlertDialogTrigger>
-        
+
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Icon className="h-5 w-5" />
               {config.dialogTitle}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              {config.dialogDescription}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{config.dialogDescription}</AlertDialogDescription>
           </AlertDialogHeader>
 
           <div className="space-y-4">
@@ -148,11 +143,11 @@ export function ApprovalActions({
               <Textarea
                 id="comment"
                 placeholder={
-                  action === 'approved' 
+                  action === 'approved'
                     ? 'Add any additional notes...'
                     : action === 'declined'
-                    ? 'Please explain why this request is being declined...'
-                    : 'Please provide specific feedback for revision...'
+                      ? 'Please explain why this request is being declined...'
+                      : 'Please provide specific feedback for revision...'
                 }
                 value={actionComment}
                 onChange={(e) => setActionComment(e.target.value)}
@@ -179,12 +174,12 @@ export function ApprovalActions({
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Processing...
                 </>
               ) : (
                 <>
-                  <Icon className="h-4 w-4 mr-2" />
+                  <Icon className="mr-2 h-4 w-4" />
                   {config.confirmText}
                 </>
               )}
@@ -206,30 +201,38 @@ export function ApprovalActions({
         <h3 className="font-medium">Your Response</h3>
         {userHasResponded && (
           <div className="text-sm text-muted-foreground">
-            You have already responded: <span className="font-medium capitalize">{userResponse}</span>
+            You have already responded:{' '}
+            <span className="font-medium capitalize">{userResponse}</span>
           </div>
         )}
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <ActionButton action="approved" />
         <ActionButton action="declined" />
         <ActionButton action="revision_requested" />
       </div>
 
       {/* Help Text */}
-      <div className="text-sm text-muted-foreground space-y-1">
-        <p>• <strong>Approve:</strong> Accept the request as submitted</p>
-        <p>• <strong>Decline:</strong> Reject the request (requires reason)</p>
-        <p>• <strong>Request Revision:</strong> Ask for changes (requires feedback)</p>
+      <div className="space-y-1 text-sm text-muted-foreground">
+        <p>
+          • <strong>Approve:</strong> Accept the request as submitted
+        </p>
+        <p>
+          • <strong>Decline:</strong> Reject the request (requires reason)
+        </p>
+        <p>
+          • <strong>Request Revision:</strong> Ask for changes (requires feedback)
+        </p>
       </div>
 
       {userHasResponded && (
-        <div className="text-xs text-muted-foreground p-3 bg-muted/50 rounded-lg">
-          <strong>Note:</strong> You can change your response at any time before the approval is finalized.
+        <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+          <strong>Note:</strong> You can change your response at any time before the approval is
+          finalized.
         </div>
       )}
     </div>
   );
-} 
+}

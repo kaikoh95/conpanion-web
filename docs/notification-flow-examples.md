@@ -132,7 +132,7 @@ SCENARIO: CFO requests budget approval from 3 executives for $50,000 equipment p
        ├─> CEO: notification-789
        ├─> COO: notification-790
        └─> CTO: notification-791
-       
+
    Each notification:
    - type: 'approval_requested'
    - priority: 'critical' (due today)
@@ -172,7 +172,7 @@ SCENARIO: Admin schedules system maintenance for tonight at 10 PM
        └─> Bulk insert notifications
 
 3. Optimized Bulk Insert
-   └─> INSERT INTO notifications 
+   └─> INSERT INTO notifications
        SELECT generate_series, 'system', 'Scheduled Maintenance', ...
        FROM users WHERE active = true
 
@@ -296,7 +296,7 @@ Comment: "Hey @alice and @bob, can you review this?"
 ```
 Without Aggregation:
 - 10:00 AM: "John commented on Task A"
-- 10:02 AM: "Sarah commented on Task B"  
+- 10:02 AM: "Sarah commented on Task B"
 - 10:03 AM: "Mike commented on Task C"
 - 10:04 AM: "Lisa commented on Task D"
 → 4 separate notifications = noise
@@ -377,9 +377,9 @@ async def load_test_notifications():
             title=f'Load Test Task {i}'
         )
         tasks.append(task)
-    
+
     results = await asyncio.gather(*tasks)
-    
+
     # Measure:
     # - Notification creation time: < 500ms per notification
     # - Realtime delivery: < 1 second to all clients

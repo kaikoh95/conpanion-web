@@ -57,4 +57,4 @@ export interface UserExistsResponse {
   error?: string;
 }
 
-export type InvitationRole = 'owner' | 'admin' | 'member' | 'guest'; 
+export type InvitationRole = 'owner' | 'admin' | 'member' | 'guest';

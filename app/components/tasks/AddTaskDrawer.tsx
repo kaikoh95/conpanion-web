@@ -93,11 +93,11 @@ export function AddTaskDrawer({
   const [assignees, setAssignees] = useState<{ id: string; name: string; avatar_url?: string }[]>(
     [],
   );
-  
+
   // State for task files
   const [taskFiles, setTaskFiles] = useState<File[] | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState(false);
-  
+
   // Handle task file uploads
   const handleFileChange = (files: File[] | null) => {
     setTaskFiles(files);
@@ -216,7 +216,7 @@ export function AddTaskDrawer({
           console.error('Error adding metadata:', metadataError);
         }
       }
-      
+
       // 5. Upload files if any are attached
       if (taskFiles && taskFiles.length > 0) {
         setUploadingFiles(true);
@@ -225,7 +225,7 @@ export function AddTaskDrawer({
           for (const file of taskFiles) {
             await uploadTaskAttachment({
               taskId,
-              file
+              file,
             });
           }
         } catch (fileError) {
@@ -661,10 +661,12 @@ export function AddTaskDrawer({
               </div>
             )}
           </div>
-          
+
           {/* Task Files */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-muted-foreground">Task Files</label>
+            <label className="mb-2 block text-sm font-medium text-muted-foreground">
+              Task Files
+            </label>
             <div className="mb-2 text-xs text-muted-foreground">
               Add files related to this task (maximum 10 files)
             </div>
@@ -674,9 +676,7 @@ export function AddTaskDrawer({
               isDisabled={saving || uploadingFiles}
             />
             {uploadingFiles && (
-              <div className="mt-2 text-sm text-blue-500">
-                Uploading files, please wait...
-              </div>
+              <div className="mt-2 text-sm text-blue-500">Uploading files, please wait...</div>
             )}
           </div>
 

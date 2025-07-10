@@ -73,14 +73,16 @@ export function ApproverSelector({
 
   const fetchUsers = async () => {
     if (!projectId) return;
-    
+
     setLoading(true);
     try {
       const supabase = createClient();
-      
+
       // Get project members using the database function
-      const { data: projectMembers, error: membersError } = await supabase
-        .rpc('get_project_members', { p_project_id: projectId });
+      const { data: projectMembers, error: membersError } = await supabase.rpc(
+        'get_project_members',
+        { p_project_id: projectId },
+      );
 
       if (membersError) {
         console.error('Error fetching project members:', membersError);
@@ -115,7 +117,7 @@ export function ApproverSelector({
     const newSelectedApprovers = selectedApprovers.includes(user.id)
       ? selectedApprovers.filter((id) => id !== user.id)
       : [...selectedApprovers, user.id];
-    
+
     onApproversChange(newSelectedApprovers);
     setApproverSearchInput('');
     setShowUserDropdown(false);
@@ -184,14 +186,13 @@ export function ApproverSelector({
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogTrigger asChild>
-        {trigger || defaultTrigger}
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Select Approvers</DialogTitle>
           <DialogDescription>
-            Choose team members who will review and approve this item. You can search by name or email address.
+            Choose team members who will review and approve this item. You can search by name or
+            email address.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -214,7 +215,7 @@ export function ApproverSelector({
                 <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border bg-popover shadow-md">
                   {loading ? (
                     <div className="px-3 py-2 text-sm text-muted-foreground">
-                      <Loader2 className="mr-2 h-3 w-3 animate-spin inline" />
+                      <Loader2 className="mr-2 inline h-3 w-3 animate-spin" />
                       Loading team members...
                     </div>
                   ) : users.length === 0 ? (
@@ -235,9 +236,7 @@ export function ApproverSelector({
                         <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                         <div className="flex-1">
                           <span>{getUserName(user)}</span>
-                          <span className="ml-1 text-muted-foreground">
-                            ({getUserEmail(user)})
-                          </span>
+                          <span className="ml-1 text-muted-foreground">({getUserEmail(user)})</span>
                         </div>
                         {selectedApprovers.includes(user.id) && (
                           <Check className="ml-auto h-4 w-4 text-primary" />
@@ -278,11 +277,9 @@ export function ApproverSelector({
           )}
         </div>
         <DialogFooter>
-          <Button onClick={() => setDialogOpen(false)}>
-            Done
-          </Button>
+          <Button onClick={() => setDialogOpen(false)}>Done</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

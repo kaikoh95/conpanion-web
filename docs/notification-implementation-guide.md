@@ -164,29 +164,29 @@ CREATE TABLE user_devices (
 -- supabase/migrations/003_notification_indexes.sql
 
 -- Performance indexes
-CREATE INDEX idx_notifications_user_unread 
-ON notifications(user_id, is_read) 
+CREATE INDEX idx_notifications_user_unread
+ON notifications(user_id, is_read)
 WHERE is_read = false;
 
-CREATE INDEX idx_notifications_created 
+CREATE INDEX idx_notifications_created
 ON notifications(created_at DESC);
 
-CREATE INDEX idx_notifications_entity 
+CREATE INDEX idx_notifications_entity
 ON notifications(entity_type, entity_id);
 
-CREATE INDEX idx_notification_deliveries_notification 
+CREATE INDEX idx_notification_deliveries_notification
 ON notification_deliveries(notification_id);
 
-CREATE INDEX idx_email_queue_status_scheduled 
-ON email_queue(status, scheduled_for) 
+CREATE INDEX idx_email_queue_status_scheduled
+ON email_queue(status, scheduled_for)
 WHERE status = 'pending';
 
-CREATE INDEX idx_push_queue_status 
-ON push_queue(status, scheduled_for) 
+CREATE INDEX idx_push_queue_status
+ON push_queue(status, scheduled_for)
 WHERE status = 'pending';
 
-CREATE INDEX idx_user_devices_user 
-ON user_devices(user_id) 
+CREATE INDEX idx_user_devices_user
+ON user_devices(user_id)
 WHERE push_enabled = true;
 ```
 
@@ -215,8 +215,8 @@ FOR INSERT WITH CHECK (true); -- Restricted via functions
 CREATE POLICY "Users can view own delivery status" ON notification_deliveries
 FOR SELECT USING (
   EXISTS (
-    SELECT 1 FROM notifications 
-    WHERE notifications.id = notification_deliveries.notification_id 
+    SELECT 1 FROM notifications
+    WHERE notifications.id = notification_deliveries.notification_id
     AND notifications.user_id = auth.uid()
   )
 );
@@ -256,28 +256,28 @@ DECLARE
 BEGIN
   -- Insert the notification
   INSERT INTO notifications (
-    user_id, type, title, message, data, 
+    user_id, type, title, message, data,
     entity_type, entity_id, priority, created_by
   ) VALUES (
     p_user_id, p_type, p_title, p_message, p_data,
     p_entity_type, p_entity_id, p_priority, COALESCE(p_created_by, auth.uid())
   ) RETURNING id INTO v_notification_id;
-  
+
   -- Check user preferences
   SELECT * INTO v_user_preferences
   FROM notification_preferences
   WHERE user_id = p_user_id AND type = p_type;
-  
+
   -- Queue email if enabled or system notification
   IF p_type = 'system' OR COALESCE(v_user_preferences.email_enabled, true) THEN
     PERFORM queue_email_notification(v_notification_id);
   END IF;
-  
+
   -- Queue push if enabled
   IF COALESCE(v_user_preferences.push_enabled, true) THEN
     PERFORM queue_push_notification(v_notification_id);
   END IF;
-  
+
   RETURN v_notification_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -386,7 +386,7 @@ export function NotificationProvider({ children }) {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(20);
-    
+
     setNotifications(data || []);
   };
 
@@ -395,7 +395,7 @@ export function NotificationProvider({ children }) {
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('is_read', false);
-    
+
     setUnreadCount(count || 0);
   };
 
@@ -403,10 +403,10 @@ export function NotificationProvider({ children }) {
     // Add to list
     setNotifications(prev => [notification, ...prev]);
     setUnreadCount(prev => prev + 1);
-    
+
     // Show toast
     showNotificationToast(notification);
-    
+
     // Request browser notification permission if needed
     if (Notification.permission === 'granted') {
       new Notification(notification.title, {
@@ -450,7 +450,7 @@ export function NotificationBell() {
           </span>
         )}
       </button>
-      
+
       {isOpen && <NotificationDropdown />}
     </div>
   );
@@ -466,25 +466,24 @@ export async function registerDevice(userId: string) {
     try {
       // Register service worker
       const registration = await navigator.serviceWorker.register('/sw.js');
-      
+
       // Request permission
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') return;
-      
+
       // Get subscription
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
       });
-      
+
       // Save to database
       await supabase.from('user_devices').upsert({
         user_id: userId,
         platform: 'web',
         token: JSON.stringify(subscription),
-        device_name: navigator.userAgent
+        device_name: navigator.userAgent,
       });
-      
     } catch (error) {
       console.error('Failed to register device:', error);
     }
@@ -522,25 +521,25 @@ import { createTestClient } from '@/utils/test/client';
 describe('Notification System', () => {
   it('creates notification on task assignment', async () => {
     const client = createTestClient();
-    
+
     // Create a task and assign it
     const { data: task } = await client
       .from('tasks')
       .insert({
         title: 'Test Task',
         project_id: 'test-project',
-        assignee_id: 'test-user'
+        assignee_id: 'test-user',
       })
       .select()
       .single();
-    
+
     // Check notification was created
     const { data: notifications } = await client
       .from('notifications')
       .select('*')
       .eq('entity_id', task.id)
       .eq('type', 'task_assigned');
-    
+
     expect(notifications).toHaveLength(1);
     expect(notifications[0].user_id).toBe('test-user');
   });
@@ -558,18 +557,18 @@ describe('Notification Flow', () => {
       user_id: testUser.id,
       type: 'task_assigned',
       title: 'Test Notification',
-      message: 'Test message'
+      message: 'Test message',
     });
-    
+
     // Wait for delivery
     await waitFor(async () => {
       const { data: deliveries } = await supabase
         .from('notification_deliveries')
         .select('*')
         .eq('notification_id', notificationId);
-      
+
       expect(deliveries).toHaveLength(3); // realtime, email, push
-      expect(deliveries.every(d => d.status === 'delivered')).toBe(true);
+      expect(deliveries.every((d) => d.status === 'delivered')).toBe(true);
     });
   });
 });
@@ -582,7 +581,7 @@ describe('Notification Flow', () => {
 ```sql
 -- Create materialized view for stats
 CREATE MATERIALIZED VIEW notification_stats AS
-SELECT 
+SELECT
   DATE_TRUNC('hour', created_at) as hour,
   type,
   priority,
@@ -647,14 +646,14 @@ function canCreateNotification(userId: string, type: string): boolean {
   const key = `${userId}:${type}`;
   const now = Date.now();
   const limit = getLimit(type); // e.g., 10 per minute
-  
+
   const timestamps = rateLimiter.get(key) || [];
-  const recentTimestamps = timestamps.filter(t => now - t < 60000);
-  
+  const recentTimestamps = timestamps.filter((t) => now - t < 60000);
+
   if (recentTimestamps.length >= limit) {
     return false;
   }
-  
+
   recentTimestamps.push(now);
   rateLimiter.set(key, recentTimestamps);
   return true;
@@ -671,14 +670,14 @@ BEGIN
   -- Move read notifications older than 30 days
   INSERT INTO notifications_archive
   SELECT * FROM notifications
-  WHERE is_read = true 
+  WHERE is_read = true
   AND created_at < NOW() - INTERVAL '30 days';
-  
+
   -- Delete from main table
   DELETE FROM notifications
-  WHERE is_read = true 
+  WHERE is_read = true
   AND created_at < NOW() - INTERVAL '30 days';
-  
+
   -- Delete unread older than 90 days
   DELETE FROM notifications
   WHERE created_at < NOW() - INTERVAL '90 days';
@@ -691,11 +690,13 @@ $$ LANGUAGE plpgsql;
 ### Common Issues
 
 1. **Notifications not appearing in real-time**
+
    - Check WebSocket connection
    - Verify realtime is enabled on table
    - Check RLS policies
 
 2. **Emails not sending**
+
    - Verify API keys are set
    - Check email queue status
    - Review edge function logs
@@ -709,12 +710,12 @@ $$ LANGUAGE plpgsql;
 
 ```sql
 -- Check notification creation
-SELECT * FROM notifications 
+SELECT * FROM notifications
 WHERE created_at > NOW() - INTERVAL '1 hour'
 ORDER BY created_at DESC;
 
 -- Check delivery status
-SELECT 
+SELECT
   n.type,
   nd.channel,
   nd.status,

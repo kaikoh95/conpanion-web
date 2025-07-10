@@ -3,7 +3,13 @@
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Search, Filter, RefreshCw } from 'lucide-react';
 import { ApprovalCard } from './ApprovalCard';
 import { ApprovalWithDetails } from '@/lib/api/approvals';
@@ -25,8 +31,8 @@ export function ApprovalsList({
   error,
   onRefresh,
   onApprovalClick,
-  emptyTitle = "No approvals found",
-  emptyDescription = "Approvals will appear here when available"
+  emptyTitle = 'No approvals found',
+  emptyDescription = 'Approvals will appear here when available',
 }: ApprovalsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all');
@@ -35,17 +41,17 @@ export function ApprovalsList({
   // Filter approvals based on search and filters
   const filteredApprovals = approvals.filter((approval) => {
     // Search filter
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch =
+      searchTerm === '' ||
       approval.entity_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       approval.requester_name.toLowerCase().includes(searchTerm.toLowerCase());
 
     // Entity type filter
-    const matchesEntityType = entityTypeFilter === 'all' || 
-      approval.entity_type === entityTypeFilter;
+    const matchesEntityType =
+      entityTypeFilter === 'all' || approval.entity_type === entityTypeFilter;
 
     // Status filter
-    const matchesStatus = statusFilter === 'all' || 
-      approval.status === statusFilter;
+    const matchesStatus = statusFilter === 'all' || approval.status === statusFilter;
 
     return matchesSearch && matchesEntityType && matchesStatus;
   });
@@ -56,10 +62,10 @@ export function ApprovalsList({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-medium text-destructive">Error loading approvals</h3>
-            <p className="text-sm text-destructive/80 mt-1">{error}</p>
+            <p className="mt-1 text-sm text-destructive/80">{error}</p>
           </div>
           <Button variant="outline" size="sm" onClick={onRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className="mr-2 h-4 w-4" />
             Retry
           </Button>
         </div>
@@ -72,7 +78,7 @@ export function ApprovalsList({
       {/* Filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         {/* Search */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search approvals..."
@@ -144,13 +150,13 @@ export function ApprovalsList({
         // Empty state
         <div className="flex h-32 items-center justify-center text-center">
           <div>
-            <Filter className="mx-auto h-8 w-8 mb-2 opacity-50" />
+            <Filter className="mx-auto mb-2 h-8 w-8 opacity-50" />
             <h3 className="font-medium">{emptyTitle}</h3>
-            <p className="text-sm text-muted-foreground mt-1">{emptyDescription}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{emptyDescription}</p>
             {(searchTerm || entityTypeFilter !== 'all' || statusFilter !== 'all') && (
-              <Button 
-                variant="link" 
-                size="sm" 
+              <Button
+                variant="link"
+                size="sm"
                 className="mt-2"
                 onClick={() => {
                   setSearchTerm('');
@@ -178,10 +184,10 @@ export function ApprovalsList({
 
       {/* Results count */}
       {!loading && filteredApprovals.length > 0 && (
-        <div className="text-sm text-muted-foreground text-center">
+        <div className="text-center text-sm text-muted-foreground">
           Showing {filteredApprovals.length} of {approvals.length} approvals
         </div>
       )}
     </div>
   );
-} 
+}

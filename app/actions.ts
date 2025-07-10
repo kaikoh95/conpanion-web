@@ -18,7 +18,7 @@ export const signUpAction = async (formData: FormData) => {
   }
 
   // Determine the redirect URL based on whether there's an invitation
-  const redirectTo = invitationToken 
+  const redirectTo = invitationToken
     ? `${origin}/auth/callback?invitation=${invitationToken}`
     : `${origin}/auth/callback`;
 
@@ -33,23 +33,23 @@ export const signUpAction = async (formData: FormData) => {
   if (error) {
     console.error(error.code + ' ' + error.message);
     return encodedRedirect('error', '/sign-up', error.message);
-  } 
+  }
 
   // Check if user was created immediately (email verification disabled)
   const user = data.user;
   const isEmailVerificationDisabled = user && !data.session?.access_token;
-  
+
   // If user was created immediately, handle invitation linking
   if (user && data.session) {
     // Link user to any pending invitations for their email
     const linkResult = await organizationAPI.linkUserToPendingInvitations(user.id, user.email!);
     console.log('Linked invitations after immediate signup:', linkResult);
-    
+
     // If there's an invitation token, redirect directly to the invitation
     if (invitationToken) {
       return redirect(`/invitation/${invitationToken}`);
     }
-    
+
     // Check if user has any pending invitations
     const hasPending = await organizationAPI.userHasPendingInvitations(user.id);
     if (hasPending) {
@@ -59,15 +59,15 @@ export const signUpAction = async (formData: FormData) => {
         return redirect(`/invitation/${firstInvitation.token}`);
       }
     }
-    
+
     // If no invitations, redirect to protected area
     return redirect('/protected');
   } else {
     // Email verification is enabled, show success message
-    const successMessage = invitationToken 
-      ? 'Thanks for signing up! Please check your email for a verification link. After verification, you\'ll be able to accept your organization invitation.'
+    const successMessage = invitationToken
+      ? "Thanks for signing up! Please check your email for a verification link. After verification, you'll be able to accept your organization invitation."
       : 'Thanks for signing up! Please check your email for a verification link.';
-    
+
     return encodedRedirect('success', '/sign-up', successMessage);
   }
 };
@@ -76,10 +76,10 @@ export const signInAction = async (formData: FormData) => {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const invitationToken = formData.get('invitation')?.toString();
-  
+
   console.log('🔄 signInAction: Starting sign-in process for:', email);
   console.log('🔄 signInAction: Invitation token:', invitationToken ? 'present' : 'none');
-  
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -97,16 +97,19 @@ export const signInAction = async (formData: FormData) => {
   console.log('🔄 signInAction: User data:', data.user ? `user ID: ${data.user.id}` : 'no user');
 
   // Get the user after successful sign-in
-  const { data: { user }, error: getUserError } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+    error: getUserError,
+  } = await supabase.auth.getUser();
+
   if (getUserError) {
     console.error('❌ signInAction: Error getting user after sign-in:', getUserError);
     return encodedRedirect('error', '/sign-in', 'Failed to retrieve user information');
   }
-  
+
   if (user) {
     console.log('✅ signInAction: User retrieved successfully:', user.email);
-    
+
     try {
       // Link user to any pending invitations for their email
       console.log('🔄 signInAction: Linking pending invitations...');
@@ -133,15 +136,18 @@ export const signInAction = async (formData: FormData) => {
       console.log('🔄 signInAction: Checking for pending invitations...');
       const hasPending = await organizationAPI.userHasPendingInvitations(user.id);
       console.log('🔄 signInAction: Has pending invitations:', hasPending);
-      
+
       if (hasPending) {
         // Redirect to a pending invitations page or show the first one
         const pendingInvitations = await organizationAPI.getUserPendingInvitations(user.id);
         console.log('🔄 signInAction: Pending invitations result:', pendingInvitations);
-        
+
         if (pendingInvitations.success && pendingInvitations.invitations.length > 0) {
           const firstInvitation = pendingInvitations.invitations[0];
-          console.log('🔄 signInAction: Redirecting to first pending invitation:', firstInvitation.token);
+          console.log(
+            '🔄 signInAction: Redirecting to first pending invitation:',
+            firstInvitation.token,
+          );
           return redirect(`/invitation/${firstInvitation.token}`);
         }
       }
@@ -216,12 +222,12 @@ export const resetPasswordAction = async (formData: FormData) => {
 
 export const signOutAction = async () => {
   const supabase = await createClient();
-  
+
   // Sign out from server-side (this clears the server-side session)
   const { error } = await supabase.auth.signOut({ scope: 'global' });
   if (error) {
     console.error('Server-side signout error:', error);
   }
-  
+
   return redirect('/sign-in');
 };

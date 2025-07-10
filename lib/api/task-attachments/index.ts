@@ -27,7 +27,7 @@ interface UploadTaskAttachmentRequest {
 function determineFileType(file: File): AttachmentFileType {
   const fileName = file.name.toLowerCase();
   const extension = fileName.split('.').pop() || '';
-  
+
   if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(extension)) {
     return 'image';
   } else if (['mp4', 'avi', 'mov', 'webm'].includes(extension)) {
@@ -47,7 +47,7 @@ function determineFileType(file: File): AttachmentFileType {
   } else if (['txt', 'md', 'json', 'xml', 'html', 'css', 'js'].includes(extension)) {
     return 'text';
   }
-  
+
   // Default fallback
   return 'other';
 }
@@ -63,12 +63,12 @@ export async function getTaskAttachments(taskId: number): Promise<TaskAttachment
       .eq('entity_id', taskId.toString())
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
-    
+
     if (error) {
       console.error('Error fetching task attachments:', error);
       return { data: null, error };
     }
-    
+
     return { data: data as Attachment[], error: null };
   } catch (error) {
     console.error('Exception in getTaskAttachments:', error);
@@ -79,7 +79,7 @@ export async function getTaskAttachments(taskId: number): Promise<TaskAttachment
 // Upload a file and create a task attachment record
 export async function uploadTaskAttachment({
   taskId,
-  file
+  file,
 }: UploadTaskAttachmentRequest): Promise<UploadTaskAttachmentResponse> {
   try {
     // First get the project ID for this task
@@ -88,47 +88,47 @@ export async function uploadTaskAttachment({
       .select('project_id')
       .eq('id', taskId)
       .single();
-    
+
     if (taskError) {
       console.error('Error fetching task project ID:', taskError);
       return { data: null, error: taskError };
     }
-    
+
     const projectId = taskData.project_id;
     if (!projectId) {
-      return { 
-        data: null, 
-        error: new Error('Task does not have an associated project ID') 
+      return {
+        data: null,
+        error: new Error('Task does not have an associated project ID'),
       };
     }
-    
+
     // Generate a unique file name to avoid collisions
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
     const originalName = file.name;
     const fileExtension = originalName.split('.').pop() || '';
     const uniqueFileName = `${timestamp}_${randomString}_${originalName}`;
-    
+
     // Define the path for the file in storage
     // The path structure should match RLS policies: projectId/task/taskId/filename
     const filePath = `${projectId}/task/${taskId}/${uniqueFileName}`;
-    
+
     // Upload the file to storage
     const { data: storageData, error: storageError } = await supabase.storage
       .from('attachments')
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: false
+        upsert: false,
       });
-    
+
     if (storageError) {
       console.error('Error uploading file:', storageError);
       return { data: null, error: storageError };
     }
-    
+
     // Determine the file type
     const fileType = determineFileType(file);
-    
+
     // Create the attachment record in the database directly
     const { data: attachmentData, error: attachmentError } = await supabase
       .from('attachments')
@@ -139,35 +139,34 @@ export async function uploadTaskAttachment({
         file_name: uniqueFileName,
         file_size: file.size,
         file_type: fileType,
-        storage_path: filePath
+        storage_path: filePath,
       })
       .select()
       .single();
-    
+
     if (attachmentError) {
       console.error('Error creating task attachment record:', attachmentError);
-      
+
       // Clean up the uploaded file if the record creation fails
-      await supabase.storage
-        .from('attachments')
-        .remove([filePath]);
-      
+      await supabase.storage.from('attachments').remove([filePath]);
+
       return { data: null, error: attachmentError };
     }
-    
+
     // Update task metadata to indicate it has attachments
     try {
-      const { error: metadataError } = await supabase
-        .from('task_metadata')
-        .upsert({
+      const { error: metadataError } = await supabase.from('task_metadata').upsert(
+        {
           task_id: taskId,
           title: 'has_attachments',
           value: 'true',
-          created_by: (await supabase.auth.getUser()).data.user?.id || ''
-        }, {
-          onConflict: 'task_id,title'
-        });
-      
+          created_by: (await supabase.auth.getUser()).data.user?.id || '',
+        },
+        {
+          onConflict: 'task_id,title',
+        },
+      );
+
       if (metadataError) {
         console.error('Error updating task metadata:', metadataError);
         // Continue anyway as the attachment was created successfully
@@ -176,7 +175,7 @@ export async function uploadTaskAttachment({
       console.error('Exception updating task metadata:', metadataErr);
       // Continue anyway
     }
-    
+
     return { data: attachmentData as Attachment, error: null };
   } catch (error) {
     console.error('Exception in uploadTaskAttachment:', error);
@@ -185,7 +184,9 @@ export async function uploadTaskAttachment({
 }
 
 // Delete a task attachment
-export async function deleteTaskAttachment(attachmentId: string): Promise<{ success: boolean; error: Error | null }> {
+export async function deleteTaskAttachment(
+  attachmentId: string,
+): Promise<{ success: boolean; error: Error | null }> {
   try {
     // Get the attachment record to know the storage path
     const { data, error: fetchError } = await supabase
@@ -193,35 +194,35 @@ export async function deleteTaskAttachment(attachmentId: string): Promise<{ succ
       .select('storage_path')
       .eq('id', attachmentId)
       .single();
-    
+
     if (fetchError) {
       console.error('Error fetching attachment:', fetchError);
       return { success: false, error: fetchError };
     }
-    
+
     // Delete the attachment record
     const { error: deleteError } = await supabase
       .from('attachments')
       .delete()
       .eq('id', attachmentId);
-    
+
     if (deleteError) {
       console.error('Error deleting attachment record:', deleteError);
       return { success: false, error: deleteError };
     }
-    
+
     // Delete the file from storage
     if (data?.storage_path) {
       const { error: storageError } = await supabase.storage
         .from('attachments')
         .remove([data.storage_path]);
-      
+
       if (storageError) {
         console.error('Error deleting file from storage:', storageError);
         // We don't return error here as the database record was successfully deleted
       }
     }
-    
+
     return { success: true, error: null };
   } catch (error) {
     console.error('Exception in deleteTaskAttachment:', error);
@@ -230,7 +231,9 @@ export async function deleteTaskAttachment(attachmentId: string): Promise<{ succ
 }
 
 // Get a signed URL for a task attachment
-export async function getTaskAttachmentUrl(attachmentId: string): Promise<{ url: string | null; error: Error | null }> {
+export async function getTaskAttachmentUrl(
+  attachmentId: string,
+): Promise<{ url: string | null; error: Error | null }> {
   try {
     // Get the attachment record to know the storage path
     const { data, error: fetchError } = await supabase
@@ -238,29 +241,29 @@ export async function getTaskAttachmentUrl(attachmentId: string): Promise<{ url:
       .select('storage_path')
       .eq('id', attachmentId)
       .single();
-    
+
     if (fetchError) {
       console.error('Error fetching attachment:', fetchError);
       return { url: null, error: fetchError };
     }
-    
+
     if (!data?.storage_path) {
       return { url: null, error: new Error('Attachment has no storage path') };
     }
-    
+
     // Create a signed URL that expires in 1 hour
     const { data: urlData, error: urlError } = await supabase.storage
       .from('attachments')
       .createSignedUrl(data.storage_path, 60 * 60);
-    
+
     if (urlError) {
       console.error('Error creating signed URL:', urlError);
       return { url: null, error: urlError };
     }
-    
+
     return { url: urlData.signedUrl, error: null };
   } catch (error) {
     console.error('Exception in getTaskAttachmentUrl:', error);
     return { url: null, error: error as Error };
   }
-} 
+}

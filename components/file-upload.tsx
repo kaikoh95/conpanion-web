@@ -107,7 +107,7 @@ export default function FileUpload({
 
   const getFileIcon = () => {
     if (!value) return <Upload className="h-8 w-8 text-muted-foreground" />;
-    
+
     if (value.type.startsWith('image/')) {
       return previewUrl ? (
         <div className="relative h-24 w-24 overflow-hidden rounded-md">
@@ -123,7 +123,7 @@ export default function FileUpload({
         <ImageIcon className="h-8 w-8 text-primary" />
       );
     }
-    
+
     return <FileIcon className="h-8 w-8 text-primary" />;
   };
 
@@ -137,7 +137,7 @@ export default function FileUpload({
         className="hidden"
         disabled={isDisabled}
       />
-      
+
       <div
         className={`relative flex min-h-[150px] w-full cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed transition-colors ${
           dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/20'
@@ -149,7 +149,7 @@ export default function FileUpload({
       >
         <div className="flex flex-col items-center justify-center space-y-2 p-4 text-center">
           {getFileIcon()}
-          
+
           {value ? (
             <div className="mt-2 text-center">
               <p className="text-sm font-medium">{value.name}</p>
@@ -158,15 +158,14 @@ export default function FileUpload({
           ) : (
             <div className="mt-2 text-center">
               <p className="text-sm font-medium">
-                Drag & drop or click to upload {isRequired && <span className="text-red-500">*</span>}
+                Drag & drop or click to upload{' '}
+                {isRequired && <span className="text-red-500">*</span>}
               </p>
-              <p className="text-xs text-muted-foreground">
-                Max size: {formatFileSize(maxSize)}
-              </p>
+              <p className="text-xs text-muted-foreground">Max size: {formatFileSize(maxSize)}</p>
             </div>
           )}
         </div>
-        
+
         {value && (
           <Button
             variant="ghost"
@@ -183,8 +182,8 @@ export default function FileUpload({
           </Button>
         )}
       </div>
-      
+
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
     </div>
   );
-} 
+}

@@ -382,7 +382,10 @@ export interface UpdateSiteDiaryAnswersRequest {
   metadata?: Record<string, any>;
 }
 
-export async function updateSiteDiaryAnswers(id: number, request: UpdateSiteDiaryAnswersRequest): Promise<SiteDiaryResponse> {
+export async function updateSiteDiaryAnswers(
+  id: number,
+  request: UpdateSiteDiaryAnswersRequest,
+): Promise<SiteDiaryResponse> {
   // Update metadata if provided
   if (request.metadata) {
     const { error: metadataError } = await supabase
@@ -412,13 +415,11 @@ export async function updateSiteDiaryAnswers(id: number, request: UpdateSiteDiar
 
       // If no rows were updated, insert new answer
       if (!updated || updated.length === 0) {
-        await supabase
-          .from('site_diary_answers')
-          .insert({
-            diary_id: id,
-            item_id: answer.item_id,
-            answer_value: answer.value,
-          });
+        await supabase.from('site_diary_answers').insert({
+          diary_id: id,
+          item_id: answer.item_id,
+          answer_value: answer.value,
+        });
       }
     }
   }

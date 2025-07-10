@@ -58,9 +58,7 @@ export default function AttachmentUploader({
   const uploadFile = useCallback(async () => {
     if (!localFile || !projectId || !entityId) return;
 
-    setFileState((prev) => 
-      prev ? { ...prev, uploading: true, error: undefined } : null
-    );
+    setFileState((prev) => (prev ? { ...prev, uploading: true, error: undefined } : null));
 
     try {
       const { data, error } = await uploadAttachment({
@@ -72,24 +70,18 @@ export default function AttachmentUploader({
 
       if (error) {
         toast.error('Failed to upload file');
-        setFileState((prev) => 
-          prev ? { ...prev, uploading: false, error: error.message } : null
-        );
+        setFileState((prev) => (prev ? { ...prev, uploading: false, error: error.message } : null));
         return;
       }
 
       if (data?.id) {
         toast.success('File uploaded successfully');
-        setFileState((prev) => 
-          prev ? { ...prev, uploading: false, id: data.id } : null
-        );
+        setFileState((prev) => (prev ? { ...prev, uploading: false, id: data.id } : null));
         onChange(data.id);
       }
     } catch (err: any) {
       toast.error('Failed to upload file');
-      setFileState((prev) => 
-        prev ? { ...prev, uploading: false, error: err.message } : null
-      );
+      setFileState((prev) => (prev ? { ...prev, uploading: false, error: err.message } : null));
     }
   }, [localFile, projectId, entityType, entityId, onChange]);
 
@@ -108,19 +100,17 @@ export default function AttachmentUploader({
         isRequired={isRequired}
         isDisabled={isDisabled || (fileState?.uploading ?? false)}
       />
-      
+
       {fileState?.uploading && (
         <div className="mt-2 flex items-center justify-center text-sm text-muted-foreground">
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Uploading...
         </div>
       )}
-      
+
       {fileState?.error && (
-        <p className="mt-1 text-sm text-red-500">
-          Upload failed: {fileState.error}
-        </p>
+        <p className="mt-1 text-sm text-red-500">Upload failed: {fileState.error}</p>
       )}
     </div>
   );
-} 
+}

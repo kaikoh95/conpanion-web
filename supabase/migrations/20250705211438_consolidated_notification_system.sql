@@ -1309,7 +1309,7 @@ BEGIN
       PERFORM create_notification(
         p_user_id => v_approver.approver_id,
         p_type => 'approval_requested',
-        p_template_name => 'default',
+        p_template_name => 'requester_confirmation',
         p_template_data => ARRAY[COALESCE(v_requester_name, 'Someone'), COALESCE(v_entity_title, 'Unknown Item')],
         p_data => jsonb_build_object(
           'approval_id', NEW.id,
@@ -1339,14 +1339,14 @@ BEGIN
       p_user_id => NEW.requester_id,
       p_type => 'approval_status_changed',
       p_template_name => 'default',
-      p_template_data => ARRAY[NEW.status, COALESCE(v_entity_title, 'Unknown Item'), NEW.status, COALESCE(v_approved_by_name, 'Someone')],
+      p_template_data => ARRAY[NEW.status::text, COALESCE(v_entity_title, 'Unknown Item'), NEW.status::text, COALESCE(v_approved_by_name, 'Someone')],
       p_data => jsonb_build_object(
         'approval_id', NEW.id,
         'entity_type', NEW.entity_type,
         'entity_id', NEW.entity_id,
         'entity_title', v_entity_title,
-        'old_status', OLD.status,
-        'new_status', NEW.status,
+        'old_status', OLD.status::text,
+        'new_status', NEW.status::text,
         'approved_by', NEW.user_id,
         'approved_by_name', v_approved_by_name
       ),

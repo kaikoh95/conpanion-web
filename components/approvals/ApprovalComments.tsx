@@ -5,13 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  MessageSquare, 
-  Send, 
-  Loader2,
-  AlertCircle,
-  User
-} from 'lucide-react';
+import { MessageSquare, Send, Loader2, AlertCircle, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import { addApprovalComment } from '@/lib/api/approvals';
 import { formatDistanceToNow } from 'date-fns';
@@ -48,10 +42,10 @@ export function ApprovalComments({
       setError(null);
 
       await addApprovalComment(approvalId, newComment.trim());
-      
+
       // Clear the comment field
       setNewComment('');
-      
+
       // Notify parent component to refresh comments
       onCommentAdded?.();
     } catch (err) {
@@ -80,10 +74,10 @@ export function ApprovalComments({
 
       {/* Comments List */}
       {comments.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+        <div className="py-8 text-center text-muted-foreground">
+          <MessageSquare className="mx-auto mb-3 h-12 w-12 opacity-50" />
           <p className="text-sm font-medium">No comments yet</p>
-          <p className="text-xs mt-1">Start the discussion by adding a comment below</p>
+          <p className="mt-1 text-xs">Start the discussion by adding a comment below</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -91,21 +85,22 @@ export function ApprovalComments({
             <Card key={comment.id} className="border-l-4 border-l-blue-500">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <Avatar className="h-8 w-8 mt-0.5">
+                  <Avatar className="mt-0.5 h-8 w-8">
                     <AvatarFallback className="text-sm">
                       <User className="h-4 w-4" />
                     </AvatarFallback>
                   </Avatar>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
+
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex items-center gap-2">
                       <p className="text-sm font-medium">{comment.user_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {comment.created_at && formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                        {comment.created_at &&
+                          formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                       </p>
                     </div>
-                    
-                    <div className="text-sm leading-relaxed whitespace-pre-wrap">
+
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
                       {comment.comment}
                     </div>
                   </div>
@@ -153,7 +148,7 @@ export function ApprovalComments({
                 <div className="text-xs text-muted-foreground">
                   Comments are visible to the requester, approvers, and project admins
                 </div>
-                
+
                 <Button
                   onClick={handleSubmitComment}
                   disabled={!newComment.trim() || loading || newComment.length > 1000}
@@ -179,8 +174,10 @@ export function ApprovalComments({
       )}
 
       {/* Help Text */}
-      <div className="text-xs text-muted-foreground space-y-1 p-3 bg-muted/30 rounded-lg">
-        <p><strong>💬 Discussion Guidelines:</strong></p>
+      <div className="space-y-1 rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground">
+        <p>
+          <strong>💬 Discussion Guidelines:</strong>
+        </p>
         <p>• Use comments for ongoing discussion and clarification</p>
         <p>• Action comments (approve/decline/revision) are separate and final</p>
         <p>• All participants can see and respond to comments</p>
@@ -188,4 +185,4 @@ export function ApprovalComments({
       </div>
     </div>
   );
-} 
+}

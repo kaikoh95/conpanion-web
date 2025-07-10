@@ -36,7 +36,7 @@ export class EmailService {
   async sendOrganizationInvitationToNewUser(data: EmailInvitationData): Promise<EmailResult> {
     try {
       const invitationUrl = `${APP_URL}/invitation/${data.invitationToken}`;
-      
+
       const { data: result, error } = await this.resend.emails.send({
         from: FROM_EMAIL,
         to: [data.email],
@@ -72,7 +72,7 @@ export class EmailService {
   async sendOrganizationInvitationToExistingUser(data: EmailInvitationData): Promise<EmailResult> {
     try {
       const invitationUrl = `${APP_URL}/invitation/${data.invitationToken}`;
-      
+
       const { data: result, error } = await this.resend.emails.send({
         from: FROM_EMAIL,
         to: [data.email],
@@ -226,7 +226,10 @@ export class EmailService {
   /**
    * Generate HTML email template for existing users
    */
-  private generateExistingUserEmailTemplate(data: EmailInvitationData, invitationUrl: string): string {
+  private generateExistingUserEmailTemplate(
+    data: EmailInvitationData,
+    invitationUrl: string,
+  ): string {
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -406,4 +409,4 @@ This invitation was sent to ${data.email}. If you weren't expecting this invitat
 }
 
 // Export a singleton instance
-export const emailService = new EmailService(); 
+export const emailService = new EmailService();
