@@ -180,7 +180,7 @@ function FormsPageContent({
           setForms([]);
           return;
         }
-        
+
         // Use the project-specific API function
         const fetchedForms = await getFormsByProject(currentProject.id);
         setForms(fetchedForms);
@@ -297,7 +297,14 @@ function FormsPageContent({
 
   // Add debugging for isCreatingEntry
   useEffect(() => {
-    console.log('isCreatingEntry changed:', isCreatingEntry, 'selectedFormId:', selectedFormId, 'formDetail:', !!formDetail);
+    console.log(
+      'isCreatingEntry changed:',
+      isCreatingEntry,
+      'selectedFormId:',
+      selectedFormId,
+      'formDetail:',
+      !!formDetail,
+    );
   }, [isCreatingEntry, selectedFormId, formDetail]);
 
   const filteredForms = forms.filter((form) =>
@@ -318,16 +325,16 @@ function FormsPageContent({
   const handleCreateEntry = (formId: number | undefined) => {
     if (formId === undefined) return;
     console.log('handleCreateEntry called with formId:', formId);
-    
+
     // Reset relevant state
     setIsClosing(false);
     setAnswers({});
     setFormErrors({});
-    
+
     // Update state to show entry form
     setSelectedFormId(formId);
     setIsCreatingEntry(true);
-    
+
     // Update URL
     router.push(`/protected/forms?formId=${formId}&entryMode=new`);
   };
@@ -336,12 +343,12 @@ function FormsPageContent({
   const closeSheet = () => {
     // Start the closing animation
     setIsClosing(true);
-    
+
     // Wait for animation to complete before resetting state
     setTimeout(() => {
       // Reset URL first
       router.push('/protected/forms');
-      
+
       // Then reset all state
       setSelectedFormId(null);
       setIsCreatingEntry(false);
@@ -358,11 +365,11 @@ function FormsPageContent({
   const handleCloseEntryForm = () => {
     // Just disable entry creation mode without closing the sheet
     setIsCreatingEntry(false);
-    
+
     // Reset form state
     setAnswers({});
     setFormErrors({});
-    
+
     // Update URL to remove entry mode parameter but keep the form ID
     if (selectedFormId) {
       router.push(`/protected/forms?formId=${selectedFormId}`);
@@ -371,7 +378,8 @@ function FormsPageContent({
 
   // Revise Sheet handling to work with Radix UI
   const handleSheetOpenChange = (isOpen: boolean) => {
-    if (!isOpen) { // When sheet is closing
+    if (!isOpen) {
+      // When sheet is closing
       if (isEditing && hasChanges()) {
         if (confirm('You have unsaved changes. Are you sure you want to discard them?')) {
           closeSheet();
@@ -649,12 +657,14 @@ function FormsPageContent({
 
     try {
       setIsSubmittingEntry(true);
-      
+
       // Create the form entry first to get its ID
       const entryAnswers = Object.entries(answers)
-        .filter(([_, value]) => value !== null && 
-                                !Array.isArray(value) || 
-                                (Array.isArray(value) && !(value[0] instanceof File)))
+        .filter(
+          ([_, value]) =>
+            (value !== null && !Array.isArray(value)) ||
+            (Array.isArray(value) && !(value[0] instanceof File)),
+        )
         .map(([itemId, value]) => ({
           itemId: parseInt(itemId),
           value: value,
@@ -669,7 +679,7 @@ function FormsPageContent({
 
       // Once we have the entry ID, upload any attachments and associate them
       const entryId = response.entry.id;
-      
+
       // Process file uploads - we now have the files directly in the answers
       if (entryId) {
         // Find all photo answers with files
@@ -686,33 +696,33 @@ function FormsPageContent({
                     entityId: entryId.toString(),
                     file,
                   });
-                  
+
                   if (error) {
                     console.error('Error uploading file:', error);
                     throw error;
                   }
-                  
+
                   return data?.id;
                 } catch (err) {
                   console.error('Failed to upload file:', err);
                   return null;
                 }
-              })
+              }),
             );
-            
+
             // Filter out any failed uploads
             const successfulUploads = uploadedFileIds.filter(Boolean);
-            
+
             // Create an answer with the attachment IDs
             return {
               itemId: parseInt(itemId),
               value: successfulUploads,
             };
           });
-        
+
         // Wait for all file uploads to complete
         const fileAnswers = await Promise.all(fileUploads);
-        
+
         // Update the form entry with file attachment IDs
         if (fileAnswers.length > 0) {
           await updateFormEntryAnswers(entryId, {
@@ -932,7 +942,7 @@ function FormsPageContent({
 
       {/* Disable sheet showing when closing */}
       {selectedFormId !== null && (
-  <Sheet open={!isClosing} onOpenChange={handleSheetOpenChange}>
+        <Sheet open={!isClosing} onOpenChange={handleSheetOpenChange}>
           <SheetTitle />
           <SheetContent
             className={`h-full w-full border-l p-0 focus:outline-none focus-visible:outline-none md:w-[40vw] md:max-w-[40vw] [&>button]:hidden`}

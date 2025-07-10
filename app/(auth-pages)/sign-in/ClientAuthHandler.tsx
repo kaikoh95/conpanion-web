@@ -11,15 +11,29 @@ export function ClientAuthHandler() {
   const invitationToken = searchParams.get('invitation');
   const [hasRedirected, setHasRedirected] = useState(false);
 
-  console.log('🔄 ClientAuthHandler: Render - loading:', loading, 'user:', user?.email || 'none', 'hasRedirected:', hasRedirected);
+  console.log(
+    '🔄 ClientAuthHandler: Render - loading:',
+    loading,
+    'user:',
+    user?.email || 'none',
+    'hasRedirected:',
+    hasRedirected,
+  );
 
   useEffect(() => {
-    console.log('🔄 ClientAuthHandler: useEffect triggered - loading:', loading, 'user:', user?.email || 'none', 'invitation:', invitationToken || 'none');
-    
+    console.log(
+      '🔄 ClientAuthHandler: useEffect triggered - loading:',
+      loading,
+      'user:',
+      user?.email || 'none',
+      'invitation:',
+      invitationToken || 'none',
+    );
+
     if (!loading && user && !hasRedirected) {
       console.log('✅ ClientAuthHandler: User authenticated, preparing redirect...');
       setHasRedirected(true);
-      
+
       if (invitationToken) {
         console.log('🔄 ClientAuthHandler: Redirecting to invitation page:', invitationToken);
         router.push(`/invitation/${invitationToken}`);
@@ -35,4 +49,4 @@ export function ClientAuthHandler() {
   }, [user, loading, router, invitationToken, hasRedirected]);
 
   return null; // This component doesn't render anything
-} 
+}

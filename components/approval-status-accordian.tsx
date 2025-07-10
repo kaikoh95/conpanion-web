@@ -144,7 +144,7 @@ export function ApprovalStatusAccordian({
 
         // First, get the project_id for this entry
         let projectId: number | null = null;
-        
+
         if (entityType === 'entries') {
           // Get project_id from form_entries table
           const { data: entryData, error: entryError } = await supabase
@@ -157,7 +157,7 @@ export function ApprovalStatusAccordian({
             console.error('Error fetching entry project:', entryError);
             return;
           }
-          
+
           projectId = entryData?.project_id;
         } else if (entityType === 'tasks') {
           // Get project_id from tasks table
@@ -171,7 +171,7 @@ export function ApprovalStatusAccordian({
             console.error('Error fetching task project:', taskError);
             return;
           }
-          
+
           projectId = taskData?.project_id;
         } else if (entityType === 'site_diary') {
           // Get project_id from site_diaries table
@@ -185,7 +185,7 @@ export function ApprovalStatusAccordian({
             console.error('Error fetching site diary project:', diaryError);
             return;
           }
-          
+
           projectId = diaryData?.project_id;
         }
 
@@ -486,7 +486,8 @@ export function ApprovalStatusAccordian({
                   <DialogHeader>
                     <DialogTitle>Create Approval Request</DialogTitle>
                     <DialogDescription>
-                      Select the approvers who will review this entry. Only active members of this project are shown. You can search by email address.
+                      Select the approvers who will review this entry. Only active members of this
+                      project are shown. You can search by email address.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">

@@ -92,8 +92,6 @@ export function DiaryApprovalStatus({
     router.push('/protected/approvals');
   };
 
-
-
   // Get status badge color
   const getStatusColor = (status: ApprovalStatus | null): string => {
     switch (status) {
@@ -138,7 +136,7 @@ export function DiaryApprovalStatus({
           <span className="font-medium">Status:</span>
           <Badge className={getStatusColor(status)}>{getStatusText(status)}</Badge>
         </div>
-        
+
         {approvalId && (
           <Button
             variant="ghost"
@@ -151,8 +149,6 @@ export function DiaryApprovalStatus({
           </Button>
         )}
       </div>
-
-
 
       {user && userCanApprove && status !== 'approved' && status !== 'declined' && approvalId && (
         <div className="mt-4">

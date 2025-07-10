@@ -175,7 +175,7 @@ export default function OrganizationMembersPage() {
         return;
       }
 
-      setUserExistsStatus(prev => ({
+      setUserExistsStatus((prev) => ({
         ...prev,
         isChecking: true,
         email: email,
@@ -240,7 +240,8 @@ export default function OrganizationMembersPage() {
           setMembers(sortedMembers);
 
           // Load pending invitations if user can manage members
-          const currentCanManageMembers = foundMembership.role === 'owner' || foundMembership.role === 'admin';
+          const currentCanManageMembers =
+            foundMembership.role === 'owner' || foundMembership.role === 'admin';
           if (currentCanManageMembers) {
             await loadPendingInvitations(foundMembership.organization_id);
           }
@@ -325,7 +326,7 @@ export default function OrganizationMembersPage() {
       const result = await organizationAPI.inviteUserByEmail(
         organization.id,
         inviteForm.email,
-        inviteForm.role as any
+        inviteForm.role as any,
       );
 
       if (result.success) {
@@ -346,8 +347,8 @@ export default function OrganizationMembersPage() {
           type: 'success',
           title: 'Invitation Sent',
           message: `Successfully invited ${inviteForm.email} to join as ${inviteForm.role}. ${
-            result.userExists 
-              ? 'The user will receive an email to accept the invitation.' 
+            result.userExists
+              ? 'The user will receive an email to accept the invitation.'
               : 'The user will receive an email to create an account and join the organization.'
           }`,
         });
@@ -577,11 +578,11 @@ export default function OrganizationMembersPage() {
     setIsCancellingInvitation(true);
     try {
       const result = await organizationAPI.cancelInvitation(cancelInvitationDialog.invitationId);
-      
+
       if (result.success) {
         // Reload pending invitations
         await loadPendingInvitations(organization.id);
-        
+
         // Close dialog
         setCancelInvitationDialog({
           isOpen: false,
@@ -620,7 +621,7 @@ export default function OrganizationMembersPage() {
       const result = await organizationAPI.resendInvitation(
         organization.id,
         invitation.invited_email,
-        invitation.role as any
+        invitation.role as any,
       );
 
       if (result.success) {
@@ -661,7 +662,7 @@ export default function OrganizationMembersPage() {
       const lastResend = new Date(invitation.last_resend_at);
       const today = new Date();
       const isSameDay = lastResend.toDateString() === today.toDateString();
-      
+
       if (isSameDay && invitation.resend_count >= 3) {
         return false;
       }
@@ -670,7 +671,9 @@ export default function OrganizationMembersPage() {
     return true;
   };
 
-  const getInvitationExpiryStatus = (expiresAt: string): {
+  const getInvitationExpiryStatus = (
+    expiresAt: string,
+  ): {
     isExpired: boolean;
     isExpiringSoon: boolean;
     daysRemaining: number;
@@ -1019,9 +1022,7 @@ export default function OrganizationMembersPage() {
               <Mail className="h-5 w-5" />
               Pending Invitations ({pendingInvitations.length})
             </CardTitle>
-            <CardDescription>
-              People who have been invited but haven't joined yet
-            </CardDescription>
+            <CardDescription>People who have been invited but haven't joined yet</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingInvitations ? (
@@ -1060,7 +1061,10 @@ export default function OrganizationMembersPage() {
                                 </Badge>
                               )}
                               {expiryStatus.isExpiringSoon && !expiryStatus.isExpired && (
-                                <Badge variant="secondary" className="w-fit text-xs bg-amber-100 text-amber-800">
+                                <Badge
+                                  variant="secondary"
+                                  className="w-fit bg-amber-100 text-xs text-amber-800"
+                                >
                                   Expires Soon
                                 </Badge>
                               )}
@@ -1076,14 +1080,19 @@ export default function OrganizationMembersPage() {
                               )}
                             </div>
                             <div className="hidden sm:block">
-                              Invited {new Date(invitation.invited_at).toLocaleDateString()} by {invitation.invited_by_name}
+                              Invited {new Date(invitation.invited_at).toLocaleDateString()} by{' '}
+                              {invitation.invited_by_name}
                               {expiryStatus.isExpired ? (
                                 <span className="text-destructive"> • Expired</span>
                               ) : (
                                 <span> • {expiryStatus.daysRemaining} days remaining</span>
                               )}
                               {invitation.resend_count > 0 && (
-                                <span> • Resent {invitation.resend_count} time{invitation.resend_count !== 1 ? 's' : ''}</span>
+                                <span>
+                                  {' '}
+                                  • Resent {invitation.resend_count} time
+                                  {invitation.resend_count !== 1 ? 's' : ''}
+                                </span>
                               )}
                             </div>
                           </div>
@@ -1120,11 +1129,9 @@ export default function OrganizationMembersPage() {
                               )}
                             </Button>
                           )}
-                          
+
                           {!canResend && invitation.resend_count >= 3 && (
-                            <div className="text-xs text-muted-foreground">
-                              Limit reached
-                            </div>
+                            <div className="text-xs text-muted-foreground">Limit reached</div>
                           )}
 
                           <DropdownMenu>
@@ -1144,10 +1151,12 @@ export default function OrganizationMembersPage() {
                                   Resend Invitation
                                 </DropdownMenuItem>
                               )}
-                              
+
                               <DropdownMenuItem
                                 className="text-destructive"
-                                onClick={() => handleCancelInvitation(invitation.id, invitation.invited_email)}
+                                onClick={() =>
+                                  handleCancelInvitation(invitation.id, invitation.invited_email)
+                                }
                               >
                                 <UserMinus className="mr-2 h-4 w-4" />
                                 Cancel Invitation
@@ -1199,7 +1208,7 @@ export default function OrganizationMembersPage() {
                 }}
                 className={inviteErrors.email ? 'border-destructive' : ''}
               />
-              
+
               {/* User existence status */}
               {inviteForm.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteForm.email) && (
                 <div className="flex items-center gap-2 text-sm">
@@ -1211,9 +1220,7 @@ export default function OrganizationMembersPage() {
                   ) : userExistsStatus.exists === true ? (
                     <>
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-green-700">
-                        User exists - invitation will be sent
-                      </span>
+                      <span className="text-green-700">User exists - invitation will be sent</span>
                     </>
                   ) : userExistsStatus.exists === false ? (
                     <>
@@ -1225,7 +1232,7 @@ export default function OrganizationMembersPage() {
                   ) : null}
                 </div>
               )}
-              
+
               {inviteErrors.email && (
                 <p className="text-sm text-destructive">{inviteErrors.email}</p>
               )}
@@ -1436,7 +1443,8 @@ export default function OrganizationMembersPage() {
                     <strong>{cancelInvitationDialog.email}</strong>.
                   </p>
                   <p className="mt-2">
-                    This action cannot be undone. If you want to invite this user later, you'll need to send a new invitation.
+                    This action cannot be undone. If you want to invite this user later, you'll need
+                    to send a new invitation.
                   </p>
                 </div>
               </div>
@@ -1451,9 +1459,9 @@ export default function OrganizationMembersPage() {
             >
               Keep Invitation
             </Button>
-            <Button 
-              onClick={confirmCancelInvitation} 
-              disabled={isCancellingInvitation} 
+            <Button
+              onClick={confirmCancelInvitation}
+              disabled={isCancellingInvitation}
               variant="destructive"
             >
               {isCancellingInvitation ? 'Cancelling...' : 'Cancel Invitation'}

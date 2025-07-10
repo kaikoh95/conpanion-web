@@ -13,20 +13,20 @@ export default function ApprovalsPage() {
   const [activeTab, setActiveTab] = useState('pending');
   const [selectedApprovalId, setSelectedApprovalId] = useState<number | null>(null);
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
-  
+
   // Fetch data using our custom hooks
-  const { 
-    approvals: pendingApprovals, 
-    loading: pendingLoading, 
-    error: pendingError, 
-    refresh: refreshPending 
+  const {
+    approvals: pendingApprovals,
+    loading: pendingLoading,
+    error: pendingError,
+    refresh: refreshPending,
   } = usePendingApprovals();
-  
-  const { 
-    requests: myRequests, 
-    loading: requestsLoading, 
-    error: requestsError, 
-    refresh: refreshRequests 
+
+  const {
+    requests: myRequests,
+    loading: requestsLoading,
+    error: requestsError,
+    refresh: refreshRequests,
   } = useMyApprovalRequests();
 
   const handleApprovalClick = (approval: ApprovalWithDetails) => {
@@ -49,9 +49,7 @@ export default function ApprovalsPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Approvals</h1>
-          <p className="text-muted-foreground">
-            Manage approval requests and review pending items
-          </p>
+          <p className="text-muted-foreground">Manage approval requests and review pending items</p>
         </div>
       </div>
 
@@ -73,9 +71,7 @@ export default function ApprovalsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Pending Approvals</CardTitle>
-              <CardDescription>
-                Items requiring your approval
-              </CardDescription>
+              <CardDescription>Items requiring your approval</CardDescription>
             </CardHeader>
             <CardContent>
               <ApprovalsList
@@ -96,9 +92,7 @@ export default function ApprovalsPage() {
           <Card>
             <CardHeader>
               <CardTitle>My Approval Requests</CardTitle>
-              <CardDescription>
-                Items you've requested approval for
-              </CardDescription>
+              <CardDescription>Items you've requested approval for</CardDescription>
             </CardHeader>
             <CardContent>
               <ApprovalsList
@@ -124,4 +118,4 @@ export default function ApprovalsPage() {
       />
     </div>
   );
-} 
+}

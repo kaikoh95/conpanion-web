@@ -100,14 +100,14 @@ export async function fetchFormEntriesWithStatus(supabase: SupabaseClient): Prom
 
 /**
  * Fetches form entries for a specific project along with their associated form name and latest approval status.
- * 
+ *
  * @param supabase The Supabase client instance.
  * @param projectId The ID of the project to filter entries by.
  * @returns A promise that resolves to an array of FormEntry objects for the specified project.
  */
 export async function fetchFormEntriesByProject(
   supabase: SupabaseClient,
-  projectId: number
+  projectId: number,
 ): Promise<FormEntry[]> {
   // 1. Fetch form entries filtered by project_id
   const { data: entriesData, error: entriesError } = await supabase

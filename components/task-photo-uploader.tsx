@@ -43,12 +43,12 @@ export default function TaskFileUploader({
 
   const validateFile = (file: File): boolean => {
     setError(null);
-    
+
     if (file.size > maxSize) {
       setError(`File is too large. Maximum size is ${formatFileSize(maxSize)}.`);
       return false;
     }
-    
+
     return true;
   };
 
@@ -61,38 +61,38 @@ export default function TaskFileUploader({
 
   const handleFileAdd = (file: File | null) => {
     if (!file) return;
-    
+
     if (!validateFile(file)) {
       return;
     }
-    
+
     // Make sure we have a current project
     if (!currentProject?.id) {
       console.error('No project selected for file upload');
       toast.error('No project selected. Please select a project to upload files.');
       return;
     }
-    
+
     // Check if we've reached the maximum number of files
     if (files.length >= maxFiles) {
       toast.error(`Maximum ${maxFiles} files allowed.`);
       return;
     }
-    
+
     console.log('Adding file to task:', taskId, 'in project:', currentProject.id);
-    
+
     // Add file to local state with preview if it's an image
     const newFile: FileState = {
       file,
-      previewUrl: createPreviewUrl(file)
+      previewUrl: createPreviewUrl(file),
     };
-    
+
     // Update local state
     const updatedFiles = [...files, newFile];
     setFiles(updatedFiles);
-    
+
     // Pass the raw files up to the parent component
-    onUploadChange(updatedFiles.map(f => f.file));
+    onUploadChange(updatedFiles.map((f) => f.file));
   };
 
   const handleFileRemove = (index: number) => {
@@ -100,28 +100,28 @@ export default function TaskFileUploader({
     if (files[index].previewUrl) {
       URL.revokeObjectURL(files[index].previewUrl);
     }
-    
+
     // Remove file from local state
     const updatedFiles = files.filter((_, i) => i !== index);
     setFiles(updatedFiles);
-    
+
     // Update parent component
-    onUploadChange(updatedFiles.length > 0 ? updatedFiles.map(f => f.file) : null);
+    onUploadChange(updatedFiles.length > 0 ? updatedFiles.map((f) => f.file) : null);
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
-    
+
     // Handle multiple files
     const availableSlots = maxFiles - files.length;
     const filesToAdd = Array.from(selectedFiles).slice(0, availableSlots);
-    
+
     if (filesToAdd.length < selectedFiles.length) {
       toast.warning(`Only ${availableSlots} more files can be added. Some files were skipped.`);
     }
-    
-    filesToAdd.forEach(file => handleFileAdd(file));
+
+    filesToAdd.forEach((file) => handleFileAdd(file));
     e.target.value = ''; // Reset input to allow selecting same file again
   };
 
@@ -143,28 +143,28 @@ export default function TaskFileUploader({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (isDisabled) return;
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const droppedFiles = Array.from(e.dataTransfer.files);
       const availableSlots = maxFiles - files.length;
-      
+
       // Only process up to the max allowed number of files
       const filesToAdd = droppedFiles.slice(0, availableSlots);
-      
+
       if (filesToAdd.length < droppedFiles.length) {
         toast.warning(`Only ${availableSlots} more files can be added. Some files were skipped.`);
       }
-      
-      filesToAdd.forEach(file => handleFileAdd(file));
+
+      filesToAdd.forEach((file) => handleFileAdd(file));
     }
   };
 
   // Function to get appropriate icon for a file
   const getFileIcon = (file: File) => {
     const type = file.type;
-    
+
     if (type.startsWith('image/')) {
       return <ImageIcon className="h-5 w-5 text-primary" />;
     } else if (type.startsWith('video/')) {
@@ -173,21 +173,25 @@ export default function TaskFileUploader({
       return <FileIcon className="h-5 w-5 text-yellow-500" />;
     } else if (type === 'application/pdf') {
       return <FileIcon className="h-5 w-5 text-red-500" />;
-    } else if (type.includes('spreadsheet') || type.includes('excel') || file.name.endsWith('.csv')) {
+    } else if (
+      type.includes('spreadsheet') ||
+      type.includes('excel') ||
+      file.name.endsWith('.csv')
+    ) {
       return <FileIcon className="h-5 w-5 text-green-500" />;
     } else if (type.includes('document') || type.includes('word')) {
       return <FileIcon className="h-5 w-5 text-blue-500" />;
     } else if (type.includes('presentation') || type.includes('powerpoint')) {
       return <FileIcon className="h-5 w-5 text-orange-500" />;
     }
-    
+
     return <FileIcon className="h-5 w-5 text-primary" />;
   };
 
   const renderFilePreview = (fileState: FileState, index: number) => {
     const file = fileState.file;
     const isImage = file.type.startsWith('image/');
-    
+
     return (
       <div key={index} className="relative flex items-center rounded-md border p-2">
         <div className="mr-2 flex h-12 w-12 items-center justify-center overflow-hidden rounded-md bg-muted">
@@ -233,12 +237,12 @@ export default function TaskFileUploader({
           {files.map((file, index) => renderFilePreview(file, index))}
         </div>
       )}
-      
+
       {/* File upload area */}
       <div
         className={`relative flex min-h-[150px] w-full cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed transition-colors ${
-          dragActive 
-            ? 'border-primary bg-primary/5' 
+          dragActive
+            ? 'border-primary bg-primary/5'
             : 'border-muted-foreground/20 hover:border-primary/50'
         } ${isDisabled ? 'cursor-not-allowed opacity-60' : ''}`}
         onClick={() => {
@@ -259,22 +263,20 @@ export default function TaskFileUploader({
           disabled={isDisabled}
           multiple
         />
-        
+
         <div className="flex flex-col items-center justify-center space-y-2 p-4 text-center">
           <Upload className="h-8 w-8 text-muted-foreground" />
           <div className="mt-2 text-center">
-            <p className="text-sm font-medium">
-              Drag & drop or click to upload files
-            </p>
+            <p className="text-sm font-medium">Drag & drop or click to upload files</p>
             <p className="text-xs text-muted-foreground">
               Max size: {formatFileSize(maxSize)} (up to {maxFiles} files)
             </p>
           </div>
         </div>
       </div>
-      
+
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
       {hasError && <p className="text-sm text-red-500">{errorMessage}</p>}
     </div>
   );
-} 
+}

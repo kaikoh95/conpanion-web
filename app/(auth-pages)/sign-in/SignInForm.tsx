@@ -28,7 +28,7 @@ export function SignInForm({ invitationToken, searchParams }: SignInFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     console.log('🔄 SignInForm: Starting client-side sign-in process');
     console.log('🔄 SignInForm: Email:', email);
     console.log('🔄 SignInForm: Invitation token:', invitationToken || 'none');
@@ -65,7 +65,7 @@ export function SignInForm({ invitationToken, searchParams }: SignInFormProps) {
           if (invitationToken) {
             formData.append('invitation', invitationToken);
           }
-          
+
           // Note: signInAction will try to authenticate again, but that's okay
           // It will handle invitation linking and other server-side logic
           await signInAction(formData);
@@ -83,7 +83,6 @@ export function SignInForm({ invitationToken, searchParams }: SignInFormProps) {
           console.log('🔄 SignInForm: Redirecting to protected area');
           router.push('/protected');
         }
-
       } catch (error) {
         console.error('❌ SignInForm: Unexpected error during sign-in:', error);
         setError(error instanceof Error ? error.message : 'An unexpected error occurred');
@@ -94,20 +93,18 @@ export function SignInForm({ invitationToken, searchParams }: SignInFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {/* Hidden field to pass invitation token */}
-      {invitationToken && (
-        <input type="hidden" name="invitation" value={invitationToken} />
-      )}
-      
+      {invitationToken && <input type="hidden" name="invitation" value={invitationToken} />}
+
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">Email</Label>
-        <Input 
+        <Input
           id="email"
-          name="email" 
+          name="email"
           type="email"
-          placeholder="you@example.com" 
+          placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          required 
+          required
         />
       </div>
 
@@ -118,14 +115,14 @@ export function SignInForm({ invitationToken, searchParams }: SignInFormProps) {
             Forgot Password?
           </Link>
         </div>
-        <Input 
+        <Input
           id="password"
-          type="password" 
-          name="password" 
+          type="password"
+          name="password"
           placeholder="Your password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          required 
+          required
         />
       </div>
 
@@ -133,13 +130,9 @@ export function SignInForm({ invitationToken, searchParams }: SignInFormProps) {
         {isPending ? 'Signing In...' : 'Sign in'}
       </Button>
 
-      {error && (
-        <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
-          {error}
-        </div>
-      )}
+      {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
       <FormMessage message={searchParams} />
     </form>
   );
-} 
+}

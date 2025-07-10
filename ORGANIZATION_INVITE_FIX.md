@@ -12,6 +12,7 @@ The organization invitation system had a critical bug where users who were previ
 ### 1. Invitation Flow (`invite_user_to_organization_by_email`)
 
 **Original problematic code:**
+
 ```sql
 -- Check if user is already a member
 IF EXISTS (
@@ -33,6 +34,7 @@ END IF;
 ### 2. Acceptance Flow (`accept_organization_invitation`)
 
 **Original problematic code:**
+
 ```sql
 -- Check if user is already a member
 SELECT * INTO v_existing_membership
@@ -77,25 +79,27 @@ I've created a migration file: `supabase/migrations/20250707091451_fix_organizat
 #### Enhanced Return Values
 
 **Invitation function now returns:**
+
 ```json
 {
   "success": true,
   "user_exists": true,
   "token": "uuid-token",
   "invitation_id": 123,
-  "was_previously_member": true,  // NEW
-  "message": "Invitation sent to previously removed user"  // ENHANCED
+  "was_previously_member": true, // NEW
+  "message": "Invitation sent to previously removed user" // ENHANCED
 }
 ```
 
 **Acceptance function now returns:**
+
 ```json
 {
   "success": true,
   "organization_id": 456,
   "role": "member",
-  "message": "Invitation accepted successfully - membership reactivated",  // ENHANCED
-  "was_reactivated": true  // NEW
+  "message": "Invitation accepted successfully - membership reactivated", // ENHANCED
+  "was_reactivated": true // NEW
 }
 ```
 
@@ -133,6 +137,7 @@ npx supabase db push
 ### Option 3: Production Deployment
 
 If using automated deployments:
+
 ```bash
 # The migration file is already created and will be applied on next deployment
 git add supabase/migrations/20250707091451_fix_organization_invite_previously_removed_users.sql
@@ -165,8 +170,9 @@ git push origin main
 ### Database Queries to Verify Fix
 
 **Check for deactivated users who can be re-invited:**
+
 ```sql
-SELECT 
+SELECT
   ou.id,
   ou.user_id,
   ou.organization_id,
@@ -180,15 +186,16 @@ ORDER BY ou.left_at DESC;
 ```
 
 **Check invitation acceptance success:**
+
 ```sql
-SELECT 
+SELECT
   oi.email,
   oi.status,
   oi.accepted_at,
   ou.status as membership_status,
   ou.role
 FROM organization_invitations oi
-LEFT JOIN organization_users ou ON ou.organization_id = oi.organization_id 
+LEFT JOIN organization_users ou ON ou.organization_id = oi.organization_id
   AND ou.user_id IN (
     SELECT id FROM auth.users WHERE email = oi.email
   )
@@ -228,7 +235,7 @@ The fix includes comprehensive error handling for:
 This fix resolves the critical issue where previously removed users couldn't be re-invited to organizations. The solution:
 
 1. ✅ **Handles deactivated memberships** properly
-2. ✅ **Reactivates memberships** instead of creating duplicates  
+2. ✅ **Reactivates memberships** instead of creating duplicates
 3. ✅ **Provides better user feedback** with enhanced messaging
 4. ✅ **Maintains backward compatibility** with existing functionality
 5. ✅ **Preserves data integrity** and audit trails

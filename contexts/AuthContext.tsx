@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: { user: authUser },
         error: authError,
       } = await supabase.auth.getUser();
-      
+
       if (authError || !authUser) {
         console.log('🔄 AuthContext: No valid user found, clearing state');
         setUser(null);
@@ -45,14 +45,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      
+
       if (!session?.user) {
         console.log('🔄 AuthContext: No session found, clearing state');
         setUser(null);
         setLoading(false);
         return;
       }
-      console.log('🔄 AuthContext: valid session for user:', session.user.email, '| token:', session.access_token ? 'present' : 'missing');
+      console.log(
+        '🔄 AuthContext: valid session for user:',
+        session.user.email,
+        '| token:',
+        session.access_token ? 'present' : 'missing',
+      );
 
       // use this for testing only
       if (!session?.user?.user_metadata?.avatar_url) {
@@ -202,8 +207,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
-      console.log('🔄 AuthContext: onAuthStateChange event:', event, 'session:', session ? `exists for ${session.user?.email}` : 'null');
-      
+      console.log(
+        '🔄 AuthContext: onAuthStateChange event:',
+        event,
+        'session:',
+        session ? `exists for ${session.user?.email}` : 'null',
+      );
+
       // Handle SIGNED_OUT immediately to clear stale state
       if (event === 'SIGNED_OUT') {
         console.log('🔄 AuthContext: SIGNED_OUT - clearing user state immediately');
@@ -211,13 +221,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       }
-      
+
       // Only refresh on meaningful auth events, not on every state check
-      if (
-        event === 'SIGNED_IN' ||
-        event === 'TOKEN_REFRESHED' ||
-        event === 'USER_UPDATED'
-      ) {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         getUser();
       }
     });

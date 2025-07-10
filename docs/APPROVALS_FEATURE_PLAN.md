@@ -1,8 +1,9 @@
 # 📋 Approvals Feature Implementation Plan
 
 ## 🎯 Task Status Tracker
+
 - ✅ Done
-- 🚧 In Progress  
+- 🚧 In Progress
 - ⏳ Pending
 - 🔄 Needs Review
 - ❌ Blocked
@@ -12,6 +13,7 @@
 ## 📖 Overview
 
 This feature will add a new "Approvals" tab to the burger menu with two main sections:
+
 1. **Pending Approvals** - Items requiring approval from the current user (as approver)
 2. **My Requests** - Items the current user has requested approval for (as requester)
 
@@ -22,7 +24,9 @@ Users can view, approve, decline, or request revisions for different entity type
 ## 🗄️ Phase 1: Database Schema Updates
 
 ### ⏳ 1.1 Create Approval Comments Table
+
 **Migration:** `create_approval_comments_table.sql`
+
 ```sql
 -- Create approval_comments table for approval-related discussions
 CREATE TABLE public.approval_comments (
@@ -44,7 +48,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public.approvals a
     LEFT JOIN public.approval_approvers aa ON a.id = aa.approval_id
-    WHERE a.id = approval_id 
+    WHERE a.id = approval_id
     AND (a.requester_id = auth.uid() OR aa.approver_id = auth.uid())
   )
 );
@@ -56,24 +60,28 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.approvals a
     LEFT JOIN public.approval_approvers aa ON a.id = aa.approval_id
-    WHERE a.id = approval_id 
+    WHERE a.id = approval_id
     AND (a.requester_id = auth.uid() OR aa.approver_id = auth.uid())
   )
 );
 ```
 
 ### ⏳ 1.2 Add Comment Support to Approval Actions
+
 **Migration:** `add_approval_action_tracking.sql`
+
 ```sql
 -- Add action_comment column to approvals table for decline/revision reasons
-ALTER TABLE public.approvals 
+ALTER TABLE public.approvals
 ADD COLUMN action_comment TEXT,
 ADD COLUMN action_taken_by UUID REFERENCES auth.users(id),
 ADD COLUMN action_taken_at TIMESTAMP WITH TIME ZONE;
 ```
 
 ### ⏳ 1.3 Update Approval Logic for Multiple Approvers
+
 **Migration:** `update_approval_multiple_approvers.sql`
+
 ```sql
 -- Add individual approver status tracking
 CREATE TABLE public.approval_approver_responses (
@@ -115,16 +123,16 @@ BEGIN
   SELECT COUNT(*) INTO total_approvers
   FROM approval_approvers aa
   WHERE aa.approval_id = approval_id_param;
-  
+
   -- Count responses by status
-  SELECT 
+  SELECT
     COUNT(CASE WHEN aar.status = 'approved' THEN 1 END),
     COUNT(CASE WHEN aar.status = 'declined' THEN 1 END),
     COUNT(CASE WHEN aar.status = 'revision_requested' THEN 1 END)
   INTO approved_count, declined_count, revision_count
   FROM approval_approver_responses aar
   WHERE aar.approval_id = approval_id_param;
-  
+
   -- If any approver declined or requested revision, overall status reflects that
   IF declined_count > 0 THEN
     RETURN 'declined';
@@ -142,12 +150,12 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION update_approval_status_on_response()
 RETURNS TRIGGER AS $$
 BEGIN
-  UPDATE approvals 
-  SET 
+  UPDATE approvals
+  SET
     status = calculate_approval_status(NEW.approval_id),
     last_updated = NOW()
   WHERE id = NEW.approval_id;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -163,46 +171,56 @@ CREATE TRIGGER approval_status_update_trigger
 ## 🔧 Phase 2: API Layer Enhancements
 
 ### ⏳ 2.1 Generate Updated Database Types
+
 **Command:** Run after database migrations are complete
+
 ```bash
 npm run types:db
 ```
+
 This will automatically generate TypeScript types for the new tables and columns in `lib/supabase/types.generated.d.ts`.
 
 ### ⏳ 2.2 Extend Approvals API (`lib/api/approvals.ts`)
 
 #### New Functions to Add:
+
 ```typescript
 // Get pending approvals for current user (as approver)
-export async function getPendingApprovalsForUser(): Promise<ApprovalWithDetails[]>
+export async function getPendingApprovalsForUser(): Promise<ApprovalWithDetails[]>;
 
 // Get approval requests made by current user (as requester)
-export async function getMyApprovalRequests(): Promise<ApprovalWithDetails[]>
+export async function getMyApprovalRequests(): Promise<ApprovalWithDetails[]>;
 
 // Get approval details with entity information
-export async function getApprovalWithEntityDetails(approvalId: number): Promise<ApprovalWithEntityDetails>
+export async function getApprovalWithEntityDetails(
+  approvalId: number,
+): Promise<ApprovalWithEntityDetails>;
 
 // Add comment to approval
-export async function addApprovalComment(approvalId: number, comment: string): Promise<ApprovalComment>
+export async function addApprovalComment(
+  approvalId: number,
+  comment: string,
+): Promise<ApprovalComment>;
 
 // Get comments for approval
-export async function getApprovalComments(approvalId: number): Promise<ApprovalComment[]>
+export async function getApprovalComments(approvalId: number): Promise<ApprovalComment[]>;
 
 // Individual approver response (for multiple approver workflow)
 export async function submitApproverResponse(
-  approvalId: number, 
+  approvalId: number,
   action: 'approved' | 'declined' | 'revision_requested',
-  comment?: string
-): Promise<ApprovalApproverResponse>
+  comment?: string,
+): Promise<ApprovalApproverResponse>;
 
 // Get approver responses for an approval
-export async function getApproverResponses(approvalId: number): Promise<ApprovalApproverResponse[]>
+export async function getApproverResponses(approvalId: number): Promise<ApprovalApproverResponse[]>;
 
 // Check if current user can approve (is an approver and hasn't responded yet)
-export async function canUserApprove(approvalId: number): Promise<boolean>
+export async function canUserApprove(approvalId: number): Promise<boolean>;
 ```
 
 #### New Types to Add:
+
 **Note:** After running `npm run types:db`, use the generated types from `lib/supabase/types.generated.d.ts` for database tables. The interfaces below are for enhanced API responses that combine multiple tables.
 
 ```typescript
@@ -240,16 +258,18 @@ interface ApprovalApproverResponseWithUser extends ApprovalApproverResponse {
 ```
 
 ### ⏳ 2.3 Create Entity-Specific Data Fetchers
+
 **File:** `lib/api/approval-entities.ts`
+
 ```typescript
 // Unified interface for fetching entity details for approvals
 export async function getEntityDetailsForApproval(
-  entityType: EntityType, 
-  entityId: number
-): Promise<EntityDetails>
+  entityType: EntityType,
+  entityId: number,
+): Promise<EntityDetails>;
 
 // Get entity title for display in lists
-export async function getEntityTitle(entityType: EntityType, entityId: number): Promise<string>
+export async function getEntityTitle(entityType: EntityType, entityId: number): Promise<string>;
 ```
 
 ---
@@ -259,6 +279,7 @@ export async function getEntityTitle(entityType: EntityType, entityId: number): 
 ### ⏳ 3.1 Core Approval Components
 
 #### `components/approvals/ApprovalsContainer.tsx`
+
 - **Purpose:** Main container with tabs for "Pending Approvals" and "My Requests"
 - **Features:**
   - Tab navigation between pending and requests
@@ -266,6 +287,7 @@ export async function getEntityTitle(entityType: EntityType, entityId: number): 
   - Responsive design for mobile/desktop
 
 #### `components/approvals/ApprovalsList.tsx`
+
 - **Purpose:** Reusable list component for both pending and requests
 - **Features:**
   - Filter by entity type (All, Site Diaries, Forms, Entries, Tasks)
@@ -277,6 +299,7 @@ export async function getEntityTitle(entityType: EntityType, entityId: number): 
   - Search functionality
 
 #### `components/approvals/ApprovalCard.tsx`
+
 - **Purpose:** Individual approval item in the list
 - **Features:**
   - Entity type badge
@@ -289,6 +312,7 @@ export async function getEntityTitle(entityType: EntityType, entityId: number): 
 #### ⏳ 3.2 Detail View Components
 
 #### `components/approvals/ApprovalDetailDrawer.tsx`
+
 - **Purpose:** Main container for approval detail view
 - **Features:**
   - Reuse existing entity detail components
@@ -297,6 +321,7 @@ export async function getEntityTitle(entityType: EntityType, entityId: number): 
   - Approval history
 
 #### `components/approvals/ApprovalActions.tsx`
+
 - **Purpose:** Action buttons for approve/decline/request revision
 - **Features:**
   - Three action buttons with appropriate styling
@@ -307,6 +332,7 @@ export async function getEntityTitle(entityType: EntityType, entityId: number): 
   - Disable actions if user already responded
 
 #### `components/approvals/ApprovalComments.tsx`
+
 - **Purpose:** Comments section for approval discussions
 - **Features:**
   - List of existing comments
@@ -317,15 +343,15 @@ export async function getEntityTitle(entityType: EntityType, entityId: number): 
 ### ⏳ 3.3 Entity Detail Component Reuse
 
 #### Reusable Components Identified:
+
 1. **Site Diaries:** `app/protected/site-diaries/view-site-diary.tsx`
    - Extract core viewing logic into `components/site-diaries/SiteDiaryViewer.tsx`
    - Remove edit functionality for approval context
-   
 2. **Form Entries:** Logic from `app/protected/entries/page.tsx`
    - Extract entry detail view into `components/entries/EntryViewer.tsx`
    - Reuse form rendering components
-   
 3. **Tasks:** `app/protected/tasks/[id]/page.tsx`
+
    - Extract read-only task view into `components/tasks/TaskViewer.tsx`
    - Remove edit capabilities for approval context
 
@@ -337,21 +363,27 @@ export async function getEntityTitle(entityType: EntityType, entityId: number): 
 ## 📱 Phase 4: Navigation & Routing
 
 ### ⏳ 4.1 Update Sidebar Navigation
+
 **File:** `app/components/layout/Sidebar.tsx`
+
 ```typescript
 // Add Approvals to navItems array
 { name: 'Approvals', icon: CheckCircle2, href: '/protected/approvals' }
 ```
 
 ### ⏳ 4.2 Create Approvals Page
+
 **File:** `app/protected/approvals/page.tsx`
+
 - Main approvals dashboard with tabs
 - Integration with ApprovalsContainer component
 - Responsive design for mobile/desktop
 - Start with Site Diaries implementation
 
 ### ⏳ 4.3 Create Approval Detail Route
+
 **File:** `app/protected/approvals/[id]/page.tsx`
+
 - Individual approval detail page
 - Deep linking support
 - Back navigation to approvals list
@@ -361,10 +393,12 @@ export async function getEntityTitle(entityType: EntityType, entityId: number): 
 ## 🔄 Phase 5: Integration with Existing Entity Views
 
 ### ⏳ 5.1 Update Existing Approval Status Components
+
 - Enhance `components/approval-status-accordian.tsx` to link to new approvals page
 - Add "View in Approvals" links where appropriate
 
 ### ⏳ 5.2 Cross-Navigation
+
 - Add links from entity detail views to approval details
 - Breadcrumb navigation for better UX
 
@@ -373,7 +407,9 @@ export async function getEntityTitle(entityType: EntityType, entityId: number): 
 ## 📋 Phase 6: State Management & Data Flow
 
 ### ⏳ 6.1 Create Approval Context
+
 **File:** `contexts/ApprovalsContext.tsx`
+
 ```typescript
 // Manage approval state across components
 // Handle real-time updates (future)
@@ -381,14 +417,16 @@ export async function getEntityTitle(entityType: EntityType, entityId: number): 
 ```
 
 ### ⏳ 6.2 Custom Hooks
+
 **File:** `hooks/useApprovals.ts`
+
 ```typescript
 // Hook for fetching and managing approvals
-export function usePendingApprovals()
-export function useMyApprovalRequests()
-export function useApprovalDetail(approvalId: number)
-export function useApprovalComments(approvalId: number)
-export function useApproverResponses(approvalId: number)
+export function usePendingApprovals();
+export function useMyApprovalRequests();
+export function useApprovalDetail(approvalId: number);
+export function useApprovalComments(approvalId: number);
+export function useApproverResponses(approvalId: number);
 ```
 
 ---
@@ -396,16 +434,19 @@ export function useApproverResponses(approvalId: number)
 ## 🎯 Phase 7: User Experience Enhancements
 
 ### ⏳ 7.1 Responsive Design
+
 - Desktop-first approach using Tailwind with mobile adaptation via flexbox
 - Tab navigation works on both mobile and desktop
 - Responsive approval cards and detail views
 
 ### ⏳ 7.2 Loading States & Error Handling
+
 - Skeleton components for loading states
 - Error boundaries for graceful error handling
 - Retry mechanisms for failed requests
 
 ### ⏳ 7.3 Accessibility
+
 - Proper ARIA labels
 - Keyboard navigation support
 - Screen reader compatibility
@@ -415,11 +456,13 @@ export function useApproverResponses(approvalId: number)
 ## 🧪 Phase 8: Testing & Validation
 
 ### ⏳ 8.1 Component Testing
+
 - Unit tests for approval components
 - Integration tests for approval workflows
 - Mock data for testing scenarios
 
 ### ⏳ 8.2 User Acceptance Testing
+
 - Test Site Diaries approval workflow first
 - Test multiple approver scenarios (1 approver vs multiple approvers)
 - Validate permissions and security (including project admin access)
@@ -431,11 +474,13 @@ export function useApproverResponses(approvalId: number)
 ## 🚀 Phase 9: Performance & Optimization
 
 ### ⏳ 9.1 Data Optimization
+
 - Implement pagination for large approval lists
 - Optimize database queries
 - Add database indexes for approval queries
 
 ### ⏳ 9.2 Caching Strategy
+
 - Cache approval lists
 - Invalidate cache on approval actions
 - Implement optimistic updates
@@ -445,10 +490,12 @@ export function useApproverResponses(approvalId: number)
 ## 🔮 Future Enhancements (Post-MVP)
 
 ### ⏳ 10.1 Real-time Updates
+
 - WebSocket integration for live approval updates
 - Push notifications for approval requests
 
 ### ⏳ 10.2 Advanced Features
+
 - Bulk approval actions
 - Approval templates and workflows
 - Approval analytics and reporting
@@ -460,12 +507,14 @@ export function useApproverResponses(approvalId: number)
 ## 📝 Implementation Notes
 
 ### Entity Type Mapping:
+
 - `site_diary` → Site Diaries
-- `form` → Forms  
+- `form` → Forms
 - `entries` → Form Entries
 - `tasks` → Tasks
 
 ### Reusable UI Patterns:
+
 - Status badges with consistent color coding
 - Entity type icons (Book, FileText, List, CheckSquare)
 - User avatars and names
@@ -473,6 +522,7 @@ export function useApproverResponses(approvalId: number)
 - Action button groups
 
 ### Security Considerations:
+
 - Verify user permissions for each approval action
 - Validate entity access before showing approval details (read-only for approvers)
 - Project admins have visibility over all project approvals
@@ -485,13 +535,15 @@ export function useApproverResponses(approvalId: number)
 ## 🎨 Design System Integration
 
 ### Colors & Status Mapping:
-- **Draft:** `bg-gray-500` 
+
+- **Draft:** `bg-gray-500`
 - **Submitted:** `bg-blue-500`
 - **Approved:** `bg-green-500`
 - **Declined:** `bg-red-500`
 - **Revision Requested:** `bg-yellow-500`
 
 ### Icons:
+
 - Approvals: `CheckCircle2`
 - Site Diary: `Book`
 - Forms: `FileText`
@@ -499,6 +551,7 @@ export function useApproverResponses(approvalId: number)
 - Tasks: `CheckSquare`
 
 ### Component Consistency:
+
 - Follow existing button variants and sizes
 - Use established spacing patterns
 - Maintain consistent typography hierarchy
@@ -509,6 +562,7 @@ export function useApproverResponses(approvalId: number)
 ## 🚀 Implementation Priority Order
 
 ### Phase A: Site Diaries MVP (First Implementation)
+
 1. ✅ **Database Updates** (1.1, 1.2, 1.3) - COMPLETE
 2. ✅ **Generate Types** (2.1) - Run `npm run types:db` - COMPLETE
 3. ✅ **Site Diary API Extensions** (2.2, 2.3 for site_diary only) - COMPLETE
@@ -517,16 +571,18 @@ export function useApproverResponses(approvalId: number)
    - ✅ ApprovalCard component with status badges and entity icons
    - ✅ Custom hooks (usePendingApprovals, useMyApprovalRequests)
    - ✅ ApprovalDetailDrawer component
-       - ✅ ApprovalActions component
-       - ✅ ApprovalComments component
+     - ✅ ApprovalActions component
+     - ✅ ApprovalComments component
 5. ✅ **Navigation & Routing** (4.1, 4.2) - Main page complete, detail route pending
 6. ⏳ **Testing & Validation** (8.1, 8.2 for site diaries)
 
 ### Phase B: Expand to Other Entities
+
 - Repeat API and UI development for Forms, Entries, then Tasks
 - Follow same patterns established in Phase A
 
 ### Phase C: Advanced Features
+
 - Performance optimizations (9.1, 9.2)
 - Future enhancements (10.1, 10.2)
 
@@ -535,22 +591,26 @@ export function useApproverResponses(approvalId: number)
 ## 📋 Key Design Decisions Based on Requirements
 
 ### Approval Workflow Logic:
+
 - **Single Approver:** One approval = approved status
 - **Multiple Approvers:** ALL approvers must approve for approved status
 - **Priority Logic:** Any decline/revision request overrides approvals
 - **Status Flexibility:** No restrictions on status transitions
 
 ### UI Structure:
+
 - **Two-Tab Interface:** "Pending Approvals" + "My Requests"
 - **Filtering Options:** Entity type, requester name, date ranges
 - **No Project Filter:** User sees current project context only
 - **Desktop-First:** Responsive design using flexbox
 
 ### Access Control:
+
 - **Approvers:** Read-only access to entities they're approving
 - **Project Admins:** Full visibility of all project approvals
 - **Comments Visibility:** Requester + Approvers + Project Admins
 
 ### Future-Ready Design:
+
 - Database schema can support notifications when implemented later
-- Component architecture allows easy expansion to new entity types 
+- Component architecture allows easy expansion to new entity types

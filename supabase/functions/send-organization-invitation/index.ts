@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
         },
-      }
+      },
     );
 
     // Get the authenticated user
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
         {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       );
     }
 
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       );
     }
 
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       );
     }
 
@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       );
     }
 
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
         p_organization_id: organizationId,
         p_email: email,
         p_role: role,
-      }
+      },
     );
 
     if (invitationError) {
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       );
     }
 
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       );
     }
 
@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
         {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        },
       );
     }
 
@@ -173,9 +173,10 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    const inviterName = inviterData?.first_name && inviterData?.last_name
-      ? `${inviterData.first_name} ${inviterData.last_name}`
-      : inviterData?.email || user.email || 'Someone';
+    const inviterName =
+      inviterData?.first_name && inviterData?.last_name
+        ? `${inviterData.first_name} ${inviterData.last_name}`
+        : inviterData?.email || user.email || 'Someone';
 
     // Send email using Resend
     const emailData = {
@@ -210,7 +211,6 @@ Deno.serve(async (req) => {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
   } catch (error) {
     console.error('Unexpected error:', error);
     return new Response(
@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      },
     );
   }
 });
@@ -238,7 +238,8 @@ async function sendInvitationEmail(data: {
 }): Promise<{ success: boolean; error?: string; messageId?: string }> {
   try {
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    const FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || 'notifications@approval.getconpanion.com';
+    const FROM_EMAIL =
+      Deno.env.get('RESEND_FROM_EMAIL') || 'notifications@approval.getconpanion.com';
     const APP_URL = Deno.env.get('APP_URL') || 'https://www.getconpanion.com';
 
     if (!RESEND_API_KEY) {
@@ -246,7 +247,7 @@ async function sendInvitationEmail(data: {
     }
 
     const invitationUrl = `${APP_URL}/invitation/${data.invitationToken}`;
-    
+
     const emailPayload = {
       from: FROM_EMAIL,
       to: [data.email],
@@ -258,7 +259,7 @@ async function sendInvitationEmail(data: {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        Authorization: `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(emailPayload),
@@ -274,7 +275,6 @@ async function sendInvitationEmail(data: {
       success: true,
       messageId: result.id,
     };
-
   } catch (error) {
     console.error('Email sending error:', error);
     return {
@@ -285,17 +285,20 @@ async function sendInvitationEmail(data: {
 }
 
 // Generate HTML email template
-function generateEmailTemplate(data: {
-  email: string;
-  organizationName: string;
-  inviterName: string;
-  role: string;
-  userExists: boolean;
-}, invitationUrl: string): string {
+function generateEmailTemplate(
+  data: {
+    email: string;
+    organizationName: string;
+    inviterName: string;
+    role: string;
+    userExists: boolean;
+  },
+  invitationUrl: string,
+): string {
   const ctaText = data.userExists ? 'Accept Invitation' : 'Create Account & Join Organization';
   const userMessage = data.userExists
     ? 'Since you already have a Conpanion account, you can accept this invitation right away and start collaborating with your team.'
-    : 'Conpanion is a project management platform designed specifically for construction companies. You\'ll be able to collaborate on projects, manage tasks, track progress, and much more.';
+    : "Conpanion is a project management platform designed specifically for construction companies. You'll be able to collaborate on projects, manage tasks, track progress, and much more.";
 
   return `
 <!DOCTYPE html>
@@ -440,17 +443,22 @@ function generateEmailTemplate(data: {
 }
 
 // Generate plain text email
-function generateEmailText(data: {
-  email: string;
-  organizationName: string;
-  inviterName: string;
-  role: string;
-  userExists: boolean;
-}, invitationUrl: string): string {
-  const ctaText = data.userExists ? 'Accept your invitation:' : 'Create your account and join the organization:';
+function generateEmailText(
+  data: {
+    email: string;
+    organizationName: string;
+    inviterName: string;
+    role: string;
+    userExists: boolean;
+  },
+  invitationUrl: string,
+): string {
+  const ctaText = data.userExists
+    ? 'Accept your invitation:'
+    : 'Create your account and join the organization:';
   const userMessage = data.userExists
     ? 'Since you already have a Conpanion account, you can accept this invitation right away and start collaborating with your team.'
-    : 'Conpanion is a project management platform designed specifically for construction companies. You\'ll be able to collaborate on projects, manage tasks, track progress, and much more.';
+    : "Conpanion is a project management platform designed specifically for construction companies. You'll be able to collaborate on projects, manage tasks, track progress, and much more.";
 
   return `
 You're invited to join ${data.organizationName} on Conpanion
@@ -476,4 +484,4 @@ This invitation was sent to ${data.email}. If you weren't expecting this invitat
 
 © 2024 Conpanion. All rights reserved.
   `;
-} 
+}

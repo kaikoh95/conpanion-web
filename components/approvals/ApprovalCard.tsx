@@ -75,10 +75,7 @@ export function ApprovalCard({ approval, onClick }: ApprovalCardProps) {
   const EntityIcon = getEntityIcon(approval.entity_type);
 
   return (
-    <Card 
-      className="cursor-pointer transition-colors hover:bg-muted/50"
-      onClick={onClick}
-    >
+    <Card className="cursor-pointer transition-colors hover:bg-muted/50" onClick={onClick}>
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           {/* Entity Icon */}
@@ -87,22 +84,22 @@ export function ApprovalCard({ approval, onClick }: ApprovalCardProps) {
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             {/* Header */}
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium truncate">{approval.entity_title}</h3>
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate font-medium">{approval.entity_title}</h3>
                 <p className="text-sm text-muted-foreground">
                   {formatEntityType(approval.entity_type)} #{approval.entity_id}
                 </p>
               </div>
-              <Badge className={`${getStatusColor(approval.status)} text-white shrink-0`}>
+              <Badge className={`${getStatusColor(approval.status)} shrink-0 text-white`}>
                 {formatStatus(approval.status)}
               </Badge>
             </div>
 
             {/* Requester Info */}
-            <div className="flex items-center gap-2 mb-2">
+            <div className="mb-2 flex items-center gap-2">
               <Avatar className="h-6 w-6">
                 <AvatarFallback className="text-xs">
                   <User className="h-3 w-3" />
@@ -116,13 +113,11 @@ export function ApprovalCard({ approval, onClick }: ApprovalCardProps) {
             {/* Time */}
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="h-3 w-3" />
-              <span>
-                {formatDistanceToNow(new Date(approval.created_at), { addSuffix: true })}
-              </span>
+              <span>{formatDistanceToNow(new Date(approval.created_at), { addSuffix: true })}</span>
             </div>
           </div>
         </div>
       </CardContent>
     </Card>
   );
-} 
+}

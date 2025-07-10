@@ -48,24 +48,24 @@ export async function getFormEntryById(id: number): Promise<FormEntryResponse | 
     console.error('Error fetching form entry answers:', answersError);
     throw answersError;
   }
-  
+
   // Process the answers to load any photo attachments
   const processedAnswers = answersData || [];
-  
+
   // Get all form items with type 'photo'
   const { data: photoItems, error: photoItemsError } = await supabase
     .from('form_items')
     .select('id, item_type')
     .eq('item_type', 'photo')
     .eq('form_id', entryData.form_id);
-    
+
   if (photoItemsError) {
     console.error('Error fetching photo form items:', photoItemsError);
   }
-  
+
   // Map of photo item IDs for quick lookup
-  const photoItemIds = new Set((photoItems || []).map(item => item.id));
-  
+  const photoItemIds = new Set((photoItems || []).map((item) => item.id));
+
   // Check if any answers are for photo questions
   for (const answer of processedAnswers) {
     // If this answer belongs to a photo item
@@ -188,7 +188,10 @@ export interface UpdateFormEntryAnswersRequest {
 }
 
 // Add a new function to update form entry answers
-export async function updateFormEntryAnswers(id: number, request: UpdateFormEntryAnswersRequest): Promise<FormEntryResponse> {
+export async function updateFormEntryAnswers(
+  id: number,
+  request: UpdateFormEntryAnswersRequest,
+): Promise<FormEntryResponse> {
   // Insert or update form entry answers
   const entryAnswers = request.answers.map((answer) => ({
     entry_id: id,
@@ -197,8 +200,8 @@ export async function updateFormEntryAnswers(id: number, request: UpdateFormEntr
   }));
 
   // First, delete any existing answers for these item IDs to avoid duplicates
-  const itemIds = request.answers.map(a => a.itemId);
-  
+  const itemIds = request.answers.map((a) => a.itemId);
+
   const { error: deleteError } = await supabase
     .from('form_entry_answers')
     .delete()
