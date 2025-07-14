@@ -241,6 +241,12 @@ Consider setting up alerts for:
 
 ---
 
+## Related Fixes
+
+- **[PROJECT_INVITATION_DUPLICATE_KEY_FIX.md](./PROJECT_INVITATION_DUPLICATE_KEY_FIX.md)** - Similar fix for project invitations with duplicate key constraint violations
+
+---
+
 ## Summary
 
 This fix resolves the duplicate key constraint violation by:

@@ -107,4 +107,10 @@ The following database functions are available for user operations:
 
 ---
 
+## Related Fixes
+
+- **[PROJECT_INVITATION_DUPLICATE_KEY_FIX.md](./PROJECT_INVITATION_DUPLICATE_KEY_FIX.md)** - Fix for duplicate key constraint violations when inviting previously removed users
+
+---
+
 **Status**: ✅ **Fixed** - Project invitations now work correctly without auth schema errors.
