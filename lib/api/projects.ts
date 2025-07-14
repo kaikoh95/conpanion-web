@@ -402,22 +402,32 @@ export class ProjectAPI {
     role: string = 'member',
   ): Promise<ProjectMember> {
     try {
-      // First find the user by email
-      const { data: users, error: userError } = await this.supabase
-        .from('auth.users')
-        .select('id')
-        .eq('email', userEmail)
-        .limit(1);
+      // First check if user exists using the proper database function
+      const { data: userExists, error: userExistsError } = await this.supabase.rpc(
+        'check_user_exists_by_email',
+        { user_email: userEmail },
+      );
 
-      if (userError) {
-        throw new Error(`Failed to find user: ${userError.message}`);
+      if (userExistsError) {
+        throw new Error(`Failed to check user existence: ${userExistsError.message}`);
       }
 
-      if (!users || users.length === 0) {
+      if (!userExists) {
         throw new Error('User not found with that email address');
       }
 
-      const userId = users[0].id;
+      // Get the user ID using the proper database function
+      const { data: userId, error: userIdError } = await this.supabase.rpc('get_user_id_by_email', {
+        user_email: userEmail,
+      });
+
+      if (userIdError) {
+        throw new Error(`Failed to get user ID: ${userIdError.message}`);
+      }
+
+      if (!userId) {
+        throw new Error('Unable to retrieve user ID for the email address');
+      }
 
       // Invite the user to the project
       const { data: result, error } = await this.supabase.rpc('invite_user_to_project', {
