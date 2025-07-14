@@ -298,6 +298,7 @@ export function TaskDrawer({
       const { data: existingLabels, error: searchError } = await supabase
         .from('labels')
         .select('id')
+        .eq('project_id', user?.activeProjectId ?? 0)
         .ilike('name', labelName.trim())
         .limit(1);
 
@@ -354,7 +355,7 @@ export function TaskDrawer({
 
       // Then associate the label with the task
       const { error: taskLabelError } = await supabase.from('entity_labels').insert({
-        entity_type: 'tasks',
+        entity_type: 'task',
         entity_id: task.id,
         label_id: labelId,
         created_by: user?.id ?? '',

@@ -2178,6 +2178,15 @@ export type Database = {
         }
         Returns: Json
       }
+      test_expanded_task_notifications: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          trigger_name: string
+          table_name: string
+          operation: string
+          description: string
+        }[]
+      }
       test_notification_self_prevention: {
         Args: Record<PropertyKey, never>
         Returns: {
