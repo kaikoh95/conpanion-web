@@ -81,114 +81,117 @@ serve(async (req) => {
     let successCount = 0;
     let failureCount = 0;
 
-    for (const email of emailQueue) {
-      try {
-        // Update status to processing first
-        const { error: updateError } = await supabase
-          .from('email_queue')
-          .update({
-            status: 'processing',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', email.id);
+    const processEmails = async () => {
+      for (const email of emailQueue) {
+        try {
+          // Update status to processing first
+          const { error: updateError } = await supabase
+            .from('email_queue')
+            .update({
+              status: 'processing',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', email.id);
 
-        if (updateError) {
-          console.error(`Failed to update email ${email.id} to processing:`, updateError);
-          continue;
-        }
+          if (updateError) {
+            console.error(`Failed to update email ${email.id} to processing:`, updateError);
+            continue;
+          }
 
-        // Extract template data
-        const templateData = email.template_data || {};
-        const userEmail = email.to_email;
-        const userName = email.to_name || templateData.user_name || userEmail.split('@')[0];
+          // Extract template data
+          const templateData = email.template_data || {};
+          const userEmail = email.to_email;
+          const userName = email.to_name || templateData.user_name || userEmail.split('@')[0];
 
-        // Generate email content based on notification type
-        const { subject, html, text } = generateEmailContent(
-          email.template_id,
-          email.subject,
-          templateData,
-          userName,
-        );
+          // Generate email content based on notification type
+          const { subject, html, text } = generateEmailContent(
+            email.template_id,
+            email.subject,
+            templateData,
+            userName,
+          );
 
-        // Send email using Resend
-        const { data: emailData, error: sendError } = await resend.emails.send({
-          from: 'Conpanion <notifications@getconpanion.com>',
-          to: userEmail,
-          subject,
-          html,
-          text,
-        });
+          // Send email using Resend
+          const { data: emailData, error: sendError } = await resend.emails.send({
+            from: 'Conpanion <notifications@getconpanion.com>',
+            to: userEmail,
+            subject,
+            html,
+            text,
+          });
 
-        if (sendError) {
-          throw new Error(`Resend error: ${sendError.message || JSON.stringify(sendError)}`);
-        }
+          if (sendError) {
+            throw new Error(`Resend error: ${sendError.message || JSON.stringify(sendError)}`);
+          }
 
-        // Update queue status to sent
-        await supabase
-          .from('email_queue')
-          .update({
+          // Update queue status to sent
+          await supabase
+            .from('email_queue')
+            .update({
+              status: 'sent',
+              sent_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              template_data: {
+                ...templateData,
+                resend_id: emailData?.id,
+                email_content: { subject, html: html.substring(0, 500) + '...', text },
+              },
+            })
+            .eq('id', email.id);
+
+          // Mark notification delivery as sent
+          if (email.notification_id) {
+            await supabase.rpc('mark_notification_delivery_sent', {
+              p_notification_id: email.notification_id,
+              p_channel: 'email',
+            });
+          }
+
+          console.log(`✅ Email sent successfully: ${email.id} -> ${userEmail}`);
+
+          results.push({
+            id: email.id,
             status: 'sent',
-            sent_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            template_data: {
-              ...templateData,
-              resend_id: emailData?.id,
-              email_content: { subject, html: html.substring(0, 500) + '...', text },
-            },
-          })
-          .eq('id', email.id);
-
-        // Mark notification delivery as sent
-        if (email.notification_id) {
-          await supabase.rpc('mark_notification_delivery_sent', {
-            p_notification_id: email.notification_id,
-            p_channel: 'email',
+            to: userEmail,
+            resend_id: emailData?.id,
           });
-        }
 
-        console.log(`✅ Email sent successfully: ${email.id} -> ${userEmail}`);
+          successCount++;
+        } catch (error) {
+          console.error(`❌ Failed to send email ${email.id}:`, error);
 
-        results.push({
-          id: email.id,
-          status: 'sent',
-          to: userEmail,
-          resend_id: emailData?.id,
-        });
+          // Update queue status to failed
+          await supabase
+            .from('email_queue')
+            .update({
+              status: 'failed',
+              error_message: error.message,
+              retry_count: (email.retry_count || 0) + 1,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', email.id);
 
-        successCount++;
-      } catch (error) {
-        console.error(`❌ Failed to send email ${email.id}:`, error);
+          // Mark notification delivery as failed
+          if (email.notification_id) {
+            await supabase.rpc('mark_notification_delivery_failed', {
+              p_notification_id: email.notification_id,
+              p_channel: 'email',
+              p_error_message: error.message,
+            });
+          }
 
-        // Update queue status to failed
-        await supabase
-          .from('email_queue')
-          .update({
+          results.push({
+            id: email.id,
             status: 'failed',
-            error_message: error.message,
-            retry_count: (email.retry_count || 0) + 1,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', email.id);
-
-        // Mark notification delivery as failed
-        if (email.notification_id) {
-          await supabase.rpc('mark_notification_delivery_failed', {
-            p_notification_id: email.notification_id,
-            p_channel: 'email',
-            p_error_message: error.message,
+            to: email.to_email,
+            error: error.message,
           });
+
+          failureCount++;
         }
-
-        results.push({
-          id: email.id,
-          status: 'failed',
-          to: email.to_email,
-          error: error.message,
-        });
-
-        failureCount++;
       }
-    }
+    };
+    EdgeRuntime.waitUntil(processEmails());
 
     console.log(`📊 Email processing complete: ${successCount} sent, ${failureCount} failed`);
 

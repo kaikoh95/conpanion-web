@@ -1723,6 +1723,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_duplicate_organization_memberships: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      cleanup_duplicate_project_memberships: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       cleanup_expired_invitations: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -2169,6 +2177,15 @@ export type Database = {
           p_user_email?: string
         }
         Returns: Json
+      }
+      test_notification_self_prevention: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          entity_type: string
+          trigger_name: string
+          has_self_check: boolean
+          notes: string
+        }[]
       }
       test_user_signup_process: {
         Args: Record<PropertyKey, never>
