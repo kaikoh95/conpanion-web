@@ -42,8 +42,14 @@ default_pool_size = 20
 # Maximum number of client connections allowed.
 max_client_conn = 100
 
-# [db.vault]
-# secret_key = "env(SECRET_VALUE)"
+[db.vault]
+SB_URL = "env(SUPABASE_URL)"
+SB_SERVICE_ROLE_KEY = "env(SUPABASE_SERVICE_ROLE_KEY)"
+RESEND_API_KEY = "env(RESEND_API_KEY)"
+VAPID_PUBLIC_KEY = "env(VAPID_PUBLIC_KEY)"
+VAPID_PRIVATE_KEY = "env(VAPID_PRIVATE_KEY)"
+VAPID_EMAIL = "env(VAPID_EMAIL)"
+
 
 [db.migrations]
 # Specifies an ordered list of schema files that describe your database.
@@ -105,9 +111,9 @@ file_size_limit = "50MiB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "https://getconpanion.com"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = ["https://getconpanion.com", "http://127.0.0.1:3000", "https://conpanion-web.vercel.app", "https://conpanion-web-nine.vercel.app"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # If disabled, the refresh token will never expire.
@@ -155,7 +161,7 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -280,12 +286,17 @@ enabled = false
 enabled = true
 # Configure one of the supported request policies: `oneshot`, `per_worker`.
 # Use `oneshot` for hot reload, or `per_worker` for load testing.
-policy = "oneshot"
+policy = "per_worker"
 # Port to attach the Chrome inspector for debugging edge functions.
 inspector_port = 8083
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+[edge_runtime.secrets]
+RESEND_API_KEY = "env(RESEND_API_KEY)"
+RESEND_FROM_EMAIL = "env(RESEND_FROM_EMAIL)"
+APP_URL = "env(APP_URL)"
+VAPID_PUBLIC_KEY = "env(VAPID_PUBLIC_KEY)"
+VAPID_PRIVATE_KEY = "env(VAPID_PRIVATE_KEY)"
+VAPID_EMAIL = "env(VAPID_EMAIL)"
 
 [analytics]
 enabled = true
@@ -305,3 +316,31 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+[functions.send-email-notification]
+enabled = true
+verify_jwt = true
+import_map = "./functions/send-email-notification/deno.json"
+entrypoint = "./functions/send-email-notification/index.ts"
+
+[functions.process-notification-queue]
+enabled = true
+verify_jwt = true
+import_map = "./functions/process-notification-queue/deno.json"
+entrypoint = "./functions/process-notification-queue/index.ts"
+
+[functions.send-push-notification]
+enabled = true
+verify_jwt = true
+import_map = "./functions/send-push-notification/deno.json"
+entrypoint = "./functions/send-push-notification/index.ts"
+
+[functions.create-approval]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/create-approval/index.ts"
+
+[functions.send-organization-invitation]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/send-organization-invitation/index.ts"
