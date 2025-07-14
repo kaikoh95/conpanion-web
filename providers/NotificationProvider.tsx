@@ -154,17 +154,17 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
           setNotifications((prev) => [newNotification, ...prev]);
 
           // Show toast notification with mobile-responsive styling
-          const icon = notificationIcons[newNotification.type] || '🔔';
-          toast(newNotification.title, {
-            description: newNotification.message,
-            icon: icon,
-            duration: 5000,
-            position: 'top-center',
-            style: {
-              maxWidth: 'calc(100vw - 2rem)',
-            },
-            className: 'sm:max-w-md',
-          });
+          // const icon = notificationIcons[newNotification.type] || '🔔';
+          // toast(newNotification.title, {
+          //   description: newNotification.message,
+          //   icon: icon,
+          //   duration: 5000,
+          //   position: 'top-center',
+          //   style: {
+          //     maxWidth: 'calc(100vw - 2rem)',
+          //   },
+          //   className: 'sm:max-w-md',
+          // });
 
           // Show browser notification if permission granted
           if (
