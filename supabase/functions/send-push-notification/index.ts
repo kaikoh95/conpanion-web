@@ -39,13 +39,16 @@ serve(async (req) => {
     // Check for required VAPID keys
     if (!vapidPublicKey || !vapidPrivateKey) {
       console.warn('VAPID keys not configured - push notifications will be skipped');
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: 'Push notifications not configured (missing VAPID keys)',
-        processed: 0
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Push notifications not configured (missing VAPID keys)',
+          processed: 0,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -69,13 +72,16 @@ serve(async (req) => {
     }
 
     if (!pushQueue || pushQueue.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: 'No pending push notifications',
-        processed: 0
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'No pending push notifications',
+          processed: 0,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     console.log(`Processing ${pushQueue.length} pending push notifications...`);
@@ -110,7 +116,7 @@ serve(async (req) => {
         let subscription;
         try {
           subscription = JSON.parse(pushItem.token);
-          
+
           // Validate required subscription fields
           if (!subscription.endpoint || !subscription.keys) {
             throw new Error('Invalid subscription format: missing endpoint or keys');
@@ -139,11 +145,13 @@ serve(async (req) => {
         if (pushItem.notification_id) {
           await supabase.rpc('mark_notification_delivery_sent', {
             p_notification_id: pushItem.notification_id,
-            p_channel: 'push'
+            p_channel: 'push',
           });
         }
 
-        console.log(`✅ Push sent successfully: ${pushItem.id} -> ${pushItem.device_id} (${pushItem.platform})`);
+        console.log(
+          `✅ Push sent successfully: ${pushItem.id} -> ${pushItem.device_id} (${pushItem.platform})`,
+        );
 
         results.push({
           id: pushItem.id,
@@ -151,9 +159,8 @@ serve(async (req) => {
           device_id: pushItem.device_id,
           platform: pushItem.platform,
         });
-        
-        successCount++;
 
+        successCount++;
       } catch (error: any) {
         console.error(`❌ Failed to send push notification ${pushItem.id}:`, error);
 
@@ -187,7 +194,7 @@ serve(async (req) => {
           await supabase.rpc('mark_notification_delivery_failed', {
             p_notification_id: pushItem.notification_id,
             p_channel: 'push',
-            p_error_message: errorMessage
+            p_error_message: errorMessage,
           });
         }
 
@@ -204,7 +211,7 @@ serve(async (req) => {
           platform: pushItem.platform,
           error: errorMessage,
         });
-        
+
         failureCount++;
       }
     }
@@ -221,17 +228,19 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
-
   } catch (error: any) {
     console.error('💥 Error in send-push-notification:', error);
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
 });
 

@@ -57,13 +57,16 @@ serve(async (req) => {
     }
 
     if (!emailQueue || emailQueue.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: 'No pending emails',
-        processed: 0
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'No pending emails',
+          processed: 0,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     console.log(`Processing ${emailQueue.length} pending emails...`);
@@ -104,7 +107,7 @@ serve(async (req) => {
           email.template_id,
           email.subject,
           templateData,
-          userName
+          userName,
         );
 
         // Send email using Resend
@@ -127,10 +130,10 @@ serve(async (req) => {
             status: 'sent',
             sent_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            template_data: { 
-              ...templateData, 
+            template_data: {
+              ...templateData,
               resend_id: emailData?.id,
-              email_content: { subject, html: html.substring(0, 500) + '...', text }
+              email_content: { subject, html: html.substring(0, 500) + '...', text },
             },
           })
           .eq('id', email.id);
@@ -139,21 +142,20 @@ serve(async (req) => {
         if (email.notification_id) {
           await supabase.rpc('mark_notification_delivery_sent', {
             p_notification_id: email.notification_id,
-            p_channel: 'email'
+            p_channel: 'email',
           });
         }
 
         console.log(`✅ Email sent successfully: ${email.id} -> ${userEmail}`);
-        
+
         results.push({
           id: email.id,
           status: 'sent',
           to: userEmail,
           resend_id: emailData?.id,
         });
-        
-        successCount++;
 
+        successCount++;
       } catch (error) {
         console.error(`❌ Failed to send email ${email.id}:`, error);
 
@@ -173,7 +175,7 @@ serve(async (req) => {
           await supabase.rpc('mark_notification_delivery_failed', {
             p_notification_id: email.notification_id,
             p_channel: 'email',
-            p_error_message: error.message
+            p_error_message: error.message,
           });
         }
 
@@ -183,7 +185,7 @@ serve(async (req) => {
           to: email.to_email,
           error: error.message,
         });
-        
+
         failureCount++;
       }
     }
@@ -200,17 +202,19 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
-
   } catch (error) {
     console.error('💥 Error in send-email-notification:', error);
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
 });
 
@@ -225,7 +229,7 @@ function generateEmailContent(
   text: string;
 } {
   const baseUrl = Deno.env.get('APP_URL') || 'https://www.getconpanion.com';
-  
+
   // Extract common data
   const notificationTitle = templateData.notification_title || defaultSubject;
   const notificationMessage = templateData.notification_message || '';
@@ -521,9 +525,7 @@ function generateEmailContent(
           `<h2>🔔 Notification</h2>
            <p><strong>${notificationTitle}</strong></p>
            <p>${notificationMessage}</p>`,
-          entityId && entityType
-            ? `${baseUrl}/protected/${entityType}s/${entityId}`
-            : undefined,
+          entityId && entityType ? `${baseUrl}/protected/${entityType}s/${entityId}` : undefined,
         ),
       };
   }

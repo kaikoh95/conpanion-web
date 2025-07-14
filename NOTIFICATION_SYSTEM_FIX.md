@@ -32,6 +32,7 @@ END IF;
 ### 2. Trigger Timing Issue
 
 The trigger `create_default_preferences_on_profile_trigger` was supposed to create preferences when a user profile was created, but:
+
 - It might have been added after some users already existed
 - It could fail silently if there were permission issues
 - Race conditions during user creation could bypass it
@@ -39,6 +40,7 @@ The trigger `create_default_preferences_on_profile_trigger` was supposed to crea
 ### 3. Notification Types
 
 The system supports 13 notification types:
+
 - `system`
 - `organization_added`
 - `project_added`
@@ -60,6 +62,7 @@ Each user needs a preference record for EACH type to ensure proper notification 
 ### 1. Enhanced `create_notification` Function
 
 The updated function now:
+
 - **Creates missing preferences on-demand** when a notification is sent
 - **Handles race conditions** with proper conflict resolution
 - **Ensures consistent defaults** (email=true, push=false, in-app=true)
@@ -81,13 +84,14 @@ IF NOT FOUND THEN
     false, -- Push disabled by default (requires device registration)
     true   -- In-app enabled by default
   ) ON CONFLICT (user_id, type) DO NOTHING
-  RETURNING email_enabled, push_enabled, in_app_enabled 
+  RETURNING email_enabled, push_enabled, in_app_enabled
   INTO v_email_enabled, v_push_enabled, v_in_app_enabled;
 ```
 
 ### 2. Batch Fix for Existing Users
 
 The migration includes a comprehensive fix that:
+
 - **Processes all existing users** in the system
 - **Creates missing preferences** for each notification type
 - **Reports progress** and any errors
@@ -96,21 +100,25 @@ The migration includes a comprehensive fix that:
 ### 3. New Helper Functions
 
 #### `ensure_all_notification_preferences(user_id)`
+
 - Creates all missing notification preferences for a specific user
 - Returns count of created preferences and their types
 - Handles conflicts gracefully
 
 #### `validate_notification_preferences()`
+
 - Returns list of users with missing preferences
 - Shows which notification types are missing
 - Useful for ongoing monitoring
 
 #### `get_notification_preference_summary()`
+
 - Provides system-wide statistics
 - Shows total users vs users with complete preferences
 - Calculates average preferences per user
 
 #### `fix_user_notification_preferences(email)`
+
 - Fixes preferences for a specific user by email
 - Useful for customer support scenarios
 - Returns detailed results
@@ -118,6 +126,7 @@ The migration includes a comprehensive fix that:
 ### 4. Enhanced Trigger
 
 The improved trigger:
+
 - **Logs any failures** instead of failing silently
 - **Uses the new ensure function** for consistency
 - **Reports created preferences** for monitoring
@@ -140,6 +149,7 @@ SELECT fix_user_notification_preferences('user@example.com');
 ### Expected Results
 
 After applying the migration:
+
 - All users should have 13 notification preferences each
 - `users_with_missing_preferences` should be 0
 - `avg_preferences_per_user` should be exactly 13.00
@@ -147,11 +157,13 @@ After applying the migration:
 ## User Experience Impact
 
 ### Before Fix
+
 - Users might not receive some notification types
 - Inconsistent notification delivery
 - No way for users to know preferences were missing
 
 ### After Fix
+
 - All users receive all applicable notifications
 - Consistent email delivery for all notification types
 - Automatic preference creation for edge cases
@@ -160,6 +172,7 @@ After applying the migration:
 ## Default Notification Settings
 
 When preferences are created (either for new or existing users):
+
 - **Email**: Enabled by default ✅
 - **Push**: Disabled by default ❌ (requires device registration)
 - **In-App**: Enabled by default ✅
@@ -169,6 +182,7 @@ Users can customize these settings in their notification preferences page.
 ## Edge Function Integration
 
 The system includes edge functions for email delivery:
+
 - `send-email-notification`: Processes email queue and sends via Resend
 - `process-notification-queue`: Orchestrates notification processing
 
@@ -186,7 +200,7 @@ These functions read from the `email_queue` table which is populated based on us
 
 ```sql
 -- Check users created in last 7 days have preferences
-SELECT 
+SELECT
   up.id,
   up.email,
   up.created_at,
@@ -209,6 +223,7 @@ HAVING COUNT(np.type) < 13;
 ## Summary
 
 This fix ensures:
+
 - ✅ All users have complete notification preferences
 - ✅ Missing preferences are created automatically
 - ✅ Consistent notification delivery for all types
