@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/utils/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,8 +10,22 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Bell, BellOff } from 'lucide-react';
+import { Loader2, Bell, BellOff, Settings } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { NotificationPreference, NotificationType } from '@/lib/types/notifications';
+
+const navigationItems = [
+  {
+    name: 'All Notifications',
+    href: '/protected/notifications',
+    icon: Bell,
+  },
+  {
+    name: 'Settings',
+    href: '/protected/settings/notifications',
+    icon: Settings,
+  },
+];
 
 const notificationTypes: { type: NotificationType; label: string; description: string }[] = [
   {
@@ -81,6 +97,7 @@ const notificationTypes: { type: NotificationType; label: string; description: s
 
 export default function NotificationPreferencesPage() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const [preferences, setPreferences] = useState<Record<NotificationType, NotificationPreference>>(
     {} as any,
   );
@@ -191,128 +208,193 @@ export default function NotificationPreferencesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-4 sm:space-y-6">
+        {/* Navigation Tabs - Mobile responsive */}
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="-mb-px flex overflow-x-auto">
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors sm:px-4 sm:py-4',
+                    'min-w-max flex-shrink-0',
+                    isActive
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:border-gray-300 hover:text-foreground',
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{item.name}</span>
+                  <span className="sm:hidden">
+                    {item.name === 'All Notifications' ? 'All' : item.name}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold sm:text-3xl">Notification Preferences</h1>
-        <p className="mt-1 text-muted-foreground sm:mt-2">
-          Manage how you receive notifications for different events
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Notification Types</CardTitle>
-          <CardDescription>
-            Choose how you want to be notified for each type of event
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {notificationTypes.map(({ type, label, description }) => {
-            const pref = preferences[type];
-            const isSystem = type === 'system';
+      {/* Navigation Tabs - Mobile responsive */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="-mb-px flex overflow-x-auto">
+          {navigationItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
 
             return (
-              <div key={type} className="space-y-4 border-b pb-6 last:border-0">
-                <div>
-                  <h3 className="font-medium">{label}</h3>
-                  <p className="text-sm text-muted-foreground">{description}</p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id={`${type}-in-app`}
-                      checked={pref?.in_app_enabled ?? true}
-                      onCheckedChange={(checked: boolean) =>
-                        updatePreference(type, 'in_app_enabled', checked)
-                      }
-                      disabled={isSaving || isSystem}
-                    />
-                    <Label htmlFor={`${type}-in-app`} className="cursor-pointer">
-                      In-App
-                    </Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id={`${type}-email`}
-                      checked={pref?.email_enabled ?? true}
-                      onCheckedChange={(checked: boolean) =>
-                        updatePreference(type, 'email_enabled', checked)
-                      }
-                      disabled={isSaving || isSystem}
-                    />
-                    <Label htmlFor={`${type}-email`} className="cursor-pointer">
-                      Email
-                    </Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id={`${type}-push`}
-                      checked={pref?.push_enabled ?? true}
-                      onCheckedChange={(checked: boolean) =>
-                        updatePreference(type, 'push_enabled', checked)
-                      }
-                      disabled={isSaving || isSystem}
-                    />
-                    <Label htmlFor={`${type}-push`} className="cursor-pointer">
-                      Push
-                    </Label>
-                  </div>
-                </div>
-              </div>
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors sm:px-4 sm:py-4',
+                  'min-w-max flex-shrink-0',
+                  isActive
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:border-gray-300 hover:text-foreground',
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{item.name}</span>
+                <span className="sm:hidden">
+                  {item.name === 'All Notifications' ? 'All' : item.name}
+                </span>
+              </Link>
             );
           })}
-        </CardContent>
-      </Card>
+        </nav>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Browser Notifications</CardTitle>
-          <CardDescription>
-            Enable browser notifications to receive alerts even when the app is not open
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="space-y-1">
-              <Label>Browser Notifications</Label>
-              <p className="text-sm text-muted-foreground">
-                Click to enable notifications for this browser
-              </p>
+      {/* Page Content */}
+      <div className="px-1 sm:px-0">
+        <div>
+          <h1 className="text-2xl font-bold sm:text-3xl">Notification Preferences</h1>
+          <p className="mt-1 text-muted-foreground sm:mt-2">
+            Manage how you receive notifications for different events
+          </p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Notification Types</CardTitle>
+            <CardDescription>
+              Choose how you want to be notified for each type of event
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {notificationTypes.map(({ type, label, description }) => {
+              const pref = preferences[type];
+              const isSystem = type === 'system';
+
+              return (
+                <div key={type} className="space-y-4 border-b pb-6 last:border-0">
+                  <div>
+                    <h3 className="font-medium">{label}</h3>
+                    <p className="text-sm text-muted-foreground">{description}</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id={`${type}-in-app`}
+                        checked={pref?.in_app_enabled ?? true}
+                        onCheckedChange={(checked: boolean) =>
+                          updatePreference(type, 'in_app_enabled', checked)
+                        }
+                        disabled={isSaving || isSystem}
+                      />
+                      <Label htmlFor={`${type}-in-app`} className="cursor-pointer">
+                        In-App
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id={`${type}-email`}
+                        checked={pref?.email_enabled ?? true}
+                        onCheckedChange={(checked: boolean) =>
+                          updatePreference(type, 'email_enabled', checked)
+                        }
+                        disabled={isSaving || isSystem}
+                      />
+                      <Label htmlFor={`${type}-email`} className="cursor-pointer">
+                        Email
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id={`${type}-push`}
+                        checked={pref?.push_enabled ?? true}
+                        onCheckedChange={(checked: boolean) =>
+                          updatePreference(type, 'push_enabled', checked)
+                        }
+                        disabled={isSaving || isSystem}
+                      />
+                      <Label htmlFor={`${type}-push`} className="cursor-pointer">
+                        Push
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Browser Notifications</CardTitle>
+            <CardDescription>
+              Enable browser notifications to receive alerts even when the app is not open
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div className="space-y-1">
+                <Label>Browser Notifications</Label>
+                <p className="text-sm text-muted-foreground">
+                  Click to enable notifications for this browser
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  if (window.Notification && window.Notification.permission === 'default') {
+                    window.Notification.requestPermission().then((permission) => {
+                      if (permission === 'granted') {
+                        toast.success('Browser notifications enabled');
+                      } else {
+                        toast.error('Browser notifications were not enabled');
+                      }
+                    });
+                  } else if (window.Notification && window.Notification.permission === 'granted') {
+                    toast.info('Browser notifications are already enabled');
+                  } else {
+                    toast.error('Your browser does not support notifications');
+                  }
+                }}
+                className="w-full sm:w-auto"
+              >
+                <Bell className="mr-2 h-4 w-4" />
+                Enable Notifications
+              </Button>
             </div>
-            <Button
-              onClick={() => {
-                if (window.Notification && window.Notification.permission === 'default') {
-                  window.Notification.requestPermission().then((permission) => {
-                    if (permission === 'granted') {
-                      toast.success('Browser notifications enabled');
-                    } else {
-                      toast.error('Browser notifications were not enabled');
-                    }
-                  });
-                } else if (window.Notification && window.Notification.permission === 'granted') {
-                  toast.info('Browser notifications are already enabled');
-                } else {
-                  toast.error('Your browser does not support notifications');
-                }
-              }}
-              className="w-full sm:w-auto"
-            >
-              <Bell className="mr-2 h-4 w-4" />
-              Enable Notifications
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
