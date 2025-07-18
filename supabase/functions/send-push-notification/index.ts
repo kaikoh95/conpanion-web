@@ -39,13 +39,16 @@ serve(async (req) => {
     // Check for required VAPID keys
     if (!vapidPublicKey || !vapidPrivateKey) {
       console.warn('VAPID keys not configured - push notifications will be skipped');
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: 'Push notifications not configured (missing VAPID keys)',
-        processed: 0
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Push notifications not configured (missing VAPID keys)',
+          processed: 0,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -69,13 +72,16 @@ serve(async (req) => {
     }
 
     if (!pushQueue || pushQueue.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: 'No pending push notifications',
-        processed: 0
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'No pending push notifications',
+          processed: 0,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     console.log(`Processing ${pushQueue.length} pending push notifications...`);
@@ -90,124 +96,128 @@ serve(async (req) => {
     let successCount = 0;
     let failureCount = 0;
 
-    for (const pushItem of pushQueue) {
-      try {
-        // Update status to processing first
-        const { error: updateError } = await supabase
-          .from('push_queue')
-          .update({
-            status: 'processing',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', pushItem.id);
-
-        if (updateError) {
-          console.error(`Failed to update push ${pushItem.id} to processing:`, updateError);
-          continue;
-        }
-
-        // Validate device token format
-        let subscription;
+    const processPushNotifications = async () => {
+      for (const pushItem of pushQueue) {
         try {
-          subscription = JSON.parse(pushItem.token);
-          
-          // Validate required subscription fields
-          if (!subscription.endpoint || !subscription.keys) {
-            throw new Error('Invalid subscription format: missing endpoint or keys');
+          // Update status to processing first
+          const { error: updateError } = await supabase
+            .from('push_queue')
+            .update({
+              status: 'processing',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', pushItem.id);
+
+          if (updateError) {
+            console.error(`Failed to update push ${pushItem.id} to processing:`, updateError);
+            continue;
           }
-        } catch (e) {
-          throw new Error(`Invalid device token format: ${e.message}`);
-        }
 
-        // Extract payload from queue item
-        const payload = pushItem.payload || {};
+          // Validate device token format
+          let subscription;
+          try {
+            subscription = JSON.parse(pushItem.token);
 
-        // Send push notification
-        await webpush.sendNotification(subscription, JSON.stringify(payload));
+            // Validate required subscription fields
+            if (!subscription.endpoint || !subscription.keys) {
+              throw new Error('Invalid subscription format: missing endpoint or keys');
+            }
+          } catch (e) {
+            throw new Error(`Invalid device token format: ${e.message}`);
+          }
 
-        // Update queue status to sent
-        await supabase
-          .from('push_queue')
-          .update({
+          // Extract payload from queue item
+          const payload = pushItem.payload || {};
+
+          // Send push notification
+          await webpush.sendNotification(subscription, JSON.stringify(payload));
+
+          // Update queue status to sent
+          await supabase
+            .from('push_queue')
+            .update({
+              status: 'sent',
+              sent_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', pushItem.id);
+
+          // Mark notification delivery as sent
+          if (pushItem.notification_id) {
+            await supabase.rpc('mark_notification_delivery_sent', {
+              p_notification_id: pushItem.notification_id,
+              p_channel: 'push',
+            });
+          }
+
+          console.log(
+            `✅ Push sent successfully: ${pushItem.id} -> ${pushItem.device_id} (${pushItem.platform})`,
+          );
+
+          results.push({
+            id: pushItem.id,
             status: 'sent',
-            sent_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', pushItem.id);
-
-        // Mark notification delivery as sent
-        if (pushItem.notification_id) {
-          await supabase.rpc('mark_notification_delivery_sent', {
-            p_notification_id: pushItem.notification_id,
-            p_channel: 'push'
+            device_id: pushItem.device_id,
+            platform: pushItem.platform,
           });
-        }
 
-        console.log(`✅ Push sent successfully: ${pushItem.id} -> ${pushItem.device_id} (${pushItem.platform})`);
+          successCount++;
+        } catch (error: any) {
+          console.error(`❌ Failed to send push notification ${pushItem.id}:`, error);
 
-        results.push({
-          id: pushItem.id,
-          status: 'sent',
-          device_id: pushItem.device_id,
-          platform: pushItem.platform,
-        });
-        
-        successCount++;
+          // Handle specific web-push errors
+          let shouldRemoveDevice = false;
+          let errorMessage = error.message;
 
-      } catch (error: any) {
-        console.error(`❌ Failed to send push notification ${pushItem.id}:`, error);
+          if (error.statusCode === 410 || error.statusCode === 404) {
+            // Subscription has expired or is no longer valid
+            shouldRemoveDevice = true;
+            errorMessage = 'Device subscription expired or invalid';
+          } else if (error.statusCode === 413) {
+            errorMessage = 'Push payload too large';
+          } else if (error.statusCode === 429) {
+            errorMessage = 'Rate limited by push service';
+          }
 
-        // Handle specific web-push errors
-        let shouldRemoveDevice = false;
-        let errorMessage = error.message;
+          // Update queue status to failed
+          await supabase
+            .from('push_queue')
+            .update({
+              status: 'failed',
+              error_message: errorMessage,
+              retry_count: (pushItem.retry_count || 0) + 1,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', pushItem.id);
 
-        if (error.statusCode === 410 || error.statusCode === 404) {
-          // Subscription has expired or is no longer valid
-          shouldRemoveDevice = true;
-          errorMessage = 'Device subscription expired or invalid';
-        } else if (error.statusCode === 413) {
-          errorMessage = 'Push payload too large';
-        } else if (error.statusCode === 429) {
-          errorMessage = 'Rate limited by push service';
-        }
+          // Mark notification delivery as failed
+          if (pushItem.notification_id) {
+            await supabase.rpc('mark_notification_delivery_failed', {
+              p_notification_id: pushItem.notification_id,
+              p_channel: 'push',
+              p_error_message: errorMessage,
+            });
+          }
 
-        // Update queue status to failed
-        await supabase
-          .from('push_queue')
-          .update({
+          // Remove invalid device if needed
+          if (shouldRemoveDevice && pushItem.device_id) {
+            console.log(`🗑️ Removing invalid device: ${pushItem.device_id}`);
+            await supabase.from('user_devices').delete().eq('id', pushItem.device_id);
+          }
+
+          results.push({
+            id: pushItem.id,
             status: 'failed',
-            error_message: errorMessage,
-            retry_count: (pushItem.retry_count || 0) + 1,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', pushItem.id);
-
-        // Mark notification delivery as failed
-        if (pushItem.notification_id) {
-          await supabase.rpc('mark_notification_delivery_failed', {
-            p_notification_id: pushItem.notification_id,
-            p_channel: 'push',
-            p_error_message: errorMessage
+            device_id: pushItem.device_id,
+            platform: pushItem.platform,
+            error: errorMessage,
           });
-        }
 
-        // Remove invalid device if needed
-        if (shouldRemoveDevice && pushItem.device_id) {
-          console.log(`🗑️ Removing invalid device: ${pushItem.device_id}`);
-          await supabase.from('user_devices').delete().eq('id', pushItem.device_id);
+          failureCount++;
         }
-
-        results.push({
-          id: pushItem.id,
-          status: 'failed',
-          device_id: pushItem.device_id,
-          platform: pushItem.platform,
-          error: errorMessage,
-        });
-        
-        failureCount++;
       }
-    }
+    };
+    EdgeRuntime.waitUntil(processPushNotifications());
 
     console.log(`📊 Push processing complete: ${successCount} sent, ${failureCount} failed`);
 
@@ -221,17 +231,19 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
-
   } catch (error: any) {
     console.error('💥 Error in send-push-notification:', error);
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
 });
 

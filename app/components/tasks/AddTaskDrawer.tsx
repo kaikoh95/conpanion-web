@@ -67,7 +67,11 @@ export function AddTaskDrawer({
   const fetchLabels = async () => {
     try {
       const supabase = getSupabaseClient();
-      const { data, error } = await supabase.from('labels').select('*').order('name');
+      const { data, error } = await supabase
+        .from('labels')
+        .select('*')
+        .eq('project_id', user?.activeProjectId ?? 0)
+        .order('name');
 
       if (error) {
         console.error('Error fetching labels:', error);
@@ -168,7 +172,7 @@ export function AddTaskDrawer({
       // 3. Add labels if any are selected
       if (selectedLabels.length > 0) {
         const labelLinks = selectedLabels.map((label) => ({
-          entity_type: 'tasks',
+          entity_type: 'task',
           entity_id: taskId,
           label_id: label.id,
           created_by: user.id,
@@ -284,6 +288,7 @@ export function AddTaskDrawer({
       const { data: existingLabels, error: searchError } = await supabase
         .from('labels')
         .select('*')
+        .eq('project_id', user?.activeProjectId ?? 0)
         .ilike('name', labelName.trim())
         .limit(1);
 
