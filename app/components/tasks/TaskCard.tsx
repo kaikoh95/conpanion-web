@@ -21,6 +21,8 @@ interface TaskCardProps {
   allPriorities: Database['public']['Tables']['priorities']['Row'][];
   refreshTasks: () => void;
   className?: string;
+  onDrawerStateChange?: (isOpen: boolean) => void;
+  onTaskUpdate?: (taskId: number, updates: Partial<TaskWithRelations>) => void;
 }
 
 export function TaskCard({
@@ -33,8 +35,33 @@ export function TaskCard({
   allPriorities,
   refreshTasks,
   className,
+  onDrawerStateChange,
+  onTaskUpdate,
 }: TaskCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Handle status change with immediate local update
+  const handleStatusChange = (newStatus: Database['public']['Tables']['statuses']['Row']) => {
+    if (onTaskUpdate) {
+      onTaskUpdate(task.id, { status_id: newStatus.id });
+    }
+  };
+
+  // Handle priority change with immediate local update
+  const handlePriorityChange = (newPriority: Database['public']['Tables']['priorities']['Row']) => {
+    if (onTaskUpdate) {
+      onTaskUpdate(task.id, {
+        priority_id: newPriority.id,
+        priorities: newPriority,
+      });
+    }
+  };
+
+  // Notify parent when drawer state changes
+  const handleDrawerStateChange = (isOpen: boolean) => {
+    setIsModalOpen(isOpen);
+    onDrawerStateChange?.(isOpen);
+  };
 
   return (
     <>
@@ -45,7 +72,7 @@ export function TaskCard({
           'border-border bg-gray-50 dark:border-gray-700 dark:bg-gray-800',
           className,
         )}
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => handleDrawerStateChange(true)}
       >
         <CardContent className="p-4">
           {/* Title and Priority */}
@@ -56,6 +83,7 @@ export function TaskCard({
                 priority={priority}
                 taskId={task.id}
                 allPriorities={allPriorities}
+                onPriorityChange={handlePriorityChange}
                 refreshTasks={refreshTasks}
                 className="ml-2"
               />
@@ -74,6 +102,7 @@ export function TaskCard({
                 status={status}
                 taskId={task.id}
                 allStatuses={allStatuses}
+                onStatusChange={handleStatusChange}
                 refreshTasks={refreshTasks}
               />
             </div>
@@ -119,7 +148,7 @@ export function TaskCard({
       {isModalOpen && (
         <TaskDrawer
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => handleDrawerStateChange(false)}
           task={task}
           status={status}
           priority={priority}
@@ -128,6 +157,7 @@ export function TaskCard({
           allStatuses={allStatuses}
           allPriorities={allPriorities}
           refreshTasks={refreshTasks}
+          onTaskUpdate={onTaskUpdate}
         />
       )}
     </>

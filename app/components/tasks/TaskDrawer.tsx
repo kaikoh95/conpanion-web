@@ -28,6 +28,7 @@ import { AssigneeSelector } from '@/components/AssigneeSelector';
 import { ProjectMember } from '@/hooks/useProjectMembers';
 import Link from 'next/link';
 import { TaskAttachmentsViewer } from '@/components/task-attachments-viewer';
+import { toast } from 'sonner';
 
 type Task = Database['public']['Tables']['tasks']['Row'];
 type Status = Database['public']['Tables']['statuses']['Row'];
@@ -49,6 +50,7 @@ interface TaskDrawerProps {
   allStatuses: Status[];
   allPriorities: Priority[];
   refreshTasks: () => void;
+  onTaskUpdate?: (taskId: number, updates: Partial<TaskWithRelations>) => void;
 }
 
 export function TaskDrawer({
@@ -62,16 +64,21 @@ export function TaskDrawer({
   allStatuses,
   allPriorities,
   refreshTasks,
+  onTaskUpdate,
 }: TaskDrawerProps) {
   const { user } = useAuth();
+
+  // Local task state for immediate updates
+  const [localTask, setLocalTask] = useState(task);
+
   const [editingTitle, setEditingTitle] = useState(false);
-  const [titleValue, setTitleValue] = useState(task.title);
+  const [titleValue, setTitleValue] = useState(localTask.title);
   const [savingTitle, setSavingTitle] = useState(false);
   const [titleError, setTitleError] = useState<string | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   const [editingDescription, setEditingDescription] = useState(false);
-  const [descriptionValue, setDescriptionValue] = useState(task.description || '');
+  const [descriptionValue, setDescriptionValue] = useState(localTask.description || '');
   const [savingDescription, setSavingDescription] = useState(false);
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
@@ -123,12 +130,39 @@ export function TaskDrawer({
   // Add due date editing state
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [dueDateValue, setDueDateValue] = useState<Date | undefined>(
-    task.due_date ? new Date(task.due_date) : undefined,
+    localTask.due_date ? new Date(localTask.due_date) : undefined,
   );
   const [savingDueDate, setSavingDueDate] = useState(false);
   const [dueDateError, setDueDateError] = useState<string | null>(null);
 
   const [assigneeError, setAssigneeError] = useState<string | null>(null);
+
+  // Handle status change with immediate local update
+  const handleStatusChange = (newStatus: Status) => {
+    setLocalTask((prev) => ({ ...prev, status_id: newStatus.id }));
+    if (onTaskUpdate) {
+      onTaskUpdate(task.id, { status_id: newStatus.id });
+    }
+  };
+
+  // Handle priority change with immediate local update
+  const handlePriorityChange = (newPriority: Priority) => {
+    setLocalTask((prev) => ({ ...prev, priority_id: newPriority.id, priorities: newPriority }));
+    if (onTaskUpdate) {
+      onTaskUpdate(task.id, {
+        priority_id: newPriority.id,
+        priorities: newPriority,
+      });
+    }
+  };
+
+  // Sync local task state when task prop changes
+  useEffect(() => {
+    setLocalTask(task);
+    setTitleValue(task.title);
+    setDescriptionValue(task.description || '');
+    setDueDateValue(task.due_date ? new Date(task.due_date) : undefined);
+  }, [task]);
 
   // Refresh comments when modal is opened
   useEffect(() => {
@@ -176,27 +210,58 @@ export function TaskDrawer({
     }
   };
 
-  const handleTitleSave = async () => {
+  const handleTitleSave = () => {
     if (titleValue.trim() === '') {
       setTitleError('Title cannot be empty');
       return;
     }
 
-    if (titleValue === task.title) {
+    if (titleValue === localTask.title) {
       setEditingTitle(false);
       return;
     }
 
+    if (savingTitle) {
+      return; // Prevent spam clicks
+    }
+
+    // Store original value for potential rollback
+    const originalTitle = localTask.title;
+
+    // Optimistic update - update local task state immediately
+    const updatedTask = { ...localTask, title: titleValue };
+    setLocalTask(updatedTask);
+
+    // Update main tasks state to reflect in columns
+    if (onTaskUpdate) {
+      onTaskUpdate(task.id, { title: titleValue });
+    }
+
+    setEditingTitle(false);
     setSavingTitle(true);
     setTitleError(null);
 
+    // Set minimum loading buffer to prevent spam (800ms)
+    const bufferTimeout = setTimeout(() => {
+      setSavingTitle(false);
+    }, 800);
+
+    // Update database in background
+    updateTitleInBackground(titleValue, originalTitle, bufferTimeout);
+  };
+
+  const updateTitleInBackground = async (
+    newTitle: string,
+    originalTitle: string,
+    bufferTimeout?: NodeJS.Timeout,
+  ) => {
     try {
       const supabase = getSupabaseClient();
 
       const { error } = await supabase
         .from('tasks')
         .update({
-          title: titleValue,
+          title: newTitle,
           updated_at: new Date().toISOString(),
         })
         .eq('id', task.id);
@@ -204,36 +269,94 @@ export function TaskDrawer({
       if (error) {
         console.error('Error updating task title:', error);
         setTitleError('Failed to update title');
-        setSavingTitle(false);
+
+        // Rollback optimistic update
+        setTitleValue(originalTitle);
+        setLocalTask((prev) => ({ ...prev, title: originalTitle }));
+
+        // Rollback main tasks state
+        if (onTaskUpdate) {
+          onTaskUpdate(task.id, { title: originalTitle });
+        }
+
+        // Show error notification to user
+        toast.error('Failed to update title. Changes have been reverted.');
       } else {
-        refreshTasks();
-        setEditingTitle(false);
-        setSavingTitle(false);
+        console.log('Title updated successfully in background');
+        // No refresh needed - local state already updated
       }
     } catch (err) {
       console.error('Exception updating task title:', err);
       setTitleError('An unexpected error occurred');
+
+      // Rollback optimistic update
+      setTitleValue(originalTitle);
+      setLocalTask((prev) => ({ ...prev, title: originalTitle }));
+
+      // Rollback main tasks state
+      if (onTaskUpdate) {
+        onTaskUpdate(task.id, { title: originalTitle });
+      }
+
+      // Show error notification to user
+      toast.error('Failed to update title. Changes have been reverted.');
+    } finally {
+      // Clear the buffer timeout if operation completes before buffer expires
+      if (bufferTimeout) {
+        clearTimeout(bufferTimeout);
+      }
       setSavingTitle(false);
     }
   };
 
-  const handleDescriptionSave = async () => {
+  const handleDescriptionSave = () => {
     // No validation needed - description can be empty
-    if (descriptionValue === (task.description || '')) {
+    if (descriptionValue === (localTask.description || '')) {
       setEditingDescription(false);
       return;
     }
 
+    if (savingDescription) {
+      return; // Prevent spam clicks
+    }
+
+    // Store original value for potential rollback
+    const originalDescription = localTask.description || '';
+
+    // Optimistic update - update local task state immediately
+    const updatedTask = { ...localTask, description: descriptionValue };
+    setLocalTask(updatedTask);
+
+    // Update main tasks state to reflect in columns
+    if (onTaskUpdate) {
+      onTaskUpdate(task.id, { description: descriptionValue });
+    }
+
+    setEditingDescription(false);
     setSavingDescription(true);
     setDescriptionError(null);
 
+    // Set minimum loading buffer to prevent spam (800ms)
+    const bufferTimeout = setTimeout(() => {
+      setSavingDescription(false);
+    }, 800);
+
+    // Update database in background
+    updateDescriptionInBackground(descriptionValue, originalDescription, bufferTimeout);
+  };
+
+  const updateDescriptionInBackground = async (
+    newDescription: string,
+    originalDescription: string,
+    bufferTimeout?: NodeJS.Timeout,
+  ) => {
     try {
       const supabase = getSupabaseClient();
 
       const { error } = await supabase
         .from('tasks')
         .update({
-          description: descriptionValue,
+          description: newDescription,
           updated_at: new Date().toISOString(),
         })
         .eq('id', task.id);
@@ -241,15 +364,42 @@ export function TaskDrawer({
       if (error) {
         console.error('Error updating task description:', error);
         setDescriptionError('Failed to update description');
-        setSavingDescription(false);
+
+        // Rollback optimistic update
+        setDescriptionValue(originalDescription);
+        setLocalTask((prev) => ({ ...prev, description: originalDescription }));
+
+        // Rollback main tasks state
+        if (onTaskUpdate) {
+          onTaskUpdate(task.id, { description: originalDescription });
+        }
+
+        // Show error notification to user
+        toast.error('Failed to update description. Changes have been reverted.');
       } else {
-        refreshTasks();
-        setEditingDescription(false);
-        setSavingDescription(false);
+        console.log('Description updated successfully in background');
+        // No refresh needed - local state already updated
       }
     } catch (err) {
       console.error('Exception updating task description:', err);
       setDescriptionError('An unexpected error occurred');
+
+      // Rollback optimistic update
+      setDescriptionValue(originalDescription);
+      setLocalTask((prev) => ({ ...prev, description: originalDescription }));
+
+      // Rollback main tasks state
+      if (onTaskUpdate) {
+        onTaskUpdate(task.id, { description: originalDescription });
+      }
+
+      // Show error notification to user
+      toast.error('Failed to update description. Changes have been reverted.');
+    } finally {
+      // Clear the buffer timeout if operation completes before buffer expires
+      if (bufferTimeout) {
+        clearTimeout(bufferTimeout);
+      }
       setSavingDescription(false);
     }
   };
@@ -258,7 +408,7 @@ export function TaskDrawer({
     if (e.key === 'Enter') {
       handleTitleSave();
     } else if (e.key === 'Escape') {
-      setTitleValue(task.title);
+      setTitleValue(localTask.title);
       setEditingTitle(false);
       setTitleError(null);
     }
@@ -266,7 +416,7 @@ export function TaskDrawer({
 
   const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
-      setDescriptionValue(task.description || '');
+      setDescriptionValue(localTask.description || '');
       setEditingDescription(false);
       setDescriptionError(null);
     } else if (e.key === 'Enter' && e.ctrlKey) {
@@ -522,7 +672,10 @@ export function TaskDrawer({
 
   // Add due date save handler
   const handleDueDateSave = async () => {
-    if (dueDateValue === (task.due_date ? new Date(task.due_date) : undefined)) {
+    if (
+      dueDateValue?.getTime() ===
+      (localTask.due_date ? new Date(localTask.due_date).getTime() : undefined)
+    ) {
       setEditingDueDate(false);
       return;
     }
@@ -626,6 +779,7 @@ export function TaskDrawer({
                 status={status}
                 taskId={task.id}
                 allStatuses={allStatuses}
+                onStatusChange={handleStatusChange}
                 refreshTasks={refreshTasks}
                 className="px-3 py-1"
               />
@@ -633,6 +787,7 @@ export function TaskDrawer({
                 priority={priority}
                 taskId={task.id}
                 allPriorities={allPriorities}
+                onPriorityChange={handlePriorityChange}
                 refreshTasks={refreshTasks}
                 className="px-3 py-1"
               />
@@ -671,7 +826,7 @@ export function TaskDrawer({
             ) : (
               <div className="flex items-center">
                 <SheetTitle className="mr-2 text-lg font-semibold text-foreground">
-                  {task.title}
+                  {localTask.title}
                 </SheetTitle>
                 <Button
                   onClick={() => setEditingTitle(true)}
@@ -733,7 +888,7 @@ export function TaskDrawer({
                 </div>
               ) : (
                 <div className="whitespace-pre-line rounded-md border border-muted-foreground/20 bg-muted/50 p-3 text-foreground">
-                  {task.description || 'No description provided'}
+                  {localTask.description || 'No description provided'}
                 </div>
               )}
             </div>
@@ -743,14 +898,16 @@ export function TaskDrawer({
               <div className="flex flex-col md:flex-row md:gap-6">
                 <div className="mb-4 flex-1 md:mb-0">
                   <h3 className="mb-2 text-sm font-medium text-muted-foreground">Created</h3>
-                  <div className="text-foreground">{format(new Date(task.created_at), 'PPP')}</div>
+                  <div className="text-foreground">
+                    {format(new Date(localTask.created_at), 'PPP')}
+                  </div>
                 </div>
                 <div className="flex-1">
                   <h3 className="mb-2 text-sm font-medium text-muted-foreground">Updated</h3>
                   <div className="text-foreground">
-                    {format(new Date(task.updated_at), 'PPP')}
+                    {format(new Date(localTask.updated_at), 'PPP')}
                     <span className="ml-2 text-muted-foreground">
-                      ({formatDistanceToNow(new Date(task.updated_at), { addSuffix: true })})
+                      ({formatDistanceToNow(new Date(localTask.updated_at), { addSuffix: true })})
                     </span>
                   </div>
                 </div>
@@ -794,11 +951,11 @@ export function TaskDrawer({
                   </div>
                 ) : (
                   <div className="rounded-md border border-muted-foreground/20 bg-muted/50 p-3 text-foreground">
-                    {task.due_date ? (
+                    {localTask.due_date ? (
                       <>
-                        {format(new Date(task.due_date), 'MMMM do, yyyy')}
+                        {format(new Date(localTask.due_date), 'MMMM do, yyyy')}
                         <span className="ml-2 text-muted-foreground">
-                          ({formatDistanceToNow(new Date(task.due_date), { addSuffix: true })})
+                          ({formatDistanceToNow(new Date(localTask.due_date), { addSuffix: true })})
                         </span>
                       </>
                     ) : (

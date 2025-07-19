@@ -6,6 +6,7 @@ import { Check, ChevronDown } from 'lucide-react';
 import { Database } from '@/lib/supabase/types.generated';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 type Status = Database['public']['Tables']['statuses']['Row'];
 
@@ -61,15 +62,38 @@ export default function StatusPill({
     }
   }, [isOpen]);
 
-  const handleStatusChange = async (newStatus: Status) => {
-    if (disabled || newStatus.id === status.id) {
+  const handleStatusChange = (newStatus: Status) => {
+    if (disabled || newStatus.id === status.id || updating) {
       setIsOpen(false);
       return;
     }
 
     setUpdating(true);
     setError(null);
+    setIsOpen(false);
 
+    // Store original status for potential rollback
+    const originalStatus = status;
+
+    // Optimistic update - call callback immediately
+    if (onStatusChange) {
+      onStatusChange(newStatus);
+    }
+
+    // Set minimum loading buffer to prevent spam (800ms)
+    const bufferTimeout = setTimeout(() => {
+      setUpdating(false);
+    }, 800);
+
+    // Update database in background
+    updateStatusInBackground(newStatus, originalStatus, bufferTimeout);
+  };
+
+  const updateStatusInBackground = async (
+    newStatus: Status,
+    originalStatus: Status,
+    bufferTimeout?: NodeJS.Timeout,
+  ) => {
     try {
       const supabase = getSupabaseClient();
 
@@ -81,23 +105,36 @@ export default function StatusPill({
       if (error) {
         console.error('Error updating status:', error);
         setError('Failed to update status');
-      } else {
-        // Call the onStatusChange callback if provided
-        if (onStatusChange) {
-          onStatusChange(newStatus);
-        }
 
-        // Refresh tasks list if a refresh function is provided
+        // Rollback optimistic update
+        if (onStatusChange) {
+          onStatusChange(originalStatus);
+        }
+        // Show error notification to user
+        toast.error('Failed to update status. Changes have been reverted.');
+      } else {
+        // Success - optionally refresh tasks to sync with server
         if (refreshTasks) {
           refreshTasks();
         }
+        console.log('Status updated successfully in background');
       }
     } catch (err) {
       console.error('Exception updating status:', err);
       setError('An unexpected error occurred');
+
+      // Rollback optimistic update
+      if (onStatusChange) {
+        onStatusChange(originalStatus);
+      }
+      // Show error notification to user
+      toast.error('Failed to update status. Changes have been reverted.');
     } finally {
+      // Clear the buffer timeout if operation completes before buffer expires
+      if (bufferTimeout) {
+        clearTimeout(bufferTimeout);
+      }
       setUpdating(false);
-      setIsOpen(false);
     }
   };
 

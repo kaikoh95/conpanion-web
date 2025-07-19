@@ -2114,6 +2114,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_project_admin_or_owner: {
+        Args: {
+          p_project_id: number
+          p_user_id?: string
+        }
+        Returns: boolean
+      }
       is_valid_standard_entity_type: {
         Args: {
           p_type: string
