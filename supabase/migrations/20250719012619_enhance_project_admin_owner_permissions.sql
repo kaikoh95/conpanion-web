@@ -182,7 +182,7 @@ ON public.forms
 FOR SELECT
 TO authenticated
 USING (
-  created_by = auth.uid() OR
+  owner_id = auth.uid() OR
   public.is_project_admin_or_owner(project_id) OR
   EXISTS (
     SELECT 1 
@@ -198,7 +198,7 @@ ON public.forms
 FOR INSERT
 TO authenticated
 WITH CHECK (
-  created_by = auth.uid() AND
+  owner_id = auth.uid() AND
   (
     public.is_project_admin_or_owner(project_id) OR
     EXISTS (
@@ -216,7 +216,7 @@ ON public.forms
 FOR UPDATE
 TO authenticated
 USING (
-  created_by = auth.uid() OR
+  owner_id = auth.uid() OR
   public.is_project_admin_or_owner(project_id)
 )
 WITH CHECK (
@@ -235,7 +235,7 @@ ON public.forms
 FOR DELETE
 TO authenticated
 USING (
-  created_by = auth.uid() OR
+  owner_id = auth.uid() OR
   public.is_project_admin_or_owner(project_id)
 );
 
@@ -493,7 +493,7 @@ USING (
   ) OR
   -- Allow project admins/owners to see all approvals in their projects
   (
-    (entity_type = 'task' AND EXISTS (
+    (entity_type = 'tasks' AND EXISTS (
       SELECT 1 FROM public.tasks t
       WHERE t.id = approvals.entity_id
       AND public.is_project_admin_or_owner(t.project_id)
@@ -508,7 +508,7 @@ USING (
       WHERE sd.id = approvals.entity_id
       AND public.is_project_admin_or_owner(sd.project_id)
     )) OR
-    (entity_type = 'form_entry' AND EXISTS (
+    (entity_type = 'entries' AND EXISTS (
       SELECT 1 FROM public.form_entries fe
       JOIN public.forms f ON f.id = fe.form_id
       WHERE fe.id = approvals.entity_id
@@ -524,7 +524,7 @@ TO authenticated
 WITH CHECK (
   requester_id = auth.uid() AND
   (
-    (entity_type = 'task' AND EXISTS (
+    (entity_type = 'tasks' AND EXISTS (
       SELECT 1 FROM public.tasks t
       JOIN public.projects_users pu ON pu.project_id = t.project_id
       WHERE t.id = approvals.entity_id
@@ -545,7 +545,7 @@ WITH CHECK (
       AND pu.user_id = auth.uid()
       AND pu.status = 'active'
     )) OR
-    (entity_type = 'form_entry' AND EXISTS (
+    (entity_type = 'entries' AND EXISTS (
       SELECT 1 FROM public.form_entries fe
       JOIN public.forms f ON f.id = fe.form_id
       JOIN public.projects_users pu ON pu.project_id = f.project_id
@@ -568,7 +568,7 @@ USING (
   ) OR
   -- Allow project admins/owners to update approvals in their projects
   (
-    (entity_type = 'task' AND EXISTS (
+    (entity_type = 'tasks' AND EXISTS (
       SELECT 1 FROM public.tasks t
       WHERE t.id = approvals.entity_id
       AND public.is_project_admin_or_owner(t.project_id)
@@ -583,7 +583,7 @@ USING (
       WHERE sd.id = approvals.entity_id
       AND public.is_project_admin_or_owner(sd.project_id)
     )) OR
-    (entity_type = 'form_entry' AND EXISTS (
+    (entity_type = 'entries' AND EXISTS (
       SELECT 1 FROM public.form_entries fe
       JOIN public.forms f ON f.id = fe.form_id
       WHERE fe.id = approvals.entity_id
@@ -600,7 +600,7 @@ USING (
   requester_id = auth.uid() OR
   -- Allow project admins/owners to delete approvals in their projects
   (
-    (entity_type = 'task' AND EXISTS (
+    (entity_type = 'tasks' AND EXISTS (
       SELECT 1 FROM public.tasks t
       WHERE t.id = approvals.entity_id
       AND public.is_project_admin_or_owner(t.project_id)
@@ -615,7 +615,7 @@ USING (
       WHERE sd.id = approvals.entity_id
       AND public.is_project_admin_or_owner(sd.project_id)
     )) OR
-    (entity_type = 'form_entry' AND EXISTS (
+    (entity_type = 'entries' AND EXISTS (
       SELECT 1 FROM public.form_entries fe
       JOIN public.forms f ON f.id = fe.form_id
       WHERE fe.id = approvals.entity_id
