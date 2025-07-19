@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TaskCard } from '@/app/components/tasks/TaskCard';
 import { TaskColumnSkeleton } from '@/app/components/tasks/TaskColumnSkeleton';
 import { TaskCardSkeleton } from '@/app/components/tasks/TaskCardSkeleton';
@@ -36,6 +36,7 @@ import { TaskWithRelations } from './models';
 import { cn } from '@/lib/utils';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { Database } from '@/lib/supabase/types.generated';
+import { toast } from 'sonner';
 
 // Define types for task position data
 type TaskPosition = {
@@ -51,6 +52,8 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<TaskWithRelations[]>([]);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [isAddTaskDrawerOpen, setIsAddTaskDrawerOpen] = useState(false);
+  const [isAnyTaskDrawerOpen, setIsAnyTaskDrawerOpen] = useState(false);
+  const [isDragProcessing, setIsDragProcessing] = useState(false);
   const [dragOverInfo, setDragOverInfo] = useState<{
     overTaskId: number | null;
     overStatusId: number | null;
@@ -61,6 +64,13 @@ export default function TasksPage() {
     if (!activeId) return null;
     return tasks.find((task) => task.id === Number(activeId));
   }, [activeId, tasks]);
+
+  // Function to update a specific task in the local state
+  const updateTaskInState = useCallback((taskId: number, updates: Partial<TaskWithRelations>) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => (task.id === taskId ? { ...task, ...updates } : task)),
+    );
+  }, []);
 
   // Generate ordered tasks for each status
   const tasksByStatus = useMemo(() => {
@@ -95,13 +105,18 @@ export default function TasksPage() {
     }
   }, [remoteTasks]);
 
-  // Configure sensors for drag and drop
+  // Configure sensors for drag and drop with better mobile support
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
+      // Require more distance to activate drag - prevents accidental drags
+      activationConstraint: { distance: 15 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 250, tolerance: 5 },
+      // Higher delay and tolerance to allow scrolling
+      activationConstraint: {
+        delay: 500, // Longer delay to distinguish from scroll
+        tolerance: 10, // More tolerance for finger movement during delay
+      },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -142,11 +157,11 @@ export default function TasksPage() {
     }
   };
 
-  // Handle drag end and persistence
-  const handleDragEnd = async (event: DragEndEvent) => {
+  // Handle drag end with optimistic updates
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (!over || !active) {
+    if (!over || !active || isDragProcessing) {
       setActiveId(null);
       return;
     }
@@ -159,6 +174,17 @@ export default function TasksPage() {
       return;
     }
 
+    // Set processing state to prevent rapid consecutive drags
+    setIsDragProcessing(true);
+
+    // Set minimum buffer to prevent spam drag operations (600ms)
+    const dragBufferTimeout = setTimeout(() => {
+      setIsDragProcessing(false);
+    }, 600);
+
+    // Store original state for potential rollback
+    const originalTasks = [...tasks];
+
     try {
       // Check if we're dropping directly on a status column
       const isColumnDrop = typeof over.id === 'string' && over.id.startsWith('status-');
@@ -168,15 +194,21 @@ export default function TasksPage() {
         const dropStatusId = Number(over.id.toString().replace('status-', ''));
 
         if (activeTask.status_id !== dropStatusId) {
-          // Only update if status changed
-          await updateTaskStatus(activeTaskId, dropStatusId);
+          // Update status - optimistic update first
+          updateTaskStatusOptimistic(activeTaskId, dropStatusId, originalTasks, dragBufferTimeout);
         } else {
           // We're dropping back in the same column - move to the end
           const tasksInColumn = tasksByStatus[dropStatusId] || [];
           if (tasksInColumn.length > 0) {
             const oldIndex = tasksInColumn.findIndex((t) => t.id === activeTaskId);
             if (oldIndex !== -1) {
-              await updateTaskOrder(dropStatusId, oldIndex, tasksInColumn.length - 1);
+              updateTaskOrderOptimistic(
+                dropStatusId,
+                oldIndex,
+                tasksInColumn.length - 1,
+                originalTasks,
+                dragBufferTimeout,
+              );
             }
           }
         }
@@ -191,28 +223,145 @@ export default function TasksPage() {
         }
 
         if (activeTask.status_id !== overTask.status_id) {
-          // Moving to a different column
-          await updateTaskStatus(activeTaskId, overTask.status_id);
+          // Moving to a different column - optimistic update first
+          updateTaskStatusOptimistic(
+            activeTaskId,
+            overTask.status_id,
+            originalTasks,
+            dragBufferTimeout,
+          );
         } else {
-          // Reordering within the same column
+          // Reordering within the same column - optimistic update first
           const tasksInSameStatus = tasksByStatus[activeTask.status_id] || [];
           const oldIndex = tasksInSameStatus.findIndex((t) => t.id === activeTaskId);
           const newIndex = tasksInSameStatus.findIndex((t) => t.id === overTaskId);
 
           if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-            await updateTaskOrder(activeTask.status_id, oldIndex, newIndex);
+            updateTaskOrderOptimistic(
+              activeTask.status_id,
+              oldIndex,
+              newIndex,
+              originalTasks,
+              dragBufferTimeout,
+            );
           }
         }
       }
     } catch (error) {
-      console.error('Error updating task', error);
+      console.error('Error in drag end handler:', error);
+      // Rollback to original state
+      setTasks(originalTasks);
+      // Clear drag processing state
+      if (dragBufferTimeout) {
+        clearTimeout(dragBufferTimeout);
+      }
+      setIsDragProcessing(false);
     } finally {
       setActiveId(null);
       setDragOverInfo({ overTaskId: null, overStatusId: null });
     }
   };
 
-  // Update task status and position in a new column
+  // Optimistic update for task status change
+  const updateTaskStatusOptimistic = (
+    taskId: number,
+    newStatusId: number,
+    originalTasks: TaskWithRelations[],
+    dragBufferTimeout?: NodeJS.Timeout,
+  ) => {
+    // Get all tasks in the target status, ordered by position
+    const tasksInTargetStatus = tasksByStatus[newStatusId] || [];
+
+    // Calculate position (place at the end by default)
+    const newPosition =
+      tasksInTargetStatus.length > 0
+        ? Math.max(...tasksInTargetStatus.map((t) => t.position || 0)) + 1000
+        : 1000;
+
+    // Update local state immediately
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === taskId ? { ...task, status_id: newStatusId, position: newPosition } : task,
+      ),
+    );
+
+    // Run database update in background
+    updateTaskStatusInBackground(
+      taskId,
+      newStatusId,
+      newPosition,
+      originalTasks,
+      dragBufferTimeout,
+    );
+  };
+
+  // Background database update for task status
+  const updateTaskStatusInBackground = async (
+    taskId: number,
+    newStatusId: number,
+    newPosition: number,
+    originalTasks: TaskWithRelations[],
+    dragBufferTimeout?: NodeJS.Timeout,
+  ) => {
+    const supabase = getSupabaseClient();
+
+    try {
+      // First update the task's status
+      const { error: statusError } = await supabase
+        .from('tasks')
+        .update({ status_id: newStatusId })
+        .eq('id', taskId);
+
+      if (statusError) throw statusError;
+
+      // Check if position record already exists
+      const { data: existingPosition } = await supabase
+        .from('entity_positions')
+        .select('id')
+        .eq('entity_id', taskId)
+        .eq('entity_type', 'task')
+        .eq('context', 'kanban')
+        .is('user_id', null)
+        .single();
+
+      if (existingPosition) {
+        // Update existing record
+        const { error: positionError } = await supabase
+          .from('entity_positions')
+          .update({ position: newPosition })
+          .eq('id', existingPosition.id);
+
+        if (positionError) throw positionError;
+      } else {
+        // Create new record
+        const { error: insertError } = await supabase.from('entity_positions').insert({
+          entity_id: taskId,
+          entity_type: 'task',
+          context: 'kanban',
+          position: newPosition,
+          user_id: null,
+        });
+
+        if (insertError) throw insertError;
+      }
+
+      console.log('Task status updated successfully in background');
+    } catch (error) {
+      console.error('Error updating task status in background:', error);
+      // Rollback to original state
+      setTasks(originalTasks);
+      // Show error notification to user
+      toast.error('Failed to update task status. Changes have been reverted.');
+    } finally {
+      // Clear the drag buffer timeout if operation completes before buffer expires
+      if (dragBufferTimeout) {
+        clearTimeout(dragBufferTimeout);
+        setIsDragProcessing(false);
+      }
+    }
+  };
+
+  // Legacy function for compatibility (keeping for other potential uses)
   const updateTaskStatus = async (taskId: number, newStatusId: number) => {
     const supabase = getSupabaseClient();
 
@@ -267,7 +416,211 @@ export default function TasksPage() {
     }
   };
 
-  // Update task order within a column
+  // Optimistic update for task order within a column
+  const updateTaskOrderOptimistic = (
+    statusId: number,
+    oldIndex: number,
+    newIndex: number,
+    originalTasks: TaskWithRelations[],
+    dragBufferTimeout?: NodeJS.Timeout,
+  ) => {
+    // Get the ordered tasks for this status
+    const currentTasks = [...(tasksByStatus[statusId] || [])];
+
+    // Safety checks
+    if (oldIndex < 0 || oldIndex >= currentTasks.length) {
+      console.error('Invalid oldIndex:', oldIndex, 'for tasks length:', currentTasks.length);
+      return;
+    }
+
+    if (newIndex < 0 || newIndex >= currentTasks.length) {
+      console.error('Invalid newIndex:', newIndex, 'for tasks length:', currentTasks.length);
+      return;
+    }
+
+    // Get the task that's being moved
+    const movedTask = currentTasks[oldIndex];
+    if (!movedTask) {
+      console.error('Cannot find task to move at index', oldIndex);
+      return;
+    }
+
+    // Reorder tasks
+    const reorderedTasks = arrayMove(currentTasks, oldIndex, newIndex);
+
+    // Calculate new positions with even spacing (1000 units apart by default)
+    const taskPositions: TaskPosition[] = reorderedTasks.map((task, index) => ({
+      id: task.id,
+      status_id: statusId,
+      position: (index + 1) * 1000,
+    }));
+
+    // Update local state immediately with all new positions
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => {
+        const newPosition = taskPositions.find((tp) => tp.id === task.id)?.position;
+        return newPosition !== undefined ? { ...task, position: newPosition } : task;
+      }),
+    );
+
+    // Run database update in background
+    updateTaskOrderInBackground(
+      statusId,
+      oldIndex,
+      newIndex,
+      taskPositions,
+      originalTasks,
+      dragBufferTimeout,
+    );
+  };
+
+  // Background database update for task order
+  const updateTaskOrderInBackground = async (
+    statusId: number,
+    oldIndex: number,
+    newIndex: number,
+    taskPositions: TaskPosition[],
+    originalTasks: TaskWithRelations[],
+    dragBufferTimeout?: NodeJS.Timeout,
+  ) => {
+    const supabase = getSupabaseClient();
+    const currentTasks = [...(tasksByStatus[statusId] || [])];
+    const movedTask = currentTasks[oldIndex];
+
+    try {
+      // Direct swap case - when swapping with just one other task
+      if (Math.abs(oldIndex - newIndex) === 1) {
+        const otherTaskIndex = oldIndex < newIndex ? oldIndex + 1 : oldIndex - 1;
+        const otherTask = currentTasks[otherTaskIndex];
+
+        // Get the positions from our calculated array
+        const movedTaskNewPosition =
+          taskPositions.find((tp) => tp.id === movedTask.id)?.position || (newIndex + 1) * 1000;
+        const otherTaskNewPosition =
+          taskPositions.find((tp) => tp.id === otherTask.id)?.position ||
+          (otherTaskIndex === newIndex ? newIndex + 1 : oldIndex + 1) * 1000;
+
+        // Update both tasks' positions
+        const [movedTaskPosResult, otherTaskPosResult] = await Promise.all([
+          supabase
+            .from('entity_positions')
+            .select('id')
+            .eq('entity_id', movedTask.id)
+            .eq('entity_type', 'task')
+            .eq('context', 'kanban')
+            .is('user_id', null)
+            .single(),
+          supabase
+            .from('entity_positions')
+            .select('id')
+            .eq('entity_id', otherTask.id)
+            .eq('entity_type', 'task')
+            .eq('context', 'kanban')
+            .is('user_id', null)
+            .single(),
+        ]);
+
+        const updatePromises = [];
+
+        // Update moved task position
+        if (movedTaskPosResult.data) {
+          updatePromises.push(
+            supabase
+              .from('entity_positions')
+              .update({ position: movedTaskNewPosition })
+              .eq('id', movedTaskPosResult.data.id),
+          );
+        } else {
+          updatePromises.push(
+            supabase.from('entity_positions').insert({
+              entity_id: movedTask.id,
+              entity_type: 'task',
+              context: 'kanban',
+              position: movedTaskNewPosition,
+              user_id: null,
+            }),
+          );
+        }
+
+        // Update other task position
+        if (otherTaskPosResult.data) {
+          updatePromises.push(
+            supabase
+              .from('entity_positions')
+              .update({ position: otherTaskNewPosition })
+              .eq('id', otherTaskPosResult.data.id),
+          );
+        } else {
+          updatePromises.push(
+            supabase.from('entity_positions').insert({
+              entity_id: otherTask.id,
+              entity_type: 'task',
+              context: 'kanban',
+              position: otherTaskNewPosition,
+              user_id: null,
+            }),
+          );
+        }
+
+        const updateResults = await Promise.all(updatePromises);
+        const hasError = updateResults.some((result) => result.error);
+        if (hasError) {
+          throw new Error('Failed to update task positions');
+        }
+      } else {
+        // Moving more than one position - just update the dragged task for now
+        const movedTaskNewPosition =
+          taskPositions.find((tp) => tp.id === movedTask.id)?.position || (newIndex + 1) * 1000;
+
+        // Check if position record already exists for moved task
+        const { data: existingPosition } = await supabase
+          .from('entity_positions')
+          .select('id')
+          .eq('entity_id', movedTask.id)
+          .eq('entity_type', 'task')
+          .eq('context', 'kanban')
+          .is('user_id', null)
+          .single();
+
+        if (existingPosition) {
+          // Update existing record
+          const { error } = await supabase
+            .from('entity_positions')
+            .update({ position: movedTaskNewPosition })
+            .eq('id', existingPosition.id);
+
+          if (error) throw error;
+        } else {
+          // Create new record
+          const { error } = await supabase.from('entity_positions').insert({
+            entity_id: movedTask.id,
+            entity_type: 'task',
+            context: 'kanban',
+            position: movedTaskNewPosition,
+            user_id: null,
+          });
+
+          if (error) throw error;
+        }
+      }
+
+      console.log('Task order updated successfully in background');
+    } catch (error) {
+      console.error('Error updating task order in background:', error);
+      // Rollback to original state
+      setTasks(originalTasks);
+      // Show error notification to user
+      toast.error('Failed to update task order. Changes have been reverted.');
+    } finally {
+      // Clear the drag buffer timeout if operation completes before buffer expires
+      if (dragBufferTimeout) {
+        clearTimeout(dragBufferTimeout);
+        setIsDragProcessing(false);
+      }
+    }
+  };
+
+  // Legacy function for compatibility (keeping for other potential uses)
   const updateTaskOrder = async (statusId: number, oldIndex: number, newIndex: number) => {
     // Get the ordered tasks for this status
     const currentTasks = [...(tasksByStatus[statusId] || [])];
@@ -452,13 +805,15 @@ export default function TasksPage() {
         </Button>
       </div>
 
-      {isAddTaskDrawerOpen ? (
-        // Static view when drawer is open
+      {isAddTaskDrawerOpen || isAnyTaskDrawerOpen ? (
+        // Static view when any drawer is open - prevents pointer events interference
         <TaskColumnsStatic
           statuses={statuses}
           tasksByStatus={tasksByStatus}
           priorities={priorities}
           refreshTasks={refreshTasks}
+          onTaskDrawerStateChange={setIsAnyTaskDrawerOpen}
+          onTaskUpdate={updateTaskInState}
         />
       ) : (
         // Interactive drag-and-drop view
@@ -480,6 +835,8 @@ export default function TasksPage() {
                 allStatuses={statuses}
                 allPriorities={priorities}
                 refreshTasks={refreshTasks}
+                onDrawerStateChange={setIsAnyTaskDrawerOpen}
+                onTaskUpdate={updateTaskInState}
               />
             ))}
           </div>
@@ -522,6 +879,7 @@ export default function TasksPage() {
                   allStatuses={statuses}
                   allPriorities={priorities}
                   refreshTasks={refreshTasks}
+                  onDrawerStateChange={() => {}} // Disable drawer interaction during drag
                   className="cursor-grabbing shadow-lg"
                 />
               </div>
@@ -557,11 +915,15 @@ function TaskColumnsStatic({
   tasksByStatus,
   priorities,
   refreshTasks,
+  onTaskDrawerStateChange,
+  onTaskUpdate,
 }: {
   statuses: Database['public']['Tables']['statuses']['Row'][];
   tasksByStatus: Record<number, TaskWithRelations[]>;
   priorities: Database['public']['Tables']['priorities']['Row'][];
   refreshTasks: () => void;
+  onTaskDrawerStateChange?: (isOpen: boolean) => void;
+  onTaskUpdate?: (taskId: number, updates: Partial<TaskWithRelations>) => void;
 }) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
@@ -612,6 +974,8 @@ function TaskColumnsStatic({
                 allStatuses={statuses}
                 allPriorities={priorities}
                 refreshTasks={refreshTasks}
+                onDrawerStateChange={onTaskDrawerStateChange}
+                onTaskUpdate={onTaskUpdate}
               />
             ))}
 
@@ -632,12 +996,16 @@ function SortableTaskCard({
   allStatuses,
   allPriorities,
   refreshTasks,
+  onDrawerStateChange,
+  onTaskUpdate,
 }: {
   task: TaskWithRelations;
   isActive: boolean;
   allStatuses: Database['public']['Tables']['statuses']['Row'][];
   allPriorities: Database['public']['Tables']['priorities']['Row'][];
   refreshTasks: () => void;
+  onDrawerStateChange?: (isOpen: boolean) => void;
+  onTaskUpdate?: (taskId: number, updates: Partial<TaskWithRelations>) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -689,6 +1057,8 @@ function SortableTaskCard({
         allStatuses={allStatuses}
         allPriorities={allPriorities}
         refreshTasks={refreshTasks}
+        onDrawerStateChange={onDrawerStateChange}
+        onTaskUpdate={onTaskUpdate}
         className={cn('cursor-grab active:cursor-grabbing', isDragging && 'ring-2 ring-primary')}
       />
     </div>
@@ -715,6 +1085,8 @@ function TaskColumn({
   allStatuses,
   allPriorities,
   refreshTasks,
+  onDrawerStateChange,
+  onTaskUpdate,
 }: {
   status: Database['public']['Tables']['statuses']['Row'];
   tasks: TaskWithRelations[];
@@ -723,6 +1095,8 @@ function TaskColumn({
   allStatuses: Database['public']['Tables']['statuses']['Row'][];
   allPriorities: Database['public']['Tables']['priorities']['Row'][];
   refreshTasks: () => void;
+  onDrawerStateChange?: (isOpen: boolean) => void;
+  onTaskUpdate?: (taskId: number, updates: Partial<TaskWithRelations>) => void;
 }) {
   // Set up the column as a droppable area
   const { setNodeRef } = useDroppable({
@@ -791,6 +1165,8 @@ function TaskColumn({
                 allStatuses={allStatuses}
                 allPriorities={allPriorities}
                 refreshTasks={refreshTasks}
+                onDrawerStateChange={onDrawerStateChange}
+                onTaskUpdate={onTaskUpdate}
               />
             </React.Fragment>
           ))}

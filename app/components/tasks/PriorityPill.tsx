@@ -6,6 +6,7 @@ import { Check, ChevronDown } from 'lucide-react';
 import { Database } from '@/lib/supabase/types.generated';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 type Priority = Database['public']['Tables']['priorities']['Row'];
 
@@ -61,15 +62,38 @@ export default function PriorityPill({
     }
   }, [isOpen]);
 
-  const handlePriorityChange = async (newPriority: Priority) => {
-    if (disabled || newPriority.id === priority.id) {
+  const handlePriorityChange = (newPriority: Priority) => {
+    if (disabled || newPriority.id === priority.id || updating) {
       setIsOpen(false);
       return;
     }
 
     setUpdating(true);
     setError(null);
+    setIsOpen(false);
 
+    // Store original priority for potential rollback
+    const originalPriority = priority;
+
+    // Optimistic update - call callback immediately
+    if (onPriorityChange) {
+      onPriorityChange(newPriority);
+    }
+
+    // Set minimum loading buffer to prevent spam (800ms)
+    const bufferTimeout = setTimeout(() => {
+      setUpdating(false);
+    }, 800);
+
+    // Update database in background
+    updatePriorityInBackground(newPriority, originalPriority, bufferTimeout);
+  };
+
+  const updatePriorityInBackground = async (
+    newPriority: Priority,
+    originalPriority: Priority,
+    bufferTimeout?: NodeJS.Timeout,
+  ) => {
     try {
       const supabase = getSupabaseClient();
 
@@ -81,23 +105,36 @@ export default function PriorityPill({
       if (error) {
         console.error('Error updating priority:', error);
         setError('Failed to update priority');
-      } else {
-        // Call the onPriorityChange callback if provided
-        if (onPriorityChange) {
-          onPriorityChange(newPriority);
-        }
 
-        // Refresh tasks list if a refresh function is provided
+        // Rollback optimistic update
+        if (onPriorityChange) {
+          onPriorityChange(originalPriority);
+        }
+        // Show error notification to user
+        toast.error('Failed to update priority. Changes have been reverted.');
+      } else {
+        // Success - optionally refresh tasks to sync with server
         if (refreshTasks) {
           refreshTasks();
         }
+        console.log('Priority updated successfully in background');
       }
     } catch (err) {
       console.error('Exception updating priority:', err);
       setError('An unexpected error occurred');
+
+      // Rollback optimistic update
+      if (onPriorityChange) {
+        onPriorityChange(originalPriority);
+      }
+      // Show error notification to user
+      toast.error('Failed to update priority. Changes have been reverted.');
     } finally {
+      // Clear the buffer timeout if operation completes before buffer expires
+      if (bufferTimeout) {
+        clearTimeout(bufferTimeout);
+      }
       setUpdating(false);
-      setIsOpen(false);
     }
   };
 
