@@ -45,7 +45,6 @@ export default function SettingsPage() {
       href: '/protected/settings/notifications',
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-50',
-      comingSoon: true,
     },
     {
       title: 'Security',

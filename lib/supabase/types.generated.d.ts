@@ -228,6 +228,68 @@ export type Database = {
           },
         ]
       }
+      email_queue: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          notification_id: string | null
+          priority: Database["public"]["Enums"]["notification_priority"]
+          retry_count: number
+          scheduled_for: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["email_status"]
+          subject: string
+          template_data: Json
+          template_id: string
+          to_email: string
+          to_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_id?: string | null
+          priority?: Database["public"]["Enums"]["notification_priority"]
+          retry_count?: number
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["email_status"]
+          subject: string
+          template_data?: Json
+          template_id: string
+          to_email: string
+          to_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_id?: string | null
+          priority?: Database["public"]["Enums"]["notification_priority"]
+          retry_count?: number
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["email_status"]
+          subject?: string
+          template_data?: Json
+          template_id?: string
+          to_email?: string
+          to_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_queue_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entity_assignees: {
         Row: {
           assigned_at: string
@@ -544,6 +606,173 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notification_deliveries: {
+        Row: {
+          channel: string
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          metadata: Json
+          notification_id: string
+          retry_count: number
+          status: Database["public"]["Enums"]["delivery_status"]
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json
+          notification_id: string
+          retry_count?: number
+          status?: Database["public"]["Enums"]["delivery_status"]
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json
+          notification_id?: string
+          retry_count?: number
+          status?: Database["public"]["Enums"]["delivery_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_deliveries_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email_enabled: boolean
+          id: string
+          in_app_enabled: boolean
+          push_enabled: boolean
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_enabled?: boolean
+          id?: string
+          in_app_enabled?: boolean
+          push_enabled?: boolean
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_enabled?: boolean
+          id?: string
+          in_app_enabled?: boolean
+          push_enabled?: boolean
+          type?: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          message_template: string
+          name: string
+          placeholders: string[] | null
+          subject_template: string
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          message_template: string
+          name: string
+          placeholders?: string[] | null
+          subject_template: string
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          message_template?: string
+          name?: string
+          placeholders?: string[] | null
+          subject_template?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data: Json
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_read: boolean
+          message: string
+          priority: Database["public"]["Enums"]["notification_priority"]
+          read_at: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean
+          message: string
+          priority?: Database["public"]["Enums"]["notification_priority"]
+          read_at?: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          priority?: Database["public"]["Enums"]["notification_priority"]
+          read_at?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       organization_invitations: {
         Row: {
@@ -863,6 +1092,72 @@ export type Database = {
           },
         ]
       }
+      push_queue: {
+        Row: {
+          created_at: string
+          device_id: string
+          error_message: string | null
+          id: string
+          notification_id: string | null
+          payload: Json
+          platform: string
+          priority: Database["public"]["Enums"]["notification_priority"]
+          retry_count: number
+          scheduled_for: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["delivery_status"]
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          error_message?: string | null
+          id?: string
+          notification_id?: string | null
+          payload: Json
+          platform: string
+          priority?: Database["public"]["Enums"]["notification_priority"]
+          retry_count?: number
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["delivery_status"]
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          error_message?: string | null
+          id?: string
+          notification_id?: string | null
+          payload?: Json
+          platform?: string
+          priority?: Database["public"]["Enums"]["notification_priority"]
+          retry_count?: number
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["delivery_status"]
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_queue_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "user_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_queue_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_diaries: {
         Row: {
           created_at: string
@@ -1043,6 +1338,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      standard_entity_type_documentation: {
+        Row: {
+          created_at: string | null
+          description: string
+          entity_type: Database["public"]["Enums"]["standard_entity_type"]
+          example_usage: string | null
+          frontend_usage: string | null
+          id_column: string
+          table_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          entity_type: Database["public"]["Enums"]["standard_entity_type"]
+          example_usage?: string | null
+          frontend_usage?: string | null
+          id_column: string
+          table_name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          entity_type?: Database["public"]["Enums"]["standard_entity_type"]
+          example_usage?: string | null
+          frontend_usage?: string | null
+          id_column?: string
+          table_name?: string
+        }
+        Relationships: []
       }
       statuses: {
         Row: {
@@ -1232,6 +1557,42 @@ export type Database = {
           },
         ]
       }
+      user_devices: {
+        Row: {
+          created_at: string
+          device_name: string | null
+          id: string
+          last_used: string
+          platform: string
+          push_enabled: boolean
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_name?: string | null
+          id?: string
+          last_used?: string
+          platform: string
+          push_enabled?: boolean
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_name?: string | null
+          id?: string
+          last_used?: string
+          platform?: string
+          push_enabled?: boolean
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           created_at: string
@@ -1301,6 +1662,45 @@ export type Database = {
           },
         ]
       }
+      webhook_requests: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          function_name: string
+          id: string
+          payload: Json | null
+          processed_at: string | null
+          response: Json | null
+          retry_count: number | null
+          scheduled_for: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          function_name: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          response?: Json | null
+          retry_count?: number | null
+          scheduled_for?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          response?: Json | null
+          retry_count?: number | null
+          scheduled_for?: string
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1317,6 +1717,20 @@ export type Database = {
           approval_id_param: number
         }
         Returns: Database["public"]["Enums"]["approval_status"]
+      }
+      call_edge_function_safe: {
+        Args: {
+          function_name: string
+        }
+        Returns: Json
+      }
+      call_send_email_notification: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      call_send_push_notification: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       can_change_member_role: {
         Args: {
@@ -1339,9 +1753,25 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_duplicate_organization_memberships: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      cleanup_duplicate_project_memberships: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       cleanup_expired_invitations: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      cleanup_notification_queues: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      cleanup_old_notifications: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       convert_slugs_to_hash: {
         Args: Record<PropertyKey, never>
@@ -1351,6 +1781,26 @@ export type Database = {
           new_slug: string
           updated: boolean
         }[]
+      }
+      create_default_notification_preferences: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      create_notification: {
+        Args: {
+          p_user_id: string
+          p_type: Database["public"]["Enums"]["notification_type"]
+          p_template_name?: string
+          p_template_data?: string[]
+          p_data?: Json
+          p_entity_type?: string
+          p_entity_id?: string
+          p_priority?: Database["public"]["Enums"]["notification_priority"]
+          p_created_by?: string
+        }
+        Returns: string
       }
       create_organization: {
         Args: {
@@ -1375,6 +1825,13 @@ export type Database = {
         }
         Returns: string
       }
+      create_webhook_request: {
+        Args: {
+          p_function_name: string
+          p_payload?: Json
+        }
+        Returns: string
+      }
       debug_invite_process: {
         Args: {
           org_id: number
@@ -1383,17 +1840,36 @@ export type Database = {
         }
         Returns: Json
       }
+      debug_pg_net_setup: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       decline_organization_invitation: {
         Args: {
           p_token: string
         }
         Returns: Json
       }
+      ensure_all_notification_preferences: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: {
+          created_count: number
+          notification_types: string[]
+        }[]
+      }
       ensure_user_has_organization: {
         Args: {
           target_user_id: string
         }
         Returns: number
+      }
+      fix_user_notification_preferences: {
+        Args: {
+          p_user_email: string
+        }
+        Returns: string
       }
       generate_attachment_path: {
         Args: {
@@ -1423,11 +1899,41 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      get_email_queue_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          status: string
+          count: number
+          oldest_created_at: string
+          newest_created_at: string
+        }[]
+      }
       get_invitation_by_token: {
         Args: {
           p_token: string
         }
         Returns: Json
+      }
+      get_notification_preference_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_users: number
+          users_with_complete_preferences: number
+          users_with_missing_preferences: number
+          total_preferences: number
+          avg_preferences_per_user: number
+        }[]
+      }
+      get_notification_template: {
+        Args: {
+          p_type: Database["public"]["Enums"]["notification_type"]
+          p_template_name?: string
+          p_template_data?: string[]
+        }
+        Returns: {
+          subject: string
+          message: string
+        }[]
       }
       get_or_create_default_organization: {
         Args: Record<PropertyKey, never>
@@ -1475,6 +1981,19 @@ export type Database = {
           user_avatar_url: string
         }[]
       }
+      get_push_queue_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          status: string
+          count: number
+          oldest_created_at: string
+          newest_created_at: string
+        }[]
+      }
+      get_standard_entity_types: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["standard_entity_type"][]
+      }
       get_task_attachments: {
         Args: {
           p_task_id: number
@@ -1488,6 +2007,10 @@ export type Database = {
           created_at: string
           created_by: string
         }[]
+      }
+      get_unread_notification_count: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       get_user_details: {
         Args: {
@@ -1543,6 +2066,16 @@ export type Database = {
           default_project_name: string
         }[]
       }
+      get_vault_secret: {
+        Args: {
+          secret_name: string
+        }
+        Returns: string
+      }
+      initialize_notification_preferences: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       invite_existing_user_to_organization: {
         Args: {
           p_organization_id: number
@@ -1581,10 +2114,61 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_valid_standard_entity_type: {
+        Args: {
+          p_type: string
+        }
+        Returns: boolean
+      }
       link_user_to_pending_invitations: {
         Args: {
           p_user_id: string
           p_email: string
+        }
+        Returns: Json
+      }
+      mark_all_notifications_read: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      mark_notification_delivery_failed: {
+        Args: {
+          p_notification_id: string
+          p_channel: string
+          p_error_message: string
+        }
+        Returns: boolean
+      }
+      mark_notification_delivery_sent: {
+        Args: {
+          p_notification_id: string
+          p_channel: string
+        }
+        Returns: boolean
+      }
+      mark_notification_read: {
+        Args: {
+          p_notification_id: string
+        }
+        Returns: undefined
+      }
+      process_email_queue: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      process_push_queue: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      queue_email_notification: {
+        Args: {
+          p_notification_id: string
+        }
+        Returns: Json
+      }
+      queue_push_notification: {
+        Args: {
+          p_notification_id: string
         }
         Returns: Json
       }
@@ -1604,6 +2188,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      retry_failed_notifications: {
+        Args: {
+          p_max_retries?: number
+        }
+        Returns: Json
+      }
       set_user_current_project: {
         Args: {
           p_project_id: number
@@ -1621,6 +2211,30 @@ export type Database = {
           new_org_id: number
         }
         Returns: boolean
+      }
+      test_email_queue: {
+        Args: {
+          p_user_email?: string
+        }
+        Returns: Json
+      }
+      test_expanded_task_notifications: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          trigger_name: string
+          table_name: string
+          operation: string
+          description: string
+        }[]
+      }
+      test_notification_self_prevention: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          entity_type: string
+          trigger_name: string
+          has_self_check: boolean
+          notes: string
+        }[]
       }
       test_user_signup_process: {
         Args: Record<PropertyKey, never>
@@ -1653,6 +2267,22 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_notification_preferences: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          email: string
+          missing_types: string[]
+          preference_count: number
+        }[]
+      }
+      validate_standard_entity_reference: {
+        Args: {
+          p_entity_type: string
+          p_entity_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       approval_status:
@@ -1672,8 +2302,47 @@ export type Database = {
         | "archive"
         | "text"
         | "other"
+      delivery_status:
+        | "pending"
+        | "processing"
+        | "sent"
+        | "failed"
+        | "queued_for_delivery"
+      email_status:
+        | "pending"
+        | "processing"
+        | "sent"
+        | "failed"
+        | "queued_for_delivery"
       entity_type: "site_diary" | "form" | "entries" | "tasks"
       item_type: "question" | "checklist" | "radio_box" | "photo"
+      notification_priority: "low" | "medium" | "high" | "critical"
+      notification_type:
+        | "system"
+        | "organization_added"
+        | "project_added"
+        | "task_assigned"
+        | "task_updated"
+        | "task_comment"
+        | "comment_mention"
+        | "task_unassigned"
+        | "form_assigned"
+        | "form_unassigned"
+        | "approval_requested"
+        | "approval_status_changed"
+        | "entity_assigned"
+      standard_entity_type:
+        | "task"
+        | "form"
+        | "entries"
+        | "site_diary"
+        | "form_entry"
+        | "task_comment"
+        | "project"
+        | "organization"
+        | "approval"
+        | "approval_comment"
+        | "approval_response"
     }
     CompositeTypes: {
       [_ in never]: never

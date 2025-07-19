@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Bell, User, Menu } from 'lucide-react';
+import { Search, User, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { signOutAction } from '@/app/actions';
 import { ThemeSwitcher } from '@/components/theme-switcher';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { OrganizationSwitcher } from '@/components/OrganizationSwitcher';
 import { ProjectSwitcher } from '@/components/ProjectSwitcher';
 import { Avatar, AvatarImage, AvatarFallback } from '@/app/components/ui/avatar';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { getSupabaseClient, createFreshSupabaseClient } from '@/lib/supabase/client';
@@ -120,9 +121,7 @@ export default function TopBar({ isSidebarOpen, onSidebarToggle, toggleButtonRef
 
       <div className="flex items-center space-x-4">
         <ThemeSwitcher />
-        <button className="rounded-lg p-2 text-muted-foreground hover:bg-muted/50">
-          <Bell className="h-5 w-5" />
-        </button>
+        <NotificationBell />
         <div className="group relative">
           <button className="flex items-center space-x-1 rounded-lg p-1 hover:bg-muted/50">
             <Avatar className="h-8 w-8">
