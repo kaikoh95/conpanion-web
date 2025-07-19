@@ -1339,6 +1339,36 @@ export type Database = {
           },
         ]
       }
+      standard_entity_type_documentation: {
+        Row: {
+          created_at: string | null
+          description: string
+          entity_type: Database["public"]["Enums"]["standard_entity_type"]
+          example_usage: string | null
+          frontend_usage: string | null
+          id_column: string
+          table_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          entity_type: Database["public"]["Enums"]["standard_entity_type"]
+          example_usage?: string | null
+          frontend_usage?: string | null
+          id_column: string
+          table_name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          entity_type?: Database["public"]["Enums"]["standard_entity_type"]
+          example_usage?: string | null
+          frontend_usage?: string | null
+          id_column?: string
+          table_name?: string
+        }
+        Relationships: []
+      }
       statuses: {
         Row: {
           color: string | null
@@ -1960,6 +1990,10 @@ export type Database = {
           newest_created_at: string
         }[]
       }
+      get_standard_entity_types: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["standard_entity_type"][]
+      }
       get_task_attachments: {
         Args: {
           p_task_id: number
@@ -2084,6 +2118,12 @@ export type Database = {
         Args: {
           p_project_id: number
           p_user_id?: string
+        }
+        Returns: boolean
+      }
+      is_valid_standard_entity_type: {
+        Args: {
+          p_type: string
         }
         Returns: boolean
       }
@@ -2243,6 +2283,13 @@ export type Database = {
           preference_count: number
         }[]
       }
+      validate_standard_entity_reference: {
+        Args: {
+          p_entity_type: string
+          p_entity_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       approval_status:
@@ -2291,6 +2338,18 @@ export type Database = {
         | "approval_requested"
         | "approval_status_changed"
         | "entity_assigned"
+      standard_entity_type:
+        | "task"
+        | "form"
+        | "entries"
+        | "site_diary"
+        | "form_entry"
+        | "task_comment"
+        | "project"
+        | "organization"
+        | "approval"
+        | "approval_comment"
+        | "approval_response"
     }
     CompositeTypes: {
       [_ in never]: never

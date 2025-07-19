@@ -1260,7 +1260,7 @@ BEGIN
   -- Get entity title based on entity_type and entity_id
   IF NEW.entity_type IS NOT NULL AND NEW.entity_id IS NOT NULL THEN
     CASE NEW.entity_type
-      WHEN 'tasks' THEN
+      WHEN 'task' THEN
         SELECT title INTO v_entity_title FROM tasks WHERE id = NEW.entity_id;
       WHEN 'form' THEN
         SELECT name INTO v_entity_title FROM forms WHERE id = NEW.entity_id;
@@ -1432,7 +1432,7 @@ BEGIN
   -- Get entity title
   IF v_approval.entity_type IS NOT NULL AND v_approval.entity_id IS NOT NULL THEN
     CASE v_approval.entity_type
-      WHEN 'tasks' THEN
+      WHEN 'task' THEN
         SELECT title INTO v_entity_title FROM tasks WHERE id = v_approval.entity_id;
       WHEN 'form' THEN
         SELECT name INTO v_entity_title FROM forms WHERE id = v_approval.entity_id;
@@ -1526,7 +1526,7 @@ BEGIN
   -- Get entity title
   IF v_approval.entity_type IS NOT NULL AND v_approval.entity_id IS NOT NULL THEN
     CASE v_approval.entity_type
-      WHEN 'tasks' THEN
+      WHEN 'task' THEN
         SELECT title INTO v_entity_title FROM tasks WHERE id = v_approval.entity_id;
       WHEN 'form' THEN
         SELECT name INTO v_entity_title FROM forms WHERE id = v_approval.entity_id;
