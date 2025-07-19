@@ -2080,6 +2080,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_project_admin_or_owner: {
+        Args: {
+          p_project_id: number
+          p_user_id?: string
+        }
+        Returns: boolean
+      }
       link_user_to_pending_invitations: {
         Args: {
           p_user_id: string
